@@ -206,4 +206,24 @@ Proprietary — Cebu Far East Institute Capstone 2 Project.
 
 ---
 
-*Last Updated: June 2, 2026*
+---
+
+## 📋 Changelog
+
+### June 16, 2026 — Enrollment Form & Student Grades Updates
+
+#### Enrollment Form (`app/enrollment/page.tsx`)
+- **Extension Name dropdown** — Added an "Ext. Name" dropdown next to the Middle Name field. Options: Jr. (Junior), Sr. (Senior), II, III, IV, Extension name appears in the Review step and Success screen as part of the full name.
+- **Declaration checkbox fix** — Fixed the checkbox overlapping the label text in Step 3. Replaced Bootstrap's `form-check` layout with a manual `d-flex` layout for proper alignment.
+
+#### Student Dashboard — My Grades (`app/dashboard/page.tsx`)
+- **"Not Yet Available" state** — When a term's grades are not open yet, the Grades section now shows a clean empty state with a reminder note about the one-week grade request window.
+- **Color Grading Guide** — A compact color legend is now permanently pinned in the top-right of the My Grades header, visible in every state (not available, requesting, released). Colors follow standard DepEd SHS grading: 🟢 Green = 80+ (Passed), 🟠 Orange = 75–79 (Needs Improvement / Lacking Activities), 🔴 Red = Below 75 (Failed).
+- **Grade Request state** — When the admin opens the request window for a term, students see per-subject cards with a "Request Grade" button. Clicking shows a confirmation modal before sending.
+- **Workflow tracker** — Once a student submits a grade request for a subject, the card shows a 5-step progress tracker: Requested → Teacher Calculating → Sent to Admin → Admin Verified → Released.
+- **All-requested summary** — When all subjects have been requested, a green "All grade requests sent!" banner appears above the cards. Subject cards and their workflow trackers remain fully visible so students can track each subject's progress.
+- **Term-based status** — Each term (Term 1, 2, 3) has its own independent status (`not_available`, `request_open`, `released`), controlled by a mock object on the frontend. This will be wired to an admin-set date range via the backend.
+
+---
+
+*Last Updated: June 16, 2026*
