@@ -61,7 +61,7 @@ export default function EnrollmentPage() {
   const [generatedLRN, setGeneratedLRN] = useState("");
 
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", middleName: "",
+    firstName: "", lastName: "", middleName: "", extensionName: "",
     email: "", phone: "",
     course: "", year: "",
     address: "", dateOfBirth: "",
@@ -149,7 +149,7 @@ export default function EnrollmentPage() {
             <h2 className="fw-black text-success mb-2">Enrollment Successful!</h2>
             <p className="text-muted mb-4">Your enrollment has been submitted. Save the credentials below — you will need them to log in.</p>
             <div className="alert alert-info text-start mb-4">
-              <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}</div>
+              <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
               <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
               <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
               <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year} · Term 1 (June–September 2026)</div>
@@ -324,11 +324,22 @@ export default function EnrollmentPage() {
                   <label className="form-label fw-semibold text-muted small">Last Name *</label>
                   <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Last name" className="form-control rounded-2" required />
                 </div>
-                <div className="col-md-6">
+                <div className="col-md-4">
                   <label className="form-label fw-semibold text-muted small">Middle Name</label>
                   <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} placeholder="Middle name" className="form-control rounded-2" />
                 </div>
-                <div className="col-md-6">
+                <div className="col-md-3">
+                  <label className="form-label fw-semibold text-muted small">Ext. Name</label>
+                  <select name="extensionName" value={formData.extensionName} onChange={handleChange} className="form-select rounded-2">
+                    <option value="">None</option>
+                    <option value="Jr.">Jr. (Junior)</option>
+                    <option value="Sr.">Sr. (Senior)</option>
+                    <option value="II">II</option>
+                    <option value="III">III</option>
+                    <option value="IV">IV</option>
+                  </select>
+                </div>
+                <div className="col-md-5">
                   <label className="form-label fw-semibold text-muted small">Date of Birth *</label>
                   <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className="form-control rounded-2" required />
                 </div>
@@ -504,16 +515,15 @@ export default function EnrollmentPage() {
               </div>
 
               {/* Checkbox */}
-              <div className="form-check p-3 rounded-3 mb-4" style={{ background: agreedToTerms ? "rgba(16,185,129,0.08)" : "rgba(220,38,38,0.04)", border: agreedToTerms ? "1.5px solid rgba(16,185,129,0.3)" : "1.5px solid rgba(220,38,38,0.2)", transition:"all 0.3s" }}>
+              <div className="d-flex align-items-start gap-3 p-3 rounded-3 mb-4" style={{ background: agreedToTerms ? "rgba(16,185,129,0.08)" : "rgba(220,38,38,0.04)", border: agreedToTerms ? "1.5px solid rgba(16,185,129,0.3)" : "1.5px solid rgba(220,38,38,0.2)", transition:"all 0.3s" }}>
                 <input
-                  className="form-check-input"
                   type="checkbox"
                   id="agreeDeclaration"
                   checked={agreedToTerms}
                   onChange={e => setAgreedToTerms(e.target.checked)}
-                  style={{ width:20, height:20 }}
+                  style={{ width:20, height:20, flexShrink:0, marginTop:2, cursor:"pointer", accentColor:"#10b981" }}
                 />
-                <label className="form-check-label fw-bold ms-2 text-dark" htmlFor="agreeDeclaration" style={{ cursor:"pointer", lineHeight:1.5 }}>
+                <label className="fw-bold text-dark mb-0" htmlFor="agreeDeclaration" style={{ cursor:"pointer", lineHeight:1.6 }}>
                   I hereby agree to the terms and conditions of the school and certify that the information provided is true and correct.
                 </label>
               </div>
@@ -548,7 +558,7 @@ export default function EnrollmentPage() {
                 {
                   title: "Personal Information",
                   fields: [
-                    ["Full Name", `${formData.firstName} ${formData.middleName ? formData.middleName+" " : ""}${formData.lastName}`],
+                    ["Full Name", `${formData.firstName} ${formData.middleName ? formData.middleName+" " : ""}${formData.lastName}${formData.extensionName ? " "+formData.extensionName : ""}`],
                     ["Date of Birth", formData.dateOfBirth],
                     ["Gender", formData.gender],
                     ["Civil Status", formData.civilStatus],
