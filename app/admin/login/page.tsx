@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const ADMIN_ACCOUNTS = [
-  { username: "admin@inform.edu",     password: "Admin@2026", name: "System Administrator", role: "Super Admin" },
+  { username: "principal@inform.edu", password: "principal", name: "Principal", role: "Principal" },
   { username: "registrar@inform.edu", password: "Reg@2026",   name: "Registrar Office",     role: "Registrar"   },
   { username: "dean@inform.edu",      password: "Dean@2026",  name: "Dean of Students",     role: "Dean"        },
 ];
@@ -29,7 +29,12 @@ export default function AdminLoginPage() {
     const match = ADMIN_ACCOUNTS.find(a => a.username === form.username && a.password === form.password);
     if (!match) { setError("Invalid credentials. Access denied."); return; }
     setLoading(true);
-    setTimeout(() => { setLoading(false); router.push("/admin/dashboard"); }, 1000);
+    setTimeout(() => {
+      setLoading(false);
+      // role is not persisted; route selection is based on the matched account
+      const next = match.role === "Principal" ? "/admin/principal/dashboard" : "/admin/dashboard";
+      router.push(next);
+    }, 1000);
   }
 
   return (
