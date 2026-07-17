@@ -17,7 +17,13 @@ function JobertChat({ initialPrompt }: { initialPrompt?: string }) {
   const bottomRef           = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, typing]);
-  useEffect(() => { if (initialPrompt) { setOpen(true); send(initialPrompt); } }, [initialPrompt]); // eslint-disable-line
+  useEffect(() => {
+    if (initialPrompt) {
+      setOpen(true);
+      send(initialPrompt);
+    }
+  }, [initialPrompt]);
+
 
   function send(text: string) {
     if (!text.trim()) return;
@@ -939,6 +945,7 @@ export default function DashboardPage() {
     setJobertPrompt(undefined);
     setTimeout(() => setJobertPrompt(prompt), 50);
   }
+
 
   function renderPanel() {
     switch (panel) {
