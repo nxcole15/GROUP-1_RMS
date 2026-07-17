@@ -8,7 +8,7 @@ const FEATURES = [
   {
     icon: "📚",
     title: "Modern Learning",
-    short: "Interactive digital resources",
+    short: "F2F and Modular and Blended learning", 
     color: "#dc2626",
     gradient: "linear-gradient(135deg, #dc2626, #f97316)",
     details: [
@@ -27,10 +27,11 @@ const FEATURES = [
     color: "#f97316",
     gradient: "linear-gradient(135deg, #f97316, #fbbf24)",
     details: [
-      { icon: "⚡", label: "Live Updates", desc: "Grades appear the moment your teacher submits them — no more waiting." },
-      { icon: "📈", label: "GWA Calculator", desc: "Automatic General Weighted Average computed across all subjects." },
-      { icon: "📉", label: "Performance Trends", desc: "Visual charts showing your progress term by term." },
-      { icon: "🔔", label: "Grade Alerts", desc: "Get notified instantly when a new grade or remark is posted." },
+      { icon: "⚡", label: "Live Updates", desc: "Grades update as the request moves forward—student request, teacher calculation, admin verification, then final release." },
+      { icon: "📝", label: "Request a Grade", desc: "If you need reconsideration, request the grade from the student portal. The request is sent to your teacher with your reason and subject details." },
+      { icon: "📤", label: "Teacher to Admin", desc: "Your teacher reviews and calculates the grade, then submits the computed score to the Admin for verification." },
+      { icon: "✅", label: "Admin Verify → Release", desc: "Admin verifies the computed grade. When approved, the final grade is released back to you and appears instantly in your grades list." },
+      { icon: "🔔", label: "Status & Alerts", desc: "Track the request status (requested → teacher calculating → sent to admin → released) and receive alerts if approved or rejected." },
     ],
     bg: "linear-gradient(135deg, rgba(249,115,22,0.06), rgba(251,191,36,0.06))",
     border: "rgba(249,115,22,0.25)",
@@ -180,7 +181,9 @@ export default function LandingPage() {
             <div className="d-flex align-items-center gap-3">
               <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Student Login</Link>
               <Link href="/teacher/login" className="text-decoration-none fw-medium" style={{ color: "#f97316" }}>Teacher Login</Link>
+              <Link href="/accounting/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Accounting</Link>
               {/* Dark / Light toggle */}
+
               <button
                 onClick={() => {
                   setTransitioning(true);
