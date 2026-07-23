@@ -4,19 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const TEACHER_ACCOUNTS = [
-  { id: "T001", password: "maria", name: "Maria Santos",    subject: "Mathematics" },
-  { id: "T002", password: "juan", name: "Juan Dela Cruz",  subject: "English" },
-  { id: "T003", password: "ana", name: "Ana Reyes",       subject: "Science" },
-  { id: "T004", password: "carlos", name: "Carlos Fernandez", subject: "History" },
-];
 
 export default function TeacherLoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ id: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showHint, setShowHint] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -25,14 +18,40 @@ export default function TeacherLoginPage() {
     setError("");
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.id || !form.password) { setError("Please enter your Teacher ID and password."); return; }
-    const match = TEACHER_ACCOUNTS.find(a => a.id === form.id && a.password === form.password);
-    if (!match) { setError("Invalid Teacher ID or password. Access denied."); return; }
-    setLoading(true);
-    setTimeout(() => { setLoading(false); router.push("/teacher/dashboard"); }, 1000);
+  async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  if (!form.id || !form.password) {
+    setError("Please enter your Teacher ID and password.");
+    return;
   }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch("/api/teacher/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacher_id: form.id, password: form.password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Login failed. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Login successful — redirect to dashboard
+    router.push("/teacher/dashboard");
+
+  } catch {
+    setError("Could not connect to server. Please try again.");
+    setLoading(false);
+  }
+}
+
 
   return (
     <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
@@ -103,15 +122,8 @@ export default function TeacherLoginPage() {
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowHint(!showHint)}
-                        className="btn btn-link btn-sm p-0 fw-medium text-decoration-none"
-                        style={{ color: "#f97316" }}
-                      >
-                        {showHint ? "Hide hint" : "Need a hint?"}
-                      </button>
                     </div>
+                    
                     <div className="position-relative">
                       <input
                         type={showPassword ? "text" : "password"}
@@ -145,25 +157,7 @@ export default function TeacherLoginPage() {
                     </div>
                   </div>
 
-                  {/* Hint */}
-                  {showHint && (
-                    <div className="mb-4 rounded-xl overflow-hidden" style={{ background: "#fef3c7", border: "1px solid #fbbf24" }}>
-                      <div className="px-4 py-2 border-bottom" style={{ borderColor: "#fbbf24", background: "#fff7ed" }}>
-                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo Teacher Accounts</p>
-                      </div>
-                      <div className="px-4 py-3">
-                        {TEACHER_ACCOUNTS.map(a => (
-                          <div key={a.id} className="py-1">
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span className="font-monospace fw-semibold" style={{ color: "#dc2626" }}>{a.id}</span>
-                              <span className="text-muted small">{a.subject}</span>
-                            </div>
-                            <p className="text-muted small mb-0">pw: <span style={{ color: "#f97316" }}>{a.password}</span></p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                 
 
                   {/* Error */}
                   {error && (

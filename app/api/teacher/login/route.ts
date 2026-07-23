@@ -1,62 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * POST /api/teacher/login
- * Teacher authentication endpoint
- */
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+
 export async function POST(req: NextRequest) {
   try {
-    const { teacher_id, password } = await req.json();
+    const body = await req.json();
 
-    if (!teacher_id || !password) {
-      return NextResponse.json(
-        { error: "Teacher ID and password are required." },
-        { status: 400 }
-      );
-    }
-
-    // Demo teacher accounts (in production, query database)
-    const TEACHER_ACCOUNTS = [
-      { id: "T001", password: "Teacher@2026", name: "Maria Santos", department: "Mathematics" },
-      { id: "T002", password: "Teacher@2026", name: "Juan Dela Cruz", department: "English" },
-      { id: "T003", password: "Teacher@2026", name: "Ana Reyes", department: "Science" },
-      { id: "T004", password: "Teacher@2026", name: "Carlos Fernandez", department: "History" },
-    ];
-
-    const teacher = TEACHER_ACCOUNTS.find(
-      (t) => t.id === teacher_id && t.password === password
-    );
-
-    if (!teacher) {
-      return NextResponse.json(
-        { error: "Invalid Teacher ID or password." },
-        { status: 401 }
-      );
-    }
-
-    // In production, generate JWT token here
-    const response = NextResponse.json({
-      message: "Login successful.",
-      teacher: {
-        teacher_id: teacher.id,
-        full_name: teacher.name,
-        department: teacher.department,
-      },
+    // Forward the request to the Express backend
+    const backendRes = await fetch(`${BACKEND_URL}/api/teacher/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
-    // Set teacher session cookie (in production, use secure JWT)
-    response.cookies.set("teacher_id", teacher.id, {
+    const data = await backendRes.json();
+
+    if (!backendRes.ok) {
+      return NextResponse.json(data, { status: backendRes.status });
+    }
+
+    // Pass the response back to the browser
+    // Also set the cookie so the browser has it
+    const response = NextResponse.json(data, { status: 200 });
+    response.cookies.set("teacher_token", data.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 86400, // 24 hours
+      maxAge: 8 * 60 * 60, // 8 hours in seconds
     });
 
     return response;
   } catch (error) {
     return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 }
+      { error: "Could not connect to server." },
+      { status: 503 }
     );
   }
 }

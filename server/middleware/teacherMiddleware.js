@@ -3,32 +3,40 @@
  * Teacher authentication and authorization middleware
  */
 
-/**
- * Verify teacher is authenticated
- * In production, this would verify JWT token
- */
-function verifyTeacher(req, res, next) {
-  // For demo purposes, check if teacher_id is in session/headers
-  const teacher_id = req.headers["x-teacher-id"] || req.session?.teacher_id;
+const jwt = require("jsonwebtoken");
+const { TEACHER_JWT_SECRET } = require("../config/env");
 
-  if (!teacher_id) {
-    return res.status(401).json({ error: "Unauthorized. Please log in as a teacher." });
+function authenticateTeacher(req, res, next) {
+  // 1. Read the token - check cookie first, the Authorize header
+  const token = 
+  req.cookies?.teacher_token ||
+  (req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice(7)
+    : null);
+
+  // 2. No token = not logged in
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
   }
 
-  req.teacher = { teacher_id };
-  next();
+  // 3. Verify the token is real and not expired
+  try {
+    const decoded = jwt.verify(token, TEACHER_JWT_SECRET);
+
+    // 4. Make sure it's actually a teacher token, not a student or admin
+    if (decoded.role !== "teacher") {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
+    // 5. Attach teacher identity to the request so controllers can use it
+    req.teacher = decoded;
+    next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Session expired. Please log in again" });
+    }
+    return res.status(401).json({ error: "Invalid token." });
+  }
 }
 
-/**
- * Verify teacher owns the resource
- */
-function verifyTeacherOwnership(req, res, next) {
-  const { teacher_id } = req.teacher;
-  const { subject_id } = req.params;
-
-  // In production, verify that teacher_id is assigned to subject_id
-  // For now, just pass through
-  next();
-}
-
-module.exports = { verifyTeacher, verifyTeacherOwnership };
+module.exports = { authenticateTeacher };

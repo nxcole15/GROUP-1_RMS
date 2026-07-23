@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { login, logout, me } = require("../controllers/authController");
+const { login, logout, me, universalLogin } = require("../controllers/authController");
 const { authenticateStudent } = require("../middleware/authMiddleware");
 
 router.post("/login",  login);
 router.post("/logout", logout);
 router.get("/me",      authenticateStudent, me);
-
+router.post("/universal-login", universalLogin);
 module.exports = router;

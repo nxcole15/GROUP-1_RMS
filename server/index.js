@@ -13,6 +13,7 @@ const attendanceRoutes    = require("./routes/attendanceRoutes");
 const paymentsRoutes      = require("./routes/paymentsRoutes");
 const documentsRoutes     = require("./routes/documentsRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
+const teacherRoutes       = require("./routes/teacherRoutes");
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.use("/api/notifications", notificationsRoutes);
 
 /* ── Admin routes ── */
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/teacher", teacherRoutes);
 
 /* ── 404 handler ── */
 app.use((req, res) => res.status(404).json({ error: "Route not found." }));

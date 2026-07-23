@@ -4,16 +4,17 @@
 const db = require("../config/db");
 
 const AttendanceModel = {
-  async findByStudentAndSemester(student_id, semester) {
-    const [rows] = await db.query(
-      `SELECT a.*, s.code AS subject_code, s.name AS subject_name
-       FROM attendance a
-       JOIN subjects s ON s.id = a.subject_id
-       WHERE a.student_id = ? AND a.semester = ?`,
-      [student_id, semester]
-    );
-    return rows;
-  },
+  async findByStudentAndTerm(student_id, term) {
+  const [rows] = await db.query(
+    `SELECT a.*, s.code AS subject_code, s.name AS subject_name
+     FROM attendance a
+     JOIN subjects s ON s.id = a.subject_id
+     WHERE a.student_id = ? AND a.term = ?`,
+    [student_id, term]
+  );
+  return rows;
+},
+
 
   enrichRecord(row) {
     const total    = row.total_meetings;

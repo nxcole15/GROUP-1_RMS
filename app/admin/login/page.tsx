@@ -4,18 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const ADMIN_ACCOUNTS = [
-  { username: "principal@inform.edu", password: "principal", name: "Principal", role: "Principal" },
-  { username: "registrar@inform.edu", password: "Reg@2026",   name: "Registrar Office",     role: "Registrar"   },
-  { username: "dean@inform.edu",      password: "Dean@2026",  name: "Dean of Students",     role: "Dean"        },
-];
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [form, setForm]         = useState({ username: "", password: "" });
+  const [form, setForm]         = useState({ admin_id: "", password: "" });
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
-  const [showHint, setShowHint] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -23,19 +17,39 @@ export default function AdminLoginPage() {
     setError("");
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.username || !form.password) { setError("Please enter your username and password."); return; }
-    const match = ADMIN_ACCOUNTS.find(a => a.username === form.username && a.password === form.password);
-    if (!match) { setError("Invalid credentials. Access denied."); return; }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // role is not persisted; route selection is based on the matched account
-      const next = match.role === "Principal" ? "/admin/principal/dashboard" : "/admin/dashboard";
-      router.push(next);
-    }, 1000);
+  async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  if (!form.admin_id || !form.password) {
+    setError("Please enter your Admin ID and password.");
+    return;
   }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ admin_id: form.admin_id, password: form.password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Login failed. Access denied.");
+      setLoading(false);
+      return;
+    }
+
+    router.push("/admin/dashboard");
+
+  } catch {
+    setError("Could not connect to server. Please try again.");
+    setLoading(false);
+  }
+}
+
 
   return (
     <div className="min-vh-100 d-flex flex-column align-items-center justify-content-center px-3 py-5 position-relative"
@@ -79,9 +93,9 @@ export default function AdminLoginPage() {
           {/* Username */}
           <div>
             <label className="form-label fw-semibold text-uppercase mb-1" style={{ color: "#a5b4fc", fontSize: 11, letterSpacing: "0.08em" }}>Username</label>
-            <input type="text" name="username" value={form.username} onChange={handleChange}
-              placeholder="admin@inform.edu" autoComplete="username"
-              className="form-control rounded-xl text-white"
+            <input type="text" name="admin_id" value={form.admin_id} onChange={handleChange}
+              placeholder="e.g., ADMIN001" autoComplete="username"
+              className="form-control rounded-xl "
               style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }} />
           </div>
 
@@ -89,9 +103,6 @@ export default function AdminLoginPage() {
           <div>
             <div className="d-flex justify-content-between align-items-center mb-1">
               <label className="form-label mb-0 fw-semibold text-uppercase" style={{ color: "#a5b4fc", fontSize: 11, letterSpacing: "0.08em" }}>Password</label>
-              <button type="button" onClick={() => setShowHint(!showHint)} className="btn btn-link btn-sm p-0" style={{ color: "#818cf8", fontSize: 12 }}>
-                {showHint ? "Hide hint" : "Need a hint?"}
-              </button>
             </div>
             <div className="position-relative">
               <input type={showPassword ? "text" : "password"} name="password" value={form.password} onChange={handleChange}
@@ -112,22 +123,6 @@ export default function AdminLoginPage() {
               </button>
             </div>
           </div>
-
-          {/* Hint */}
-          {showHint && (
-            <div className="rounded-xl p-3" style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)" }}>
-              <p className="fw-semibold small mb-2" style={{ color: "#a5b4fc" }}>Demo Admin Accounts</p>
-              {ADMIN_ACCOUNTS.map(a => (
-                <div key={a.username} className="mb-2">
-                  <div className="d-flex justify-content-between gap-2">
-                    <span className="font-mono small" style={{ color: "#a5b4fc" }}>{a.username}</span>
-                    <span className="text-white-50 small">{a.role}</span>
-                  </div>
-                  <span className="font-mono" style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>pw: {a.password}</span>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Error */}
           {error && <div className="alert alert-danger py-2 px-3 small rounded-xl mb-0">{error}</div>}

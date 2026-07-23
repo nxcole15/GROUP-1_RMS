@@ -99,4 +99,85 @@ async function me(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { login, logout, me };
+async function universalLogin(req, res, next) {
+  try {
+    const { id, password } = req.body;
+
+    if (!id || !password) {
+      return res.status(400).json({ error: "ID and password are required." });
+    }
+
+    // ── Try Admin ──────────────────────────────────────────
+    if (id.toUpperCase().startsWith("ADMIN")) {
+      const AdminModel = require("../models/adminModel");
+      const admin = await AdminModel.findByAdminId(id.toUpperCase());
+      if (admin && await bcrypt.compare(password, admin.password)) {
+        const { ADMIN_JWT_SECRET } = require("../config/env");
+        const token = jwt.sign(
+          { id: admin.id, admin_id: admin.admin_id, full_name: admin.full_name, role: "admin" },
+          ADMIN_JWT_SECRET, { expiresIn: "8h" }
+        );
+        return res.cookie("admin_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
+          .json({ message: "Login successful.", role: "admin", full_name: admin.full_name, token });
+      }
+    }
+
+    // ── Try Teacher ────────────────────────────────────────
+  if (id.toUpperCase().startsWith("T")) {
+    const TeacherModel = require("../models/teacherModel");
+    const { TEACHER_JWT_SECRET } = require("../config/env");
+    const db = require("../config/db");
+
+    // Fetch teacher WITH password
+    const [rows] = await db.query(
+      "SELECT * FROM teachers WHERE teacher_id = ? LIMIT 1",
+      [id.toUpperCase()]
+    );
+    const teacher = rows[0];
+
+    if (teacher && await bcrypt.compare(password, teacher.password)) {
+      const token = jwt.sign(
+        { id: teacher.id, teacher_id: teacher.teacher_id, full_name: teacher.full_name, department: teacher.department, role: "teacher" },
+        TEACHER_JWT_SECRET, { expiresIn: "8h" }
+      );
+      return res.cookie("teacher_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
+        .json({ message: "Login successful.", role: "teacher", full_name: teacher.full_name, token });
+    }
+  }
+
+
+    // ── Try Student ────────────────────────────────────────
+    if (/^\d+$/.test(id)) {
+      const student = await StudentModel.findByStudentId(id);
+      if (student?.locked_until && new Date() < new Date(student.locked_until)) {
+        return res.status(403).json({ error: "Account locked. Please try again later." });
+      }
+      if (student && await bcrypt.compare(password, student.password)) {
+        await StudentModel.resetFailedAttempts(id);
+        const token = jwt.sign(
+          { id: student.id, student_id: student.student_id, full_name: student.full_name, role: "student" },
+          JWT_SECRET, { expiresIn: JWT_EXPIRES_IN }
+        );
+        return res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 24 * 60 * 60 * 1000 })
+          .json({ message: "Login successful.", role: "student", full_name: student.full_name, token });
+      }
+      // Track failed attempts for students
+      if (student) {
+        const attempts = (student.failed_attempts || 0) + 1;
+        if (attempts >= 5) {
+          const lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+          await StudentModel.updateFailedAttempts(id, attempts, lockedUntil.toISOString().slice(0, 19).replace("T", " "));
+        } else {
+          await StudentModel.updateFailedAttempts(id, attempts);
+        }
+      }
+    }
+
+    return res.status(401).json({ error: "Invalid ID or password." });
+
+  } catch (err) { next(err); }
+}
+
+
+module.exports = { login, logout, me, universalLogin };
+

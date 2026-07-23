@@ -13,7 +13,7 @@ const ConfigModel = {
       throw new Error("Enrollment configuration not found in database.");
     }
     return {
-      active_semester: rows[0].active_semester,
+      active_term: rows[0].active_term,
       deadline:        new Date(rows[0].deadline),
     };
   },
