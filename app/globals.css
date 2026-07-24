@@ -51,6 +51,395 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
   letter-spacing: 0.3px;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* ── Global Shell Layouts ── */
+.app-shell {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.dashboard-layout,
+.teacher-dashboard-layout,
+.admin-dashboard-layout,
+.accounting-dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: #f0f4ff;
+}
+
+.dashboard-main,
+.teacher-dashboard-main,
+.admin-dashboard-main,
+.accounting-dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  transition: margin-left 0.3s ease;
+}
+
+.dashboard-content,
+.teacher-dashboard-content,
+.admin-dashboard-content,
+.accounting-dashboard-content {
+  flex: 1;
+  overflow: auto;
+  min-width: 0;
+}
+
+.shell-main {
+  min-width: 0;
+  transition: margin-left 0.3s ease;
+}
+
+.shell-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.shell-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 991.98px) {
+  .shell-main,
+  .dashboard-main,
+  .teacher-dashboard-main,
+  .admin-dashboard-main,
+  .accounting-dashboard-main {
+    margin-left: 0 !important;
+  }
+}
+
+/* ── MOBILE RESPONSIVE UTILITIES ── */
+
+/* Mobile-first responsive container */
+@media (max-width: 575.98px) {
+  .container, .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Touch-friendly button sizes on mobile */
+@media (max-width: 767.98px) {
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .btn-sm {
+    min-height: 38px;
+    padding: 0.5rem 0.875rem;
+  }
+}
+
+/* Responsive sidebar - always full width on mobile when shown */
+@media (max-width: 991.98px) {
+  .d-flex.flex-column.flex-shrink-0.position-fixed {
+    width: 280px !important;
+  }
+}
+
+/* Stack cards vertically on small screens */
+@media (max-width: 767.98px) {
+  .row.g-3 > [class*="col"],
+  .row.g-4 > [class*="col"] {
+    width: 100%;
+  }
+}
+
+/* Responsive tables - horizontal scroll */
+@media (max-width: 767.98px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table {
+    min-width: 600px;
+  }
+}
+
+/* Responsive font sizes */
+@media (max-width: 575.98px) {
+  .fs-1, h1 { font-size: 2rem !important; }
+  .fs-2, h2 { font-size: 1.5rem !important; }
+  .fs-3, h3 { font-size: 1.25rem !important; }
+  .fs-4, h4 { font-size: 1.125rem !important; }
+  
+  .display-1 { font-size: 3rem !important; }
+  .display-2 { font-size: 2.5rem !important; }
+  .display-3 { font-size: 2rem !important; }
+  .display-4 { font-size: 1.75rem !important; }
+}
+
+/* Mobile-optimized forms */
+@media (max-width: 767.98px) {
+  .form-control,
+  .form-select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+  
+  .input-group {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+}
+
+/* Responsive navigation */
+@media (max-width: 991.98px) {
+  nav .d-flex.gap-2,
+  nav .d-flex.gap-3 {
+    flex-wrap: wrap;
+  }
+}
+
+/* Mobile dashboard adjustments */
+@media (max-width: 767.98px) {
+  .card {
+    border-radius: 1rem;
+  }
+  
+  .rounded-3 {
+    border-radius: 0.75rem !important;
+  }
+  
+  .rounded-4 {
+    border-radius: 1rem !important;
+  }
+  
+  /* Reduce padding on mobile */
+  .p-4 {
+    padding: 1.25rem !important;
+  }
+  
+  .p-5 {
+    padding: 1.5rem !important;
+  }
+  
+  .py-4 {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+  
+  .py-5 {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+/* Mobile-optimized modals */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+}
+
+/* Responsive gap utilities for mobile */
+@media (max-width: 575.98px) {
+  .gap-4 {
+    gap: 1rem !important;
+  }
+  
+  .gap-5 {
+    gap: 1.5rem !important;
+  }
+}
+
+/* Mobile-friendly badges */
+@media (max-width: 575.98px) {
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mobile hamburger menu button visibility */
+@media (min-width: 992px) {
+  .hamburger-mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .hamburger-mobile-only {
+    display: block !important;
+  }
+}
+
+/* Touch-optimized interactive elements */
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover,
+  .card:hover {
+    transform: none;
+  }
+  
+  .btn:active,
+  .card:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Prevent text selection on touch devices for buttons */
+@media (pointer: coarse) {
+  .btn,
+  button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}
+
+/* Mobile-optimized chat panel */
+@media (max-width: 575.98px) {
+  .chat-panel {
+    width: calc(100vw - 2rem);
+    height: calc(100vh - 8rem);
+    right: 1rem;
+    bottom: 5rem;
+  }
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 575.98px) {
+  .col-6 {
+    width: 100%;
+  }
+}
+
+/* Mobile viewport height fix */
+@media (max-width: 767.98px) {
+  .min-vh-100 {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Landscape mode adjustments for mobile */
+@media (max-width: 991.98px) and (orientation: landscape) {
+  .py-4,
+  .py-5 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+}
+
+/* Tablet-specific adjustments */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .container {
+    max-width: 720px;
+  }
+}
+
+/* Large mobile / small tablet */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .container {
+    max-width: 540px;
+  }
+}
+
+/* Extra small devices (portrait phones) */
+@media (max-width: 575.98px) {
+  .container {
+    max-width: 100%;
+  }
+  
+  /* Hide long text on very small screens */
+  .text-truncate-mobile {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Responsive flex direction */
+@media (max-width: 767.98px) {
+  .flex-md-row {
+    flex-direction: column !important;
+  }
+  
+  .flex-md-column {
+    flex-direction: row !important;
+  }
+}
+
+/* Mobile-optimized stats cards */
+@media (max-width: 575.98px) {
+  .dashboard-card,
+  .card-elevated {
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Responsive overflow handling */
+@media (max-width: 767.98px) {
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Ensure buttons don't wrap text on small screens */
+@media (max-width: 575.98px) {
+  .btn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Mobile-friendly dropdown menus */
+@media (max-width: 575.98px) {
+  .dropdown-menu {
+    max-width: calc(100vw - 2rem);
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+  }
+}
+
+/* Accessibility: larger tap targets on mobile */
+@media (max-width: 767.98px) {
+  a, button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+body, html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Mobile search inputs */
+@media (max-width: 575.98px) {
+  .input-group {
+    width: 100%;
+  }
+  
+  .form-control[placeholder] {
+    font-size: 14px;
+  }
 }
 
 /* ── Animations ── */
@@ -1100,6 +1489,16 @@ html:not([data-theme="dark"]) .kiosk-bg .display-4 span {
 .admin-sidebar {
   background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
   min-height: 100vh; width: 256px;
+}
+
+.admin-main-content {
+  transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 991.98px) {
+  .admin-main-content {
+    margin-left: 0 !important;
+  }
 }
 
 /* ── Chat panel ── */

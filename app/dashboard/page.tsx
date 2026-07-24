@@ -181,25 +181,33 @@ const navItems = [
 ];
 
 /* ── Sidebar ── */
-function Sidebar({ active, setActive, show, setShow, unreadCount }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; unreadCount:number }) {
+function Sidebar({ active, setActive, show, setShow, unreadCount, onExpandChange }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; unreadCount:number; onExpandChange?: (expanded: boolean) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const handleMouseEnter = () => {
+    setExpanded(true);
+    onExpandChange?.(true);
+  };
+  const handleMouseLeave = () => {
+    setExpanded(false);
+    onExpandChange?.(false);
+  };
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex:1040 }} onClick={() => setShow(false)} />}
       <div
         className={`d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show?"":"d-none d-lg-flex"}`}
         style={{ width:expanded?256:80, zIndex:1045, background:"linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY:"auto", overflowX:"hidden", transition:"width 0.3s ease" }}
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
         <div className="d-flex align-items-center gap-3 px-4 py-4 border-bottom border-white border-opacity-10" style={{ minHeight:80 }}>
           <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width:32, height:32, objectFit:"cover", border:"1px solid rgba(255,255,255,0.2)" }} />
           {expanded && <>
-            <img src="/newimlogo.png" alt="INFORM" className="rounded-3 flex-shrink-0" style={{ width:36, height:36, objectFit:"cover" }} />
-            <div><div className="text-white fw-bold lh-1" style={{ fontSize:15 }}>INFORM</div><div style={{ color:"#818cf8", fontSize:11 }}>Student Portal</div></div>
+            <img src="/newimlogo.png" alt="CFEI" className="rounded-3 flex-shrink-0" style={{ width:36, height:36, objectFit:"cover" }} />
+            <div><div className="text-white fw-bold lh-1" style={{ fontSize:15 }}>CFEI</div><div style={{ color:"#818cf8", fontSize:11 }}>Student Portal</div></div>
           </>}
-          {expanded && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+          {show && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
         {/* Student badge */}
@@ -232,7 +240,10 @@ function Sidebar({ active, setActive, show, setShow, unreadCount }: { active:str
             <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>JS</div>
               <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Jamie Santos</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>STU-2024-001</div></div>
-              <Link href="/login" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
+              <Link href="/login" className="btn btn-sm btn-danger rounded-pill px-3 py-1 text-decoration-none d-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 600 }} title="Log out">
+                <span>↩</span>
+                <span className="d-none d-xl-inline">Logout</span>
+              </Link>
             </div>
           </div>
         )}
@@ -935,6 +946,7 @@ function NotificationsView() {
 export default function DashboardPage() {
   const [panel, setPanel]         = useState<Panel>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [notifList, setNotifList] = useState(notifications);
   const [jobertPrompt, setJobertPrompt] = useState<string|undefined>(undefined);
@@ -959,10 +971,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="d-flex" style={{ height:"100vh", overflow:"hidden", background:"#f0f4ff" }} suppressHydrationWarning>
-      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} unreadCount={unreadCount} />
+    <div className="dashboard-layout" suppressHydrationWarning>
+      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} unreadCount={unreadCount} onExpandChange={setSidebarExpanded} />
 
-      <div className="d-flex flex-column flex-grow-1 overflow-hidden" style={{ marginLeft:80 }}>
+      <div className="dashboard-main dashboard-content" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
           <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>

@@ -180,8 +180,8 @@ export default function LandingPage() {
             </Link>
             <div className="d-flex align-items-center gap-3">
               <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Student Login</Link>
-              <Link href="/teacher/login" className="text-decoration-none fw-medium" style={{ color: "#f97316" }}>Teacher Login</Link>
-              <Link href="/accounting/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Accounting</Link>
+              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#f97316" }}>Teacher Login</Link>
+              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Accounting</Link>
               {/* Dark / Light toggle */}
 
               <button
@@ -229,7 +229,7 @@ export default function LandingPage() {
                   {dark ? "🌙" : "☀️"}
                 </span>
               </button>
-              <Link href="/admin/login" className="btn btn-shimmer fw-semibold" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Admin</Link>
+              <Link href="/login" className="btn btn-shimmer fw-semibold" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Admin</Link>
             </div>
           </div>
         </div>

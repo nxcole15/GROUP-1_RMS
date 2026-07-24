@@ -27,7 +27,7 @@ export default function PrincipalDashboardPage() {
                 Welcome back, Principal
               </h2>
             </div>
-            <button className="btn btn-outline-secondary btn-sm" onClick={() => router.push("/admin/login")}>
+            <button className="btn btn-outline-secondary btn-sm" onClick={() => router.push("/login")}>
               Switch Account
             </button>
           </div>

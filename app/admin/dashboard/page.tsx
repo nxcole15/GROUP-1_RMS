@@ -123,9 +123,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex:1040 }} onClick={() => setShow(false)} />}
       <div 
-        className={`d-flex flex-column flex-shrink-0 position-fixed position-lg-static top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
+        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
         style={{ 
-          width: expanded ? 256 : 80, 
+          width: show ? 256 : expanded ? 256 : 80, 
           zIndex: 1045, 
           background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
           overflowY: "auto",
@@ -140,11 +140,11 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width:32, height:32, objectFit:"cover", border:"1px solid rgba(255,255,255,0.2)" }} />
           {expanded && (
             <>
-              <img src="/newimlogo.png" alt="INFORM" className="rounded-3 flex-shrink-0" style={{ width:36, height:36, objectFit:"cover" }} />
-              <div><div className="text-white fw-bold lh-1" style={{ fontSize:15 }}>INFORM</div><div style={{ color:"#818cf8", fontSize:11 }}>Admin Panel</div></div>
+              <img src="/newimlogo.png" alt="CFEI" className="rounded-3 flex-shrink-0" style={{ width:36, height:36, objectFit:"cover" }} />
+              <div><div className="text-white fw-bold lh-1" style={{ fontSize:15 }}>CFEI</div><div style={{ color:"#818cf8", fontSize:11 }}>Admin Panel</div></div>
             </>
           )}
-          {expanded && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+          {show && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
         </div>
         
         {/* Admin badge */}
@@ -178,8 +178,11 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           <div className="px-3 py-4 border-top border-white border-opacity-10">
             <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
-              <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Admin User</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@inform.edu</div></div>
-              <Link href="/" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
+              <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Admin User</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@cfei.edu</div></div>
+              <Link href="/" className="btn btn-sm btn-danger rounded-pill px-3 py-1 text-decoration-none d-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 600 }} title="Log out">
+                <span>↩</span>
+                <span className="d-none d-xl-inline">Logout</span>
+              </Link>
             </div>
           </div>
         )}
@@ -1972,85 +1975,57 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="d-flex" style={{ height:"100vh", overflow:"hidden", background:"#f0f4ff" }} suppressHydrationWarning>
+    <div className="admin-dashboard-layout" suppressHydrationWarning>
       <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
 
-      {/* Desktop layout with sidebar margin */}
-      <div className="d-lg-flex d-none flex-column flex-grow-1 overflow-hidden" style={{ marginLeft: "80px", transition: "margin-left 0.3s ease" }}>
+      {/* Main content - responsive for all screen sizes */}
+      <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
         {/* Topbar */}
-        <header className="bg-white border-bottom px-3 px-sm-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
-          <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor" }} />
+        <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
+          <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
-          <div className="input-group flex-grow-1" style={{ maxWidth:400 }}>
+          <div className="input-group flex-grow-1" style={{ maxWidth:"min(400px, 100%)" }}>
             <span className="input-group-text bg-light border-end-0 text-muted">🔍</span>
-            <input type="text" placeholder="Search students, records..." className="form-control bg-light border-start-0" />
+            <input type="text" placeholder="Search..." className="form-control bg-light border-start-0" />
           </div>
-          <div className="d-flex align-items-center gap-3 ms-auto">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
+          <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
+            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
               <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
             </span>
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
+            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)} aria-label="Notifications">
               <span style={{ fontSize:20 }}>🔔</span>
               {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
+            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
           </div>
         </header>
 
-        <main className="flex-grow-1 overflow-auto p-3 p-sm-4">
+        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4">
           {renderPanel()}
         </main>
       </div>
 
-      {/* Mobile layout without sidebar margin */}
-      <div className="d-flex d-lg-none flex-column flex-grow-1 overflow-hidden">
-        {/* Topbar */}
-        <header className="bg-white border-bottom px-3 px-sm-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
-          <button className="btn btn-link text-muted p-1" onClick={() => setMobileOpen(true)}>
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor" }} />
-          </button>
-          <div className="input-group flex-grow-1" style={{ maxWidth:400 }}>
-            <span className="input-group-text bg-light border-end-0 text-muted">🔍</span>
-            <input type="text" placeholder="Search students, records..." className="form-control bg-light border-start-0" />
-          </div>
-          <div className="d-flex align-items-center gap-3 ms-auto">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
-              <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
-            </span>
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
-              <span style={{ fontSize:20 }}>🔔</span>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
-            </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
-          </div>
-        </header>
-
-        <main className="flex-grow-1 overflow-auto p-3 p-sm-4">
-          {renderPanel()}
-        </main>
-      </div>
-
-      {/* Notification Dropdown - shared for both desktop and mobile */}
+      {/* Notification Dropdown - responsive */}
       {showNotifDropdown && (
         <>
-          <div style={{ position:"fixed", top:60, right:20, width:360, maxHeight:480, background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:9999, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
-            <div className="px-4 py-3 border-bottom d-flex align-items-center justify-content-between">
+          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:9999, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
+            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
                 {unreadCount > 0 && <button onClick={markAllAsRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
-                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }}>✕</button>
+                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close">✕</button>
               </div>
             </div>
             {notifs.length === 0 ? (
               <div className="px-4 py-5 text-center text-muted"><div style={{ fontSize:32, marginBottom:8 }}>🔔</div><small>No notifications</small></div>
             ) : (
               notifs.map(n => (
-                <div key={n.id} className="px-4 py-3 border-bottom d-flex gap-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
+                <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
                   <div style={{ fontSize:20, minWidth:24 }}>{n.icon}</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{n.title}</div>
@@ -2058,8 +2033,8 @@ export default function AdminDashboardPage() {
                     <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read">✓</button>}
-                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete">✕</button>
+                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read">✓</button>}
+                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete">✕</button>
                   </div>
                 </div>
               ))

@@ -126,27 +126,29 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
 ];
 
 /* ── Sidebar ── */
-function Sidebar({ active, setActive, show, setShow }: { active: string; setActive: (s: Panel) => void; show: boolean; setShow: (b: boolean) => void }) {
+function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active: string; setActive: (s: Panel) => void; show: boolean; setShow: (b: boolean) => void; onExpandChange?: (expanded: boolean) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const handleMouseEnter = () => { setExpanded(true); onExpandChange?.(true); };
+  const handleMouseLeave = () => { setExpanded(false); onExpandChange?.(false); };
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
-        className={`d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: expanded ? 256 : 80, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden", transition: "width 0.3s ease" }}
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
+        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
+        style={{ width: show ? 256 : expanded ? 256 : 80, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
         <div className="d-flex align-items-center gap-3 px-4 py-4 border-bottom border-white border-opacity-10" style={{ minHeight: 80 }}>
           <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)" }} />
           {expanded && (
             <>
-              <img src="/newimlogo.png" alt="INFORM" className="rounded-3 flex-shrink-0" style={{ width: 36, height: 36, objectFit: "cover" }} />
-              <div><div className="text-white fw-bold lh-1" style={{ fontSize: 15 }}>INFORM</div><div style={{ color: "#818cf8", fontSize: 11 }}>Teacher Portal</div></div>
+              <img src="/newimlogo.png" alt="CFEI" className="rounded-3 flex-shrink-0" style={{ width: 36, height: 36, objectFit: "cover" }} />
+              <div><div className="text-white fw-bold lh-1" style={{ fontSize: 15 }}>CFEI</div><div style={{ color: "#818cf8", fontSize: 11 }}>Teacher Portal</div></div>
             </>
           )}
-          {expanded && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+          {show && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
         {/* Teacher badge */}
@@ -181,7 +183,10 @@ function Sidebar({ active, setActive, show, setShow }: { active: string; setActi
                 <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
                 <div className="text-truncate" style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{teacherData.email}</div>
               </div>
-              <Link href="/teacher/login" className="text-decoration-none" style={{ color: "rgba(255,255,255,0.3)", fontSize: 16 }} title="Log out">↩</Link>
+              <Link href="/login" className="btn btn-sm btn-danger rounded-pill px-3 py-1 text-decoration-none d-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 600 }} title="Log out">
+                <span>↩</span>
+                <span className="d-none d-xl-inline">Logout</span>
+              </Link>
             </div>
           </div>
         )}
@@ -1145,6 +1150,7 @@ function TimeLogPanel() {
 export default function TeacherDashboardPage() {
   const [panel, setPanel]           = useState<Panel>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotif, setShowNotif]   = useState(false);
   const [notifs, setNotifs]         = useState(teacherNotifications);
   const [pendingCount, setPendingCount] = useState(0);
@@ -1180,40 +1186,42 @@ export default function TeacherDashboardPage() {
   }
 
   return (
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden", background: "#f0f4ff" }} suppressHydrationWarning>
-      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} />
+    <div className="teacher-dashboard-layout" style={{ minHeight: "100vh", background: "#f0f4ff" }} suppressHydrationWarning>
+      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
 
-      <div className="d-flex flex-column flex-grow-1 overflow-hidden" style={{ marginLeft: 80 }}>
+      <div className="teacher-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
         {/* Topbar */}
-        <header className="bg-white border-bottom px-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
-          <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>
-            <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
-            <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
-            <div style={{ width: 20, height: 2, background: "currentColor" }} />
+        <header className="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm">
+          <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
-          <div className="fw-bold text-dark d-none d-sm-block">
+          <div className="fw-bold text-dark d-none d-md-block" style={{ fontSize: "clamp(14px, 3vw, 16px)" }}>
             {navItems.find(n => n.id === panel)?.label ?? "Overview"}
           </div>
-          <div className="d-flex align-items-center gap-3 ms-auto">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
+          <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
+            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
               <span className="rounded-circle bg-success d-inline-block" style={{ width: 7, height: 7 }} />Online
             </span>
             {isGradeLocked && (
-              <span className="badge bg-danger-subtle text-danger border border-danger-subtle d-none d-sm-flex align-items-center gap-1">
+              <span className="badge bg-danger-subtle text-danger border border-danger-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
                 🔒 Grades Locked
               </span>
             )}
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)}>
+            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)} aria-label="Notifications">
               <span style={{ fontSize: 20 }}>🔔</span>
               {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 16, height: 16, fontSize: 9, fontWeight: "bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
+            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
               {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
             </div>
           </div>
         </header>
 
-        <main className="flex-grow-1 overflow-auto p-3 p-sm-4">
+        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4">
           {renderPanel()}
         </main>
       </div>
@@ -1221,18 +1229,18 @@ export default function TeacherDashboardPage() {
       {/* Notification dropdown */}
       {showNotif && (
         <>
-          <div style={{ position: "fixed", top: 60, right: 20, width: 360, maxHeight: 480, background: "white", borderRadius: "0.75rem", border: "1px solid rgba(0,0,0,0.1)", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 9999, overflowY: "auto" }}>
-            <div className="px-4 py-3 border-bottom d-flex align-items-center justify-content-between">
+          <div style={{ position: "fixed", top: 60, right: "clamp(8px, 2vw, 20px)", width: "min(360px, calc(100vw - 32px))", maxHeight: "min(480px, calc(100vh - 100px))", background: "white", borderRadius: "0.75rem", border: "1px solid rgba(0,0,0,0.1)", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 9999, overflowY: "auto" }}>
+            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize: 11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
                 {unreadCount > 0 && <button onClick={() => setNotifs(prev => prev.map(n => ({ ...n, read: true })))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 11 }}>Mark all read</button>}
-                <button onClick={() => setShowNotif(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 18 }}>✕</button>
+                <button onClick={() => setShowNotif(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize: 18 }} aria-label="Close">✕</button>
               </div>
             </div>
             {notifs.length === 0
               ? <div className="px-4 py-5 text-center text-muted"><div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div><small>No notifications</small></div>
               : notifs.map(n => (
-                <div key={n.id} className="px-4 py-3 border-bottom d-flex gap-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
+                <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
                   <div style={{ fontSize: 20, minWidth: 24 }}>{n.icon}</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{n.title}</div>
@@ -1240,8 +1248,8 @@ export default function TeacherDashboardPage() {
                     <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>✓</button>}
-                    <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }}>✕</button>
+                    {!n.read && <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark as read">✓</button>}
+                    <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }} aria-label="Delete">✕</button>
                   </div>
                 </div>
               ))

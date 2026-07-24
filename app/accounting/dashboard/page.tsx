@@ -50,6 +50,7 @@ export default function AccountingDashboardPage() {
   const [active, setActive] = useState<AccountingActive>(null);
   const [paymentLog, setPaymentLog] = useState<PaymentRecord[]>(PAYMENT_LOG_SEED);
   const [panel, setPanel] = useState<"tuition" | "payments" | "students">("tuition");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"All" | "For Verification" | "Verified">("All");
@@ -122,7 +123,7 @@ export default function AccountingDashboardPage() {
     } catch {
       // ignore
     }
-    window.location.href = "/accounting/login";
+    window.location.href = "/login";
   }
 
   if (!active) {
@@ -131,8 +132,8 @@ export default function AccountingDashboardPage() {
         <div className="card shadow-sm p-4" style={{ maxWidth: 520, width: "100%" }}>
           <div className="fw-bold" style={{ color: "#dc2626" }}>Accounting session not found</div>
           <p className="text-muted small mb-3">Please login again.</p>
-          <a href="/accounting/login" className="btn" style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white" }}>
-            Go to Accounting Login
+          <a href="/login" className="btn" style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white" }}>
+            Go to Login
           </a>
         </div>
       </div>
@@ -140,16 +141,18 @@ export default function AccountingDashboardPage() {
   }
 
   return (
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden", background: "#0b1020" }}>
+    <div className="accounting-dashboard-layout" style={{ minHeight: "100vh", background: "#0b1020" }} suppressHydrationWarning>
+      {mobileOpen && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setMobileOpen(false)} />}
       <aside
-        className="d-none d-lg-flex flex-column"
+        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 ${mobileOpen ? "" : "d-none d-lg-flex"}`}
         style={{ width: 280, background: "linear-gradient(180deg,#111827,#1f2937)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
       >
         <div className="px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           <div className="d-flex align-items-center gap-3">
             <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)" }} />
+            <img src="/newimlogo.png" alt="CFEI" className="rounded-3" style={{ width: 36, height: 36, objectFit: "cover" }} />
             <div>
-              <div className="fw-bold" style={{ color: "#fbbf24" }}>INFORM</div>
+              <div className="fw-bold" style={{ color: "#fbbf24" }}>CFEI</div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Accounting</div>
             </div>
           </div>
@@ -183,15 +186,21 @@ export default function AccountingDashboardPage() {
             ))}
           </div>
 
-          <button onClick={logout} className="btn btn-outline-light mt-auto" style={{ borderRadius: 12 }}>
-            Log out
+          <button onClick={logout} className="btn btn-danger mt-auto fw-semibold d-flex align-items-center justify-content-center gap-2" style={{ borderRadius: 12 }}>
+            <span>↩</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      <section className="d-flex flex-column flex-grow-1 overflow-hidden">
+      <section className="accounting-dashboard-main d-flex flex-column flex-grow-1 overflow-hidden">
         <header style={{ flexShrink: 0, borderBottom: "1px solid rgba(0,0,0,0.08)" }} className="bg-white">
           <div className="d-flex align-items-center gap-3 px-4 py-3">
+            <button className="btn btn-link text-dark p-1 d-lg-none" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
+              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
+              <div style={{ width: 20, height: 2, background: "currentColor" }} />
+            </button>
             <h4 className="mb-0" style={{ color: "#dc2626" }}>Accounting Dashboard</h4>
             <div className="ms-auto d-flex align-items-center gap-2">
               <div className="input-group" style={{ width: 320 }}>
