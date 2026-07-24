@@ -179,9 +179,6 @@ export default function LandingPage() {
               </div>
             </Link>
             <div className="d-flex align-items-center gap-3">
-              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Student Login</Link>
-              <Link href="/teacher/login" className="text-decoration-none fw-medium" style={{ color: "#f97316" }}>Teacher Login</Link>
-              <Link href="/accounting/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Accounting</Link>
               {/* Dark / Light toggle */}
 
               <button
@@ -229,7 +226,6 @@ export default function LandingPage() {
                   {dark ? "🌙" : "☀️"}
                 </span>
               </button>
-              <Link href="/admin/login" className="btn btn-shimmer fw-semibold" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Admin</Link>
             </div>
           </div>
         </div>
@@ -262,9 +258,9 @@ export default function LandingPage() {
               </p>
               <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                 <Link href="/login" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-                  Student Portal
+                  Log In
                 </Link>
-                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl border-2 transition-all" style={{ borderColor: "#dc2626", color: "#dc2626" }}>
+                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer " style={{ background: "linear-gradient(135deg, #f97316, #ffcc00)", color: "white" }}>
                   Enroll Now
                 </Link>
               </div>
@@ -524,47 +520,6 @@ export default function LandingPage() {
                 </Link>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-5 py-md-6 py-lg-7" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-        <div className="container">
-          <div className="row justify-content-center g-4">
-            {[
-              { value: "2,400+", label: "Active Students" },
-              { value: "120+", label: "Faculty Members" },
-              { value: "99.9%", label: "System Uptime" },
-            ].map((stat, idx) => (
-              <div key={idx} className="col-12 col-md-4 text-center scroll-reveal">
-                <p className="display-4 fw-extrabold mb-1" style={{ color: "#fbbf24" }}>{stat.value}</p>
-                <p className="mb-0 fw-medium" style={{ color: "#fff7ed" }}>{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Enrollment CTA */}
-      <section className="py-5 py-md-6 py-lg-7 landing-cta" style={{ background: "#ffffff" }}>
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-10">
-              <div className="text-center p-5 p-md-6 rounded-4 scroll-reveal" style={{ background: "linear-gradient(135deg, #fef3c7, #fff7ed)", border: "2px solid #fbbf24" }}>
-                <div className="text-5xl mb-3">📋</div>
-                <h2 className="h1 fw-bold mb-3" style={{ color: "#dc2626" }}>Enrollment Period is Now Open</h2>
-                <p className="lead mb-4 text-muted">
-                  Don't miss the deadline! Enroll by <strong style={{ color: "#f97316" }}>June 15, 2026</strong>.
-                </p>
-                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-                  Enroll Now
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ms-2">
-                    <path d="M 3 8 L 13 8 M 10 5 L 13 8 L 10 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
       </section>
