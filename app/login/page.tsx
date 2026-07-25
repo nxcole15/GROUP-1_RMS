@@ -4,24 +4,47 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+type Role = "student" | "teacher" | "admin";
+
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ id: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const detectRole = (identifier: string): Role => {
+    const normalized = identifier.trim().toLowerCase();
+    if (!normalized) return "student";
+    if (normalized.includes("@") || normalized.startsWith("admin")) return "admin";
+    if (/^t\d+/i.test(normalized)) return "teacher";
+    if (/^\d+$/.test(normalized)) return "student";
+    return "student";
+  };
+
+  const detectedRole = detectRole(form.identifier);
+  const roleLabels: Record<Role, string> = {
+    student: "Student",
+    teacher: "Teacher",
+    admin: "Admin",
+  };
+
+  const currentLabel = detectedRole === "admin" ? "Admin Username" : detectedRole === "teacher" ? "Teacher ID" : "Student ID";
+  const currentTip = "Teacher IDs start with T, admin usernames include @, student IDs are numeric.";
+  const detectedLabel = form.identifier
+    ? `Detected role: ${roleLabels[detectedRole]}`
+    : "Enter your ID or username to detect your role.";
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: name === "id" ? value.replace(/\D/g, "") : value });
+    setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
-  if (!form.id || !form.password) {
-    setError("Please enter your Student ID and password.");
+  if (!form.identifier || !form.password) {
+    setError("Please enter your ID and password.");
     return;
   }
 
@@ -29,29 +52,32 @@ export default function LoginPage() {
   setError("");
 
   try {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/auth/universal-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ student_id: form.id, password: form.password }),
+      body: JSON.stringify({ id: form.identifier.trim(), password: form.password }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || "Login failed. Please try again.");
+      setError(data.error || "Invalid credentials. Please try again.");
       setLoading(false);
       return;
     }
 
-    router.push("/dashboard");
+    // Redirect based on role returned from backend
+    if (data.role === "admin")   router.push("/admin/dashboard");
+    else if (data.role === "teacher") router.push("/teacher/dashboard");
+    else router.push("/dashboard");
 
   } catch {
     setError("Could not connect to server. Please try again.");
     setLoading(false);
   }
+
 }
-
-
+  
   return (
     <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
       {/* Navigation */}
@@ -83,8 +109,8 @@ export default function LoginPage() {
                 Back to Home
               </Link>
               <div className="text-center mb-5">
-                <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Student Login</h1>
-                <p className="text-muted lead">Enter your credentials to access your portal</p>
+                <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Log In</h1>
+                <p className="text-muted lead">Enter your ID or username and password to access the portal.</p>
               </div>
 
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
@@ -97,26 +123,29 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="mb-4 text-center">
+                  <span className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
+                    {detectedLabel}
+                  </span>
+                </div>
+
                 <form onSubmit={handleSubmit}>
-                  {/* Student ID */}
                   <div className="mb-4">
-                    <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>Student ID</label>
+                    <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>{currentLabel}</label>
                     <input
                       type="text"
-                      name="id"
-                      value={form.id}
+                      name="identifier"
+                      value={form.identifier}
                       onChange={handleChange}
-                      inputMode="numeric"
-                      maxLength={12}
-                      placeholder="e.g., 202400001"
+                      placeholder="Enter your ID or username"
+                      inputMode={detectedRole === "student" ? "numeric" : "text"}
                       autoComplete="username"
                       className="form-control form-control-lg rounded-xl"
                       style={{ borderColor: "#f97316" }}
                     />
-                    <div className="form-text text-muted small">Numbers only · max 12 digits</div>
+                    <div className="form-text text-muted small">{currentTip}</div>
                   </div>
 
-                  {/* Password */}
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
@@ -155,14 +184,12 @@ export default function LoginPage() {
                   </div>
 
 
-                  {/* Error */}
                   {error && (
                     <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
                       {error}
                     </div>
                   )}
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
@@ -174,7 +201,7 @@ export default function LoginPage() {
                         <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         Signing in...
                       </span>
-                    ) : "Access Portal"}
+                    ) : "Log In"}
                   </button>
                 </form>
               </div>

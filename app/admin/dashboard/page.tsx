@@ -136,15 +136,16 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
-        <div className="d-flex align-items-center gap-3 px-4 py-4 border-bottom border-white border-opacity-10" style={{ minHeight: 80 }}>
-          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width:32, height:32, objectFit:"cover", border:"1px solid rgba(255,255,255,0.2)" }} />
-          {expanded && (
-            <>
-              <img src="/newimlogo.png" alt="INFORM" className="rounded-3 flex-shrink-0" style={{ width:36, height:36, objectFit:"cover" }} />
-              <div><div className="text-white fw-bold lh-1" style={{ fontSize:15 }}>INFORM</div><div style={{ color:"#818cf8", fontSize:11 }}>Admin Panel</div></div>
-            </>
-          )}
-          {expanded && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+            <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
+            {expanded && (
+              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+                <div className="sidebar-brand-title">Admin Panel</div>
+              </div>
+            )}
+          </div>
+          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
         
         {/* Admin badge */}
@@ -179,7 +180,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
             <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
               <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Admin User</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@inform.edu</div></div>
-              <Link href="/" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
+              <Link href="/login" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
             </div>
           </div>
         )}

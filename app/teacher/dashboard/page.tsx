@@ -138,15 +138,16 @@ function Sidebar({ active, setActive, show, setShow }: { active: string; setActi
         onMouseLeave={() => setExpanded(false)}
       >
         {/* Logo */}
-        <div className="d-flex align-items-center gap-3 px-4 py-4 border-bottom border-white border-opacity-10" style={{ minHeight: 80 }}>
-          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)" }} />
-          {expanded && (
-            <>
-              <img src="/newimlogo.png" alt="INFORM" className="rounded-3 flex-shrink-0" style={{ width: 36, height: 36, objectFit: "cover" }} />
-              <div><div className="text-white fw-bold lh-1" style={{ fontSize: 15 }}>INFORM</div><div style={{ color: "#818cf8", fontSize: 11 }}>Teacher Portal</div></div>
-            </>
-          )}
-          {expanded && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+            <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
+            {expanded && (
+              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+                <div className="sidebar-brand-title">Teacher Portal</div>
+              </div>
+            )}
+          </div>
+          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
         {/* Teacher badge */}
@@ -181,7 +182,7 @@ function Sidebar({ active, setActive, show, setShow }: { active: string; setActi
                 <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
                 <div className="text-truncate" style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{teacherData.email}</div>
               </div>
-              <Link href="/teacher/login" className="text-decoration-none" style={{ color: "rgba(255,255,255,0.3)", fontSize: 16 }} title="Log out">↩</Link>
+              <Link href="/login" className="text-decoration-none" style={{ color: "rgba(255,255,255,0.3)", fontSize: 16 }} title="Log out">↩</Link>
             </div>
           </div>
         )}
