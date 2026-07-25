@@ -1102,6 +1102,66 @@ html:not([data-theme="dark"]) .kiosk-bg .display-4 span {
   min-height: 100vh; width: 256px;
 }
 
+.sidebar-brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1rem;
+  min-height: 80px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sidebar-brand:hover {
+  transform: scale(1.03);
+}
+
+.sidebar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.2);
+  transition: transform 0.25s ease;
+}
+
+.sidebar-brand:hover .sidebar-brand-logo {
+  transform: scale(1.05);
+}
+
+.sidebar-brand-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sidebar-brand-title {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.sidebar-brand-subtitle {
+  color: rgba(209,213,219,0.8);
+  font-size: 0.75rem;
+}
+
+.sidebar-brand-close {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 /* ── Chat panel ── */
 .chat-panel {
   position: fixed; bottom: 96px; right: 24px; z-index: 1050;

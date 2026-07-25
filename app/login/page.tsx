@@ -4,35 +4,135 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+type Role = "student" | "teacher" | "admin";
+
 const STUDENT_ACCOUNTS = [
-  { id: "202400001", password: "jamie", name: "Jamie Santos",    course: "STEM Grade 11" },
-  { id: "202400002", password: "maria", name: "Maria Reyes",     course: "HUMSS Grade 11" },
+  { id: "202400001", password: "jamie", name: "Jamie Santos", course: "STEM Grade 11" },
+  { id: "202400002", password: "maria", name: "Maria Reyes", course: "HUMSS Grade 11" },
   { id: "202400003", password: "carlo", name: "Carlo Dela Cruz", course: "ABM Grade 12" },
-  { id: "202400004", password: "ana",   name: "Ana Villanueva",  course: "TVL-TechPro Grade 11"  },
+  { id: "202400004", password: "ana", name: "Ana Villanueva", course: "TVL-TechPro Grade 11" },
+];
+
+const TEACHER_ACCOUNTS = [
+  { id: "T001", password: "maria", name: "Maria Santos", subject: "Mathematics" },
+  { id: "T002", password: "juan", name: "Juan Dela Cruz", subject: "English" },
+  { id: "T003", password: "ana", name: "Ana Reyes", subject: "Science" },
+  { id: "T004", password: "carlos", name: "Carlos Fernandez", subject: "History" },
+];
+
+const ADMIN_ACCOUNTS = [
+  { username: "principal@inform.edu", password: "principal", name: "Principal", role: "Principal" },
+  { username: "registrar@inform.edu", password: "Reg@2026", name: "Registrar", role: "Registrar" },
+  { username: "dean@inform.edu", password: "Dean@2026", name: "Dean of Students", role: "Dean" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ id: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showHint, setShowHint] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const detectRole = (identifier: string): Role => {
+    const normalized = identifier.trim().toLowerCase();
+    if (!normalized) return "student";
+    if (normalized.includes("@")) return "admin";
+    if (/^t\d+/i.test(normalized)) return "teacher";
+    if (/^\d+$/.test(normalized)) return "student";
+    return "student";
+  };
+
+  const detectedRole = detectRole(form.identifier);
+  const roleLabels: Record<Role, string> = {
+    student: "Student",
+    teacher: "Teacher",
+    admin: "Admin",
+  };
+
+  const currentLabel = detectedRole === "admin" ? "Admin Username" : detectedRole === "teacher" ? "Teacher ID" : "Student ID";
+  const currentTip = "Teacher IDs start with T, admin usernames include @, student IDs are numeric.";
+  const detectedLabel = form.identifier
+    ? `Detected role: ${roleLabels[detectedRole]}`
+    : "Enter your ID or username to detect your role.";
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: name === "id" ? value.replace(/\D/g, "") : value });
+    setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.id || !form.password) { setError("Please enter your Student ID and password."); return; }
-    const match = STUDENT_ACCOUNTS.find(a => a.id === form.id && a.password === form.password);
-    if (!match) { setError("Invalid Student ID or password. Please try again."); return; }
+    if (!form.identifier || !form.password) {
+      setError("Please enter your username/ID and password.");
+      return;
+    }
+
+    if (detectedRole === "admin") {
+      const match = ADMIN_ACCOUNTS.find(
+        a => a.username.toLowerCase() === form.identifier.trim().toLowerCase() && a.password === form.password
+      );
+      if (!match) {
+        setError("Invalid admin credentials. Please try again.");
+        return;
+      }
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        const next = match.role === "Principal" ? "/admin/principal/dashboard" : "/admin/dashboard";
+        router.push(next);
+      }, 1000);
+      return;
+    }
+
+    const identifier = form.identifier.trim();
+    const match = detectedRole === "teacher"
+      ? TEACHER_ACCOUNTS.find(a => a.id.toLowerCase() === identifier.toLowerCase() && a.password === form.password)
+      : STUDENT_ACCOUNTS.find(a => a.id === identifier && a.password === form.password);
+
+    if (!match) {
+      setError(`Invalid ${roleLabels[detectedRole]} credentials. Please try again.`);
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => { setLoading(false); router.push("/dashboard"); }, 1000);
+    setTimeout(() => {
+      setLoading(false);
+      router.push(detectedRole === "teacher" ? "/teacher/dashboard" : "/dashboard");
+    }, 1000);
   }
+
+  const getHintRows = () => {
+    if (detectedRole === "student") {
+      return STUDENT_ACCOUNTS.map(a => (
+        <div key={a.id} className="d-flex justify-content-between align-items-center py-1">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.id}</span>
+          <span className="font-monospace" style={{ color: "#f97316" }}>{a.password}</span>
+          <span className="text-muted small d-none d-sm-block">{a.name}</span>
+        </div>
+      ));
+    }
+
+    if (detectedRole === "teacher") {
+      return TEACHER_ACCOUNTS.map(a => (
+        <div key={a.id} className="d-flex justify-content-between align-items-center py-1">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.id}</span>
+          <span className="font-monospace" style={{ color: "#f97316" }}>{a.password}</span>
+          <span className="text-muted small d-none d-sm-block">{a.subject}</span>
+        </div>
+      ));
+    }
+
+    return ADMIN_ACCOUNTS.map(a => (
+      <div key={a.username} className="py-1">
+        <div className="d-flex justify-content-between align-items-center">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.username}</span>
+          <span className="text-muted small d-none d-sm-block">{a.role}</span>
+        </div>
+        <p className="text-muted small mb-0">pw: <span style={{ color: "#f97316" }}>{a.password}</span></p>
+      </div>
+    ));
+  };
 
   return (
     <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
@@ -65,8 +165,8 @@ export default function LoginPage() {
                 Back to Home
               </Link>
               <div className="text-center mb-5">
-                <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Student Login</h1>
-                <p className="text-muted lead">Enter your credentials to access your portal</p>
+                <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Log In</h1>
+                <p className="text-muted lead">Enter your ID or username and password to access the portal.</p>
               </div>
 
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
@@ -79,26 +179,29 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="mb-4 text-center">
+                  <span className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
+                    {detectedLabel}
+                  </span>
+                </div>
+
                 <form onSubmit={handleSubmit}>
-                  {/* Student ID */}
                   <div className="mb-4">
-                    <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>Student ID</label>
+                    <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>{currentLabel}</label>
                     <input
                       type="text"
-                      name="id"
-                      value={form.id}
+                      name="identifier"
+                      value={form.identifier}
                       onChange={handleChange}
-                      inputMode="numeric"
-                      maxLength={12}
-                      placeholder="e.g., 202400001"
+                      placeholder="Enter your ID or username"
+                      inputMode={detectedRole === "student" ? "numeric" : "text"}
                       autoComplete="username"
                       className="form-control form-control-lg rounded-xl"
                       style={{ borderColor: "#f97316" }}
                     />
-                    <div className="form-text text-muted small">Numbers only · max 12 digits</div>
+                    <div className="form-text text-muted small">{currentTip}</div>
                   </div>
 
-                  {/* Password */}
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
@@ -144,32 +247,23 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Hint */}
                   {showHint && (
                     <div className="mb-4 rounded-xl overflow-hidden" style={{ background: "#fef3c7", border: "1px solid #fbbf24" }}>
                       <div className="px-4 py-2 border-bottom" style={{ borderColor: "#fbbf24", background: "#fff7ed" }}>
-                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo Accounts</p>
+                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo login accounts</p>
                       </div>
                       <div className="px-4 py-3">
-                        {STUDENT_ACCOUNTS.map(a => (
-                          <div key={a.id} className="d-flex justify-content-between align-items-center py-1">
-                            <span className="font-monospace" style={{ color: "#dc2626" }}>{a.id}</span>
-                            <span className="font-monospace" style={{ color: "#f97316" }}>{a.password}</span>
-                            <span className="text-muted small d-none d-sm-block">{a.name}</span>
-                          </div>
-                        ))}
+                        {getHintRows()}
                       </div>
                     </div>
                   )}
 
-                  {/* Error */}
                   {error && (
                     <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
                       {error}
                     </div>
                   )}
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
@@ -181,7 +275,7 @@ export default function LoginPage() {
                         <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                         Signing in...
                       </span>
-                    ) : "Access Portal"}
+                    ) : "Log In"}
                   </button>
                 </form>
               </div>
