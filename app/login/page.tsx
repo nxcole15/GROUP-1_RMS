@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +33,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showHint, setShowHint] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("landing-theme");
+      if (saved === "dark") {
+        setDark(true);
+        document.documentElement.setAttribute("data-landing", "dark");
+      } else {
+        setDark(false);
+        document.documentElement.removeAttribute("data-landing");
+      }
+    } catch (e) {
+      // ignore (e.g., SSR or blocked storage)
+    }
+  }, []);
 
   const detectRole = (identifier: string): Role => {
     const normalized = identifier.trim().toLowerCase();
@@ -135,7 +151,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
+    <div className={`min-vh-100${dark ? " landing-dark" : ""}`} style={{ background: dark ? "linear-gradient(135deg,#0f172a,#0b1220)" : "linear-gradient(135deg, #fff7ed, #fef3c7)", color: dark ? "#f8fafc" : undefined }}>
       {/* Navigation */}
       <header className="bg-white bg-opacity-90 backdrop-blur border-bottom border-light shadow-sm">
         <div className="container py-3">
@@ -166,10 +182,13 @@ export default function LoginPage() {
               </Link>
               <div className="text-center mb-5">
                 <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Log In</h1>
-                <p className="text-muted lead">Enter your ID or username and password to access the portal.</p>
+                <p className="lead" style={{ color: dark ? "#e6eef8" : "#374151", fontWeight: 600, opacity: 1 }}>Enter your ID or username and password to access the portal.</p>
               </div>
 
-              <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
+              <div
+                className="rounded-4 shadow-lg p-5"
+                style={dark ? { border: "1px solid rgba(251,191,36,0.12)", background: "#071025", color: "#f8fafc" } : { border: "1px solid #fbbf24", background: "white" }}
+              >
                 {/* Logo Area */}
                 <div className="d-flex justify-content-center mb-5">
                   <div className="d-flex align-items-center gap-4">
@@ -180,14 +199,17 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mb-4 text-center">
-                  <span className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
+                  <span
+                    className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium"
+                    style={{ background: dark ? "rgba(255,255,255,0.04)" : "rgba(220,38,38,0.1)", color: dark ? "#fbbf24" : "#dc2626", padding: "8px 18px" }}
+                  >
                     {detectedLabel}
                   </span>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                   <div className="mb-4">
-                    <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>{currentLabel}</label>
+                    <label className="form-label fw-semibold" style={{ color: dark ? "#fbbf24" : "#dc2626" }}>{currentLabel}</label>
                     <input
                       type="text"
                       name="identifier"
@@ -197,19 +219,19 @@ export default function LoginPage() {
                       inputMode={detectedRole === "student" ? "numeric" : "text"}
                       autoComplete="username"
                       className="form-control form-control-lg rounded-xl"
-                      style={{ borderColor: "#f97316" }}
+                      style={{ borderColor: dark ? "#334155" : "#f97316", background: dark ? "#071025" : undefined, color: dark ? "#f8fafc" : undefined }}
                     />
-                    <div className="form-text text-muted small">{currentTip}</div>
+                    <div className="form-text small" style={{ color: dark ? "rgba(255,255,255,0.75)" : undefined }}>{currentTip}</div>
                   </div>
 
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
+                      <label className="form-label fw-semibold mb-0" style={{ color: dark ? "#fbbf24" : "#dc2626" }}>Password</label>
                       <button
                         type="button"
                         onClick={() => setShowHint(!showHint)}
                         className="btn btn-link btn-sm p-0 fw-medium text-decoration-none"
-                        style={{ color: "#f97316" }}
+                        style={{ color: dark ? "#fbbf24" : "#f97316" }}
                       >
                         {showHint ? "Hide hint" : "Need a hint?"}
                       </button>
@@ -223,13 +245,13 @@ export default function LoginPage() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="form-control form-control-lg rounded-xl pe-5"
-                        style={{ borderColor: "#f97316" }}
+                        style={{ borderColor: dark ? "#334155" : "#f97316", background: dark ? "#071025" : undefined, color: dark ? "#f8fafc" : undefined }}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3 p-0"
-                        style={{ color: "#dc2626" }}
+                        style={{ color: dark ? "#f8fafc" : "#dc2626" }}
                       >
                         {showPassword ? (
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -248,18 +270,18 @@ export default function LoginPage() {
                   </div>
 
                   {showHint && (
-                    <div className="mb-4 rounded-xl overflow-hidden" style={{ background: "#fef3c7", border: "1px solid #fbbf24" }}>
-                      <div className="px-4 py-2 border-bottom" style={{ borderColor: "#fbbf24", background: "#fff7ed" }}>
-                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo login accounts</p>
+                    <div className="mb-4 rounded-xl overflow-hidden" style={ dark ? { background: "transparent", border: "1px solid rgba(255,255,255,0.06)" } : { background: "#fef3c7", border: "1px solid #fbbf24" } }>
+                      <div className="px-4 py-2 border-bottom" style={ dark ? { borderColor: "rgba(255,255,255,0.04)", background: "transparent" } : { borderColor: "#fbbf24", background: "#fff7ed" } }>
+                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: dark ? "#fbbf24" : "#dc2626" }}>Demo login accounts</p>
                       </div>
-                      <div className="px-4 py-3">
+                      <div className="px-4 py-3" style={{ color: dark ? "#eef2ff" : undefined }}>
                         {getHintRows()}
                       </div>
                     </div>
                   )}
 
                   {error && (
-                    <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
+                    <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={ dark ? { background: "rgba(220,38,38,0.08)", borderColor: "rgba(220,38,38,0.2)", color: "#ffd6d6" } : { background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" } }>
                       {error}
                     </div>
                   )}
