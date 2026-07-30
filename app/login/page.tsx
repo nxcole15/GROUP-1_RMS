@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -52,7 +52,7 @@ function detectRole(id: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ id: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showHint, setShowHint] = useState(false);
@@ -191,6 +191,38 @@ export default function LoginPage() {
     setForgotPasswordSuccess("");
   }
 
+  const getHintRows = () => {
+    if (detectedRole === "student") {
+      return STUDENT_ACCOUNTS.map(a => (
+        <div key={a.id} className="d-flex justify-content-between align-items-center py-1">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.id}</span>
+          <span className="font-monospace" style={{ color: "#f97316" }}>{a.password}</span>
+          <span className="text-muted small d-none d-sm-block">{a.name}</span>
+        </div>
+      ));
+    }
+
+    if (detectedRole === "teacher") {
+      return TEACHER_ACCOUNTS.map(a => (
+        <div key={a.id} className="d-flex justify-content-between align-items-center py-1">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.id}</span>
+          <span className="font-monospace" style={{ color: "#f97316" }}>{a.password}</span>
+          <span className="text-muted small d-none d-sm-block">{a.subject}</span>
+        </div>
+      ));
+    }
+
+    return ADMIN_ACCOUNTS.map(a => (
+      <div key={a.username} className="py-1">
+        <div className="d-flex justify-content-between align-items-center">
+          <span className="font-monospace" style={{ color: "#dc2626" }}>{a.username}</span>
+          <span className="text-muted small d-none d-sm-block">{a.role}</span>
+        </div>
+        <p className="text-muted small mb-0">pw: <span style={{ color: "#f97316" }}>{a.password}</span></p>
+      </div>
+    ));
+  };
+
   return (
     <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
       <header className="bg-white bg-opacity-90 backdrop-blur border-bottom border-light shadow-sm">
@@ -234,18 +266,27 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="mb-4 text-center">
+                  <span
+                    className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium"
+                    style={{ background: dark ? "rgba(255,255,255,0.04)" : "rgba(220,38,38,0.1)", color: dark ? "#fbbf24" : "#dc2626", padding: "8px 18px" }}
+                  >
+                    {detectedLabel}
+                  </span>
+                </div>
+
                 <form onSubmit={handleSubmit}>
                   <div className="mb-4">
                     <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>User ID</label>
                     <input
                       type="text"
-                      name="id"
-                      value={form.id}
+                      name="identifier"
+                      value={form.identifier}
                       onChange={handleChange}
                       placeholder="e.g. 202400001, T001, R001, P001, A001"
                       autoComplete="username"
                       className="form-control form-control-lg rounded-xl"
-                      style={{ borderColor: "#f97316" }}
+                      style={{ borderColor: dark ? "#334155" : "#f97316", background: dark ? "#071025" : undefined, color: dark ? "#f8fafc" : undefined }}
                     />
                     <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, dean, or accounting ID.</div>
                   </div>
@@ -258,12 +299,12 @@ export default function LoginPage() {
 
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
+                      <label className="form-label fw-semibold mb-0" style={{ color: dark ? "#fbbf24" : "#dc2626" }}>Password</label>
                       <button
                         type="button"
                         onClick={() => setShowHint(!showHint)}
                         className="btn btn-link btn-sm p-0 fw-medium text-decoration-none"
-                        style={{ color: "#f97316" }}
+                        style={{ color: dark ? "#fbbf24" : "#f97316" }}
                       >
                         {showHint ? "Hide hint" : "Need a hint?"}
                       </button>
@@ -277,13 +318,13 @@ export default function LoginPage() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="form-control form-control-lg rounded-xl pe-5"
-                        style={{ borderColor: "#f97316" }}
+                        style={{ borderColor: dark ? "#334155" : "#f97316", background: dark ? "#071025" : undefined, color: dark ? "#f8fafc" : undefined }}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3 p-0"
-                        style={{ color: "#dc2626" }}
+                        style={{ color: dark ? "#f8fafc" : "#dc2626" }}
                       >
                         {showPassword ? (
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -302,9 +343,9 @@ export default function LoginPage() {
                   </div>
 
                   {showHint && (
-                    <div className="mb-4 rounded-xl overflow-hidden" style={{ background: "#fef3c7", border: "1px solid #fbbf24" }}>
-                      <div className="px-4 py-2 border-bottom" style={{ borderColor: "#fbbf24", background: "#fff7ed" }}>
-                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo Accounts</p>
+                    <div className="mb-4 rounded-xl overflow-hidden" style={ dark ? { background: "transparent", border: "1px solid rgba(255,255,255,0.06)" } : { background: "#fef3c7", border: "1px solid #fbbf24" } }>
+                      <div className="px-4 py-2 border-bottom" style={ dark ? { borderColor: "rgba(255,255,255,0.04)", background: "transparent" } : { borderColor: "#fbbf24", background: "#fff7ed" } }>
+                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: dark ? "#fbbf24" : "#dc2626" }}>Demo login accounts</p>
                       </div>
                       <div className="px-4 py-3">
                         {USER_ACCOUNTS.map((account) => (
@@ -324,7 +365,7 @@ export default function LoginPage() {
                   )}
 
                   {error && (
-                    <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
+                    <div className="alert py-3 px-4 rounded-xl mb-4 text-sm" style={ dark ? { background: "rgba(220,38,38,0.08)", borderColor: "rgba(220,38,38,0.2)", color: "#ffd6d6" } : { background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" } }>
                       {error}
                     </div>
                   )}
@@ -340,18 +381,6 @@ export default function LoginPage() {
                     </button>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn btn-lg w-100 fw-semibold py-3 rounded-xl shadow hover:shadow-lg transition-all"
-                    style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}
-                  >
-                    {loading ? (
-                      <span className="d-inline-flex align-items-center gap-2">
-                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        Signing in...
-                      </span>
-                    ) : "Continue"}
                   </button>
                 </form>
               </div>
