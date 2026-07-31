@@ -1,51 +1,33 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import AdminDashboardPage from "../../dashboard/page";
 
 export default function PrincipalDashboardPage() {
-  const router = useRouter();
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
-  // Principal should reuse the full Admin dashboard UI.
-  // We only add a small banner override on top via a wrapper.
   return (
     <div className="min-vh-100">
+      {/* Welcome banner — shifts with sidebar */}
       <div
-        className="w-100"
         style={{
-          background: "linear-gradient(135deg, rgba(220,38,38,0.12), rgba(245,158,11,0.10), rgba(251,191,36,0.08))",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          marginLeft: sidebarExpanded ? 256 : 80,
+          background: "linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 60%, #2563eb 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          padding: "1.5rem 1.5rem",
+          transition: "margin-left 0.3s ease",
         }}
       >
-        <div className="container py-3">
-          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-              <div className="small text-uppercase fw-semibold" style={{ letterSpacing: "0.08em", color: "#dc2626" }}>
-                Principal Portal
-              </div>
-              <h2 className="fw-black" style={{ color: "#111827", marginBottom: 0 }}>
-                Welcome back, Principal
-              </h2>
-            </div>
-            <button className="btn btn-outline-secondary btn-sm" onClick={() => router.push("/login")}>
-              Switch Account
-            </button>
-          </div>
+        <div className="small text-uppercase fw-semibold mb-1" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}>
+          Principal Portal
         </div>
+        <h1 className="fw-black mb-0" style={{ color: "#ffffff", fontSize: "1.5rem", lineHeight: 1.2 }}>
+          Welcome back, Principal
+        </h1>
       </div>
 
-      {/* Reuse existing admin dashboard */}
-      <div>
-        {/* Importing AdminDashboardPage directly keeps behavior identical.
-            Route change is the only difference. */}
-        <AdminDashboardPage />
-      </div>
+      {/* Admin dashboard — banner hidden, sidebar expand tracked */}
+      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} />
     </div>
   );
 }
-
-// NOTE: import inside same file would create circular imports in some bundlers,
-// so we re-export via dynamic module loading is not used here.
-// We reuse the existing component from the admin route by importing below.
-
-

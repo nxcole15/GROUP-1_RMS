@@ -62,11 +62,11 @@ const announcements = [
 ];
 
 const recentActivity = [
-  { action:"New student enrolled",     name:"Rosa Bautista",   time:"2h ago",    icon:"🎓" },
-  { action:"Tuition payment received", name:"Carlo Dela Cruz", time:"3h ago",    icon:"💰" },
-  { action:"Grade submitted",          name:"Mr. Dela Cruz",   time:"5h ago",    icon:"📊" },
+  { action:"New student enrolled",     name:"Rosa Bautista",   time:"2h ago"},
+  { action:"Tuition payment received", name:"Carlo Dela Cruz", time:"3h ago"},
+  { action:"Grade submitted",          name:"Mr. Dela Cruz",   time:"5h ago"},
 
-  { action:"Announcement posted",      name:"Admin",           time:"Yesterday", icon:"📢" },
+  { action:"Announcement posted",      name:"Admin",           time:"Yesterday"},
 ];
 
 const allGradeRequests = [
@@ -84,23 +84,23 @@ const allDocumentRequests = [
 ];
 
 const adminNotifications = [
-  { id: 1, type: "document", title: "Document Request", message: "Jamie Santos requested a TOR", time: "1h ago", read: false, icon: "📄" },
+  { id: 1, type: "document", title: "Document Request", message: "Jamie Santos requested a TOR", time: "1h ago", read: false, icon: "" },
   { id: 2, type: "grade", title: "Grade Submitted", message: "Mr. Dela Cruz submitted grades for Algebra I", time: "2h ago", read: false, icon: "✓" },
-  { id: 3, type: "enrollment", title: "New Enrollment", message: "Rosa Bautista enrolled in the system", time: "1d ago", read: true, icon: "🎓" },
-  { id: 4, type: "payment", title: "Payment Received", message: "Carlo Dela Cruz paid tuition fee", time: "2d ago", read: true, icon: "💰" },
+  { id: 3, type: "enrollment", title: "New Enrollment", message: "Rosa Bautista enrolled in the system", time: "1d ago", read: true, icon: "" },
+  { id: 4, type: "payment", title: "Payment Received", message: "Carlo Dela Cruz paid tuition fee", time: "2d ago", read: true, icon: "" },
 ];
 
 const navItems = [
-  { id:"overview",      label:"Overview",          icon:"🏠" },
-  { id:"students",      label:"Students",          icon:"🎓" },
-  { id:"teachers",      label:"Teachers",          icon:"👨‍🏫" },
-  { id:"grades",        label:"Grades",            icon:"📊" },
-  { id:"requests",      label:"Grade Requests",    icon:"📨" },
-  { id:"documents",     label:"Documents",         icon:"📄" },
-  { id:"enrollment",    label:"Enrollment",        icon:"📋" },
-  { id:"tuition",       label:"Tuition",           icon:"💰" },
-  { id:"announcements", label:"Announcements",     icon:"📢" },
-  { id:"timelog",       label:"Teacher Time Logs", icon:"🕐" },
+  { id:"overview",      label:"Overview",          icon:"" },
+  { id:"students",      label:"Students",          icon:"" },
+  { id:"teachers",      label:"Teachers",          icon:"" },
+  { id:"grades",        label:"Grades",            icon:"" },
+  { id:"requests",      label:"Grade Requests",    icon:"" },
+  { id:"documents",     label:"Documents",         icon:"" },
+  { id:"enrollment",    label:"Enrollment",        icon:"" },
+  { id:"tuition",       label:"Tuition",           icon:"" },
+  { id:"announcements", label:"Announcements",     icon:"" },
+  { id:"timelog",       label:"Teacher Time Logs", icon:"" },
 ];
 
 function initials(name: string) { return name.split(" ").map(n => n[0]).join("").slice(0, 2); }
@@ -151,7 +151,6 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         {/* Admin badge */}
         {expanded && (
           <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-            <span>🛡️</span>
             <div><div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Administrator</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
           </div>
         )}
@@ -193,7 +192,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* ── Overview ── */
-function Overview({ setActive }: { setActive: (s: string) => void }) {
+function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; hideBanner?: boolean }) {
   const activeStudents = students.filter(s => s.status === "Active").length;
   const avgGwa         = (students.reduce((a, s) => a + s.gwa, 0) / students.length).toFixed(2);
 
@@ -234,13 +233,26 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Welcome banner */}
+      {!hideBanner && (
       <div className="rounded-3 p-4"
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin 👋</h2>
-        <p className="text-white-50 small mb-0">Manage students, teachers, grades, and system records.</p>
+        <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
+          Administrator · Full Access · SY 2025–2026
+        </p>
+        <div className="d-flex gap-2 flex-wrap">
+          <span className="fw-semibold px-3 py-2 rounded-3" style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", fontSize:12 }}>
+            🛡️ Admin
+          </span>
+          <span className="fw-semibold px-3 py-2 rounded-3" style={{ background:"#f59e0b", color:"#fff", fontSize:12 }}>
+            🔔 System Online
+          </span>
+        </div>
       </div>
+      )}
 
       {/* Stats */}
+      {!hideBanner && (
       <div className="row g-3">
         {[
           { label:"Active Students", value:activeStudents, icon:"✅", cls:"border-success-subtle bg-success-subtle", val:"text-success" },
@@ -259,6 +271,7 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* Quick access */}
       <div>
@@ -288,7 +301,6 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
               <div className="d-flex flex-column gap-3">
                 {recentActivity.map((a, i) => (
                   <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:36, height:36, fontSize:18 }}>{a.icon}</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
                       <div className="text-muted" style={{ fontSize:11 }}>{a.name}</div>
@@ -388,52 +400,79 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
 
                 return (
                   <div>
-                    <div className="small text-muted mb-2">
-                      Enrolled students (animated bars)
+                    <div className="small fw-semibold mb-3" style={{ color: "#1e3a5f" }}>
+                      Enrolled Students by Track
                     </div>
 
-                    <div
-                      className="d-flex align-items-end gap-2"
-                      style={{ height: 240, borderRadius: 16, padding: 12, background: "rgba(248,250,252,0.85)", border: "1px solid rgba(0,0,0,0.06)" }}
-                    >
-                      {countsByTrack.map((c, i) => {
-                        const h = Math.round((c.count / maxCount) * 180);
-                        const delay = i * 60;
-                        const bg = c.count === 0
-                          ? "rgba(148,163,184,0.25)"
-                          : i % 3 === 0
-                            ? "linear-gradient(180deg, rgba(220,38,38,0.95), rgba(245,158,11,0.95))"
-                            : i % 3 === 1
-                              ? "linear-gradient(180deg, rgba(249,115,22,0.95), rgba(251,191,36,0.95))"
-                              : "linear-gradient(180deg, rgba(251,191,36,0.95), rgba(220,38,38,0.95))";
+                    {/* Y-axis + bars container */}
+                    <div style={{ display: "flex", gap: 12 }}>
+                      {/* Y-axis labels */}
+                      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end", height: 200, paddingBottom: 28 }}>
+                        {[maxCount, Math.round(maxCount * 0.75), Math.round(maxCount * 0.5), Math.round(maxCount * 0.25), 0].map((v, i) => (
+                          <span key={i} style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>{v}</span>
+                        ))}
+                      </div>
 
-                        return (
-                          <div key={c.track} style={{ width: "20%", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                            <div
-                              style={{
-                                width: "100%",
-                                height: h,
-                                borderRadius: 12,
-                                background: bg,
-                                border: "1px solid rgba(0,0,0,0.06)",
-                                boxShadow: "0 14px 30px rgba(220,38,38,0.15)",
-                                transformOrigin: "bottom",
-                                animation: `scaleIn 650ms cubic-bezier(0.4,0,0.2,1) ${delay}ms both`,
-                              }}
-                              title={`${c.track}: ${c.count}`}
-                            />
-                            <div className="small" style={{ color: "#0f172a", opacity: 0.85, fontWeight: 800, textAlign: "center", lineHeight: 1.1 }}>
-                              {c.count} students
+                      {/* Chart area */}
+                      <div style={{ flex: 1, position: "relative" }}>
+                        {/* Grid lines */}
+                        {[0, 25, 50, 75, 100].map((pct) => (
+                          <div key={pct} style={{ position: "absolute", left: 0, right: 0, bottom: `calc(28px + ${pct / 100} * 172px)`, height: 1, background: pct === 0 ? "#cbd5e1" : "rgba(148,163,184,0.2)", zIndex: 0 }} />
+                        ))}
+
+                        {/* Bars */}
+                        <div className="d-flex align-items-end gap-3" style={{ height: 200, position: "relative", zIndex: 1, paddingBottom: 28 }}>
+                          {countsByTrack.map((c, i) => {
+                            const h = Math.round((c.count / maxCount) * 172);
+                            const delay = i * 80;
+                            const blueShades = [
+                              "linear-gradient(180deg, #1d4ed8, #3b82f6)",
+                              "linear-gradient(180deg, #1e40af, #2563eb)",
+                              "linear-gradient(180deg, #2563eb, #60a5fa)",
+                              "linear-gradient(180deg, #1d4ed8, #93c5fd)",
+                            ];
+                            const bg = c.count === 0
+                              ? "rgba(148,163,184,0.2)"
+                              : blueShades[i % blueShades.length];
+
+                            return (
+                              <div key={c.track} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
+                                {c.count > 0 && (
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8" }}>{c.count}</span>
+                                )}
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    height: c.count === 0 ? 4 : h,
+                                    borderRadius: "6px 6px 2px 2px",
+                                    background: bg,
+                                    boxShadow: c.count > 0 ? "0 4px 16px rgba(37,99,235,0.3)" : "none",
+                                    transformOrigin: "bottom",
+                                    animation: `scaleIn 600ms cubic-bezier(0.34,1.56,0.64,1) ${delay}ms both`,
+                                    transition: "box-shadow 0.2s",
+                                    cursor: "default",
+                                  }}
+                                  title={`${c.track}: ${c.count} student${c.count !== 1 ? "s" : ""}`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* X-axis labels */}
+                        <div className="d-flex gap-3" style={{ marginTop: 4 }}>
+                          {countsByTrack.map((c) => (
+                            <div key={c.track} style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: 600, color: "#64748b" }}>
+                              {c.track}
                             </div>
-
-                          </div>
-                        );
-                      })}
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="d-flex justify-content-between mt-3">
-                      <span className="small fw-semibold" style={{ color: "#0f172a" }}>Max: {maxCount}</span>
-                      <span className="small fw-semibold" style={{ color: "#dc2626" }}>Theme: Orange/Yellow/Red</span>
+                    <div className="d-flex justify-content-between align-items-center mt-3 pt-2" style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <span className="small" style={{ color: "#64748b" }}>Total: <strong style={{ color: "#1d4ed8" }}>{countsByTrack.reduce((a, c) => a + c.count, 0)} students</strong></span>
+                      <span className="small" style={{ color: "#64748b" }}>Peak: <strong style={{ color: "#1d4ed8" }}>{maxCount}</strong></span>
                     </div>
                   </div>
                 );
@@ -455,7 +494,7 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
               <div className="d-flex flex-column gap-2">
                 {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
                   <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3 bg-light border border-transparent" style={{ cursor:"pointer" }}>
-                    <span style={{ fontSize:18 }}>📢</span>
+                    <span style={{ fontSize:18 }}></span>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
                       <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
@@ -1919,7 +1958,7 @@ function AdminTimeLogPanel() {
 }
 
 /* ── Page ── */
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -1971,13 +2010,13 @@ export default function AdminDashboardPage() {
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
       case "timelog":       return <AdminTimeLogPanel />;
-      default:              return <Overview setActive={setActiveNav} />;
+      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} />;
     }
   }
 
   return (
     <div className="admin-dashboard-layout" suppressHydrationWarning>
-      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
+      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} />
 
       {/* Main content - responsive for all screen sizes */}
       <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
