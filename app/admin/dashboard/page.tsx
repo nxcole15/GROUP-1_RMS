@@ -148,7 +148,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
         
-        {/* Admin badge */}
+        {/* Profile - Right after Admin Panel */}
         {expanded && (
           <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
             <div><div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Administrator</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
@@ -156,7 +156,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         )}
         
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1">
+        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 ${active === item.id ? "text-white" : ""}`}
@@ -167,13 +167,13 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
                 whiteSpace: "nowrap"
               }}
               title={item.label}>
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ fontSize: 18 }}></span>
               {expanded && <span>{item.label}</span>}
             </button>
           ))}
         </nav>
         
-        {/* User */}
+        {/* Logout button - More visible at bottom */}
         {expanded && (
           <div className="px-3 py-4 border-top border-white border-opacity-10">
             <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
