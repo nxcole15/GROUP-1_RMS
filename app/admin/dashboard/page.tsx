@@ -780,7 +780,7 @@ function EnrollmentPanel() {
                       <div className="d-flex gap-2 justify-content-end align-items-center">
                         {/* Upload ID photo */}
                         <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
-                          📷
+                          Add Photo
                           <input
                             type="file"
                             accept="image/*"
@@ -2037,10 +2037,6 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <div className="input-group flex-grow-1" style={{ maxWidth:"min(400px, 100%)" }}>
-            <span className="input-group-text bg-light border-end-0 text-muted"></span>
-            <input type="text" placeholder="Search..." className="form-control bg-light border-start-0" />
-          </div>
           <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
             <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
               <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
