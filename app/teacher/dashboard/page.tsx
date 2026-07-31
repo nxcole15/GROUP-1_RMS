@@ -121,7 +121,6 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "requests",       label: "Grade Requests",   icon: "📨" },
   { id: "attendance",     label: "Attendance",       icon: "✅" },
   { id: "documents",      label: "Documents",        icon: "📄" },
-  { id: "notifications",  label: "Notifications",    icon: "🔔" },
   { id: "timelog" as Panel, label: "Time Log", icon: "🕐" },
 ];
 
@@ -150,16 +149,28 @@ function Sidebar({ active, setActive, show, setShow }: { active: string; setActi
           {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
-        {/* Teacher badge */}
+        {/* Profile - Right after Teacher Portal */}
         {expanded && (
-          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.35)" }}>
-            <span>👨‍🏫</span>
-            <div><div style={{ color: "#6ee7b7", fontSize: 12, fontWeight: 700 }}>Faculty</div><div style={{ color: "rgba(110,231,183,0.6)", fontSize: 11 }}>{teacherData.department}</div></div>
+          <div className="px-3 mt-3 mb-2">
+            <Link href="/teacher/profile" className="text-decoration-none">
+              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
+                  {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                </div>
+                <div className="flex-grow-1 overflow-hidden">
+                  <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
+                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>👤</span>
+              </div>
+            </Link>
           </div>
         )}
 
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1">
+        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
@@ -171,19 +182,15 @@ function Sidebar({ active, setActive, show, setShow }: { active: string; setActi
           ))}
         </nav>
 
-        {/* User */}
+        {/* Logout button - More visible at bottom */}
         {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-              </div>
-              <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
-                <div className="text-truncate" style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{teacherData.email}</div>
-              </div>
-              <Link href="/teacher/login" className="text-decoration-none" style={{ color: "rgba(255,255,255,0.3)", fontSize: 16 }} title="Log out">↩</Link>
-            </div>
+          <div className="px-3 py-3 border-top border-white border-opacity-10">
+            <Link href="/teacher/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}>
+              <span style={{ fontSize: 16 }}>↩</span>
+              <span>Log Out</span>
+            </Link>
           </div>
         )}
       </div>
@@ -1192,9 +1199,17 @@ export default function TeacherDashboardPage() {
             <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
             <div style={{ width: 20, height: 2, background: "currentColor" }} />
           </button>
-          <div className="fw-bold text-dark d-none d-sm-block">
-            {navItems.find(n => n.id === panel)?.label ?? "Overview"}
+          
+          {/* Left side - Logo */}
+          <div className="d-flex align-items-center gap-3">
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 36, height: 36, objectFit: "cover", border: "2px solid #dc2626" }} />
+            <div className="d-none d-sm-block">
+              <div className="fw-bold" style={{ color: "#dc2626", fontSize: 14 }}>CFEI Portal</div>
+              <div className="text-muted" style={{ fontSize: 11 }}>Teacher Dashboard</div>
+            </div>
           </div>
+
+          {/* Right side - Status badges & Notification */}
           <div className="d-flex align-items-center gap-3 ms-auto">
             <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
               <span className="rounded-circle bg-success d-inline-block" style={{ width: 7, height: 7 }} />Online
@@ -1205,12 +1220,9 @@ export default function TeacherDashboardPage() {
               </span>
             )}
             <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)}>
-              <span style={{ fontSize: 20 }}>🔔</span>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 16, height: 16, fontSize: 9, fontWeight: "bold" }}>{unreadCount}</span>}
+              <span style={{ fontSize: 22 }}>🔔</span>
+              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 18, height: 18, fontSize: 10, fontWeight: "bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-              {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-            </div>
           </div>
         </header>
 

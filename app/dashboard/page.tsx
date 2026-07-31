@@ -5,7 +5,7 @@ import React from "react";
 import type { ReactNode as _ReactNode } from "react";
 import Link from "next/link";
 
-type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications";
+type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile";
 type JMsg  = { role:"ai"|"user"; text:string; feedback?:"up"|"down"|null };
 
 /* ── JOBERT Chat ── */
@@ -103,12 +103,12 @@ function JobertChat({ initialPrompt }: { initialPrompt?: string }) {
 
 /* ── Data ── */
 const gradeData = [
-  { subject:"Mathematics",        icon:"📐", term1:{grade:"A",  pct:92}, term2:{grade:"A-", pct:90}, term3:null, teacher:"Mr. Dela Cruz",  status:"Excellent" },
-  { subject:"Physics",            icon:"⚛️", term1:{grade:"B+", pct:87}, term2:{grade:"B+", pct:88}, term3:null, teacher:"Ms. Villanueva", status:"Passing"   },
-  { subject:"English Literature", icon:"📖", term1:{grade:"A+", pct:96}, term2:{grade:"A",  pct:94}, term3:null, teacher:"Ms. Santos",     status:"Excellent" },
-  { subject:"Chemistry",          icon:"🧪", term1:{grade:"B",  pct:81}, term2:{grade:"B+", pct:84}, term3:null, teacher:"Mr. Fernandez",  status:"Passing"   },
-  { subject:"History",            icon:"🏛️", term1:{grade:"B+", pct:85}, term2:{grade:"A-", pct:89}, term3:null, teacher:"Ms. Reyes",      status:"Passing"   },
-  { subject:"Computer Science",   icon:"💻", term1:{grade:"A",  pct:93}, term2:{grade:"A",  pct:95}, term3:null, teacher:"Mr. Uy",         status:"Excellent" },
+  { subject:"Mathematics",        icon:"", term1:{grade:"A",  pct:92}, term2:{grade:"A-", pct:90}, term3:null, teacher:"Mr. Dela Cruz",  status:"Excellent" },
+  { subject:"Physics",            icon:"", term1:{grade:"B+", pct:87}, term2:{grade:"B+", pct:88}, term3:null, teacher:"Ms. Villanueva", status:"Passing"   },
+  { subject:"English Literature", icon:"", term1:{grade:"A+", pct:96}, term2:{grade:"A",  pct:94}, term3:null, teacher:"Ms. Santos",     status:"Excellent" },
+  { subject:"Chemistry",          icon:"", term1:{grade:"B",  pct:81}, term2:{grade:"B+", pct:84}, term3:null, teacher:"Mr. Fernandez",  status:"Passing"   },
+  { subject:"History",            icon:"", term1:{grade:"B+", pct:85}, term2:{grade:"A-", pct:89}, term3:null, teacher:"Ms. Reyes",      status:"Passing"   },
+  { subject:"Computer Science",   icon:"", term1:{grade:"A",  pct:93}, term2:{grade:"A",  pct:95}, term3:null, teacher:"Mr. Uy",         status:"Excellent" },
 ];
 
 const gradeRequests = [
@@ -117,30 +117,30 @@ const gradeRequests = [
 
 const timetable: Record<string, { time:string; subject:string; icon:string; room:string; teacher:string; enter:string; leave:string }[]> = {
   Monday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"📐", room:"Room 301", teacher:"Ms. Maria Santos",       enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"English Literature", icon:"📖", room:"Room 205", teacher:"Mr. Juan Dela Cruz",     enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"Computer Science",   icon:"💻", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez",   enter:"09:55", leave:"11:05" },
-    { time:"13:00–14:00", subject:"Physical Education", icon:"🏃", room:"Gym",      teacher:"Coach Maria",            enter:"12:55", leave:"14:05" },
+    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",       enter:"07:25", leave:"08:35" },
+    { time:"08:30–09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",     enter:"08:25", leave:"09:35" },
+    { time:"10:00–11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez",   enter:"09:55", leave:"11:05" },
+    { time:"13:00–14:00", subject:"Physical Education", icon:"", room:"Gym",      teacher:"Coach Maria",            enter:"12:55", leave:"14:05" },
   ],
   Tuesday:[
-    { time:"07:30–09:00", subject:"Physics",   icon:"⚛️", room:"Sci. Lab", teacher:"Ms. Ana Reyes",        enter:"07:20", leave:"09:05" },
-    { time:"09:00–10:30", subject:"Chemistry", icon:"🧪", room:"Chem Lab", teacher:"Dr. Luis Fernandez",   enter:"08:55", leave:"10:35" },
-    { time:"13:00–14:30", subject:"History",   icon:"🏛️", room:"Room 108", teacher:"Mr. Juan Dela Cruz",   enter:"12:55", leave:"14:35" },
+    { time:"07:30–09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",        enter:"07:20", leave:"09:05" },
+    { time:"09:00–10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",   enter:"08:55", leave:"10:35" },
+    { time:"13:00–14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",   enter:"12:55", leave:"14:35" },
   ],
   Wednesday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"📐", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"English Literature", icon:"📖", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"Computer Science",   icon:"💻", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"09:55", leave:"11:05" },
+    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
+    { time:"08:30–09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"08:25", leave:"09:35" },
+    { time:"10:00–11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"09:55", leave:"11:05" },
   ],
   Thursday:[
-    { time:"07:30–09:00", subject:"Physics",   icon:"⚛️", room:"Sci. Lab", teacher:"Ms. Ana Reyes",       enter:"07:20", leave:"09:05" },
-    { time:"09:00–10:30", subject:"Chemistry", icon:"🧪", room:"Chem Lab", teacher:"Dr. Luis Fernandez",  enter:"08:55", leave:"10:35" },
-    { time:"13:00–14:30", subject:"History",   icon:"🏛️", room:"Room 108", teacher:"Mr. Juan Dela Cruz",  enter:"12:55", leave:"14:35" },
+    { time:"07:30–09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",       enter:"07:20", leave:"09:05" },
+    { time:"09:00–10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",  enter:"08:55", leave:"10:35" },
+    { time:"13:00–14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",  enter:"12:55", leave:"14:35" },
   ],
   Friday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"📐", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"Computer Science",   icon:"💻", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"English Literature", icon:"📖", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"09:55", leave:"11:05" },
+    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
+    { time:"08:30–09:30", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"08:25", leave:"09:35" },
+    { time:"10:00–11:00", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"09:55", leave:"11:05" },
   ],
 };
 
@@ -172,16 +172,15 @@ const availableDocuments = [
 
 /* ── Sidebar nav items ── */
 const navItems = [
-  { id:"home"          as Panel, label:"Dashboard",    icon:"🏠" },
-  { id:"grades"        as Panel, label:"My Grades",    icon:"📊" },
-  { id:"schedule"      as Panel, label:"My Schedule",  icon:"📅" },
-  { id:"tuition"       as Panel, label:"Tuition Fee",  icon:"💰" },
-  { id:"documents"     as Panel, label:"Documents",    icon:"📄" },
-  { id:"notifications" as Panel, label:"Notifications",icon:"🔔" },
+  { id:"home"          as Panel, label:"Dashboard",  },
+  { id:"grades"        as Panel, label:"My Grades",  },
+  { id:"schedule"      as Panel, label:"My Schedule",},
+  { id:"tuition"       as Panel, label:"Tuition Fee",},
+  { id:"documents"     as Panel, label:"Documents",  },
 ];
 
 /* ── Sidebar ── */
-function Sidebar({ active, setActive, show, setShow, unreadCount }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; unreadCount:number }) {
+function Sidebar({ active, setActive, show, setShow }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <>
@@ -205,38 +204,46 @@ function Sidebar({ active, setActive, show, setShow, unreadCount }: { active:str
           {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
-        {/* Student badge */}
+        {/* Profile - Right after Student Portal */}
         {expanded && (
-          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-            <span>🎓</span>
-            <div><div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Jamie Santos</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>STEM Grade 11</div></div>
+          <div className="px-3 mt-3 mb-2">
+            <button onClick={() => { setActive("profile"); setShow(false); }} className="w-100 btn text-decoration-none border-0 p-0">
+              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: active === "profile" ? "#4f46e5" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = active === "profile" ? "#4f46e5" : "rgba(255,255,255,0.15)"}
+                onMouseLeave={e => e.currentTarget.style.background = active === "profile" ? "#4f46e5" : "rgba(255,255,255,0.1)"}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>JS</div>
+                <div className="flex-grow-1 overflow-hidden text-start">
+                  <div className="text-white small fw-semibold text-truncate">Jamie Santos</div>
+                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>STU-2024-001</div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>👤</span>
+              </div>
+            </button>
           </div>
         )}
 
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1">
+        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 position-relative"
               style={{ color:active===item.id?"#fff":"rgba(255,255,255,0.5)", background:active===item.id?"#4f46e5":"transparent", justifyContent:expanded?"flex-start":"center", whiteSpace:"nowrap" }}
               title={item.label}>
-              <span style={{ fontSize:18 }}>{item.icon}</span>
+              <span style={{ fontSize:18 }}></span>
               {expanded && <span>{item.label}</span>}
-              {item.id==="notifications" && unreadCount>0 && (
-                <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold", margin:4 }}>{unreadCount}</span>
-              )}
             </button>
           ))}
         </nav>
 
-        {/* User */}
+        {/* Logout button - More visible at bottom */}
         {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>JS</div>
-              <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Jamie Santos</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>STU-2024-001</div></div>
-              <Link href="/login" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
-            </div>
+          <div className="px-3 py-3 border-top border-white border-opacity-10">
+            <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}>
+              <span style={{ fontSize: 16 }}>↩</span>
+              <span>Log Out</span>
+            </Link>
           </div>
         )}
       </div>
@@ -252,31 +259,31 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
   const pendingDocs  = documentRequests.filter(d => d.status==="pending").length;
 
   const quickLinks = [
-    { id:"grades"        as Panel, label:"View Grades",  icon:"📊", bg:"#8b5cf6" },
-    { id:"schedule"      as Panel, label:"My Schedule",  icon:"📅", bg:"#3b82f6" },
-    { id:"tuition"       as Panel, label:"Tuition Fee",  icon:"💰", bg:"#f59e0b" },
-    { id:"documents"     as Panel, label:"Documents",    icon:"📄", bg:"#ec4899" },
+    { id:"grades"        as Panel, label:"View Grades",  icon:"", bg:"#8b5cf6" },
+    { id:"schedule"      as Panel, label:"My Schedule",  icon:"", bg:"#3b82f6" },
+    { id:"tuition"       as Panel, label:"Tuition Fee",  icon:"", bg:"#f59e0b" },
+    { id:"documents"     as Panel, label:"Documents",    icon:"", bg:"#ec4899" },
   ];
 
   return (
     <div className="d-flex flex-column gap-4">
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Jamie Santos 👋</h2>
+        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Jamie Santos </h2>
         <p className="text-white-50 small mb-0">STU-2024-001 · STEM Grade 11 · Term 1 SY 2025–2026</p>
         <div className="d-flex gap-2 mt-3 flex-wrap">
-          <span className="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25">🎓 Active Student</span>
-          <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25">🔔 Enrollment Open</span>
+          <span className="badge bg-white bg-opacity-20 text-black border border-white border-opacity-25"> Active Student</span>
+          <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25">Enrollment Open</span>
         </div>
       </div>
 
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label:"General Average", value:`${avgGrade}%`,          icon:"📈", cls:"border-primary-subtle bg-primary-subtle",   val:"text-primary"  },
-          { label:"Tuition Paid",    value:`₱${totalPaid.toLocaleString()}`, icon:"💰", cls:"border-success-subtle bg-success-subtle", val:"text-success"  },
-          { label:"Balance Due",     value:`₱${(totalFees-totalPaid).toLocaleString()}`, icon:"⚠️", cls:"border-warning-subtle bg-warning-subtle", val:"text-warning" },
-          { label:"Pending Docs",    value:pendingDocs,              icon:"📄", cls:"border-info-subtle bg-info-subtle",         val:"text-info"     },
+          { label:"General Average", value:`${avgGrade}%`,          icon:"", cls:"border-primary-subtle bg-primary-subtle",   val:"text-primary"  },
+          { label:"Tuition Paid",    value:`₱${totalPaid.toLocaleString()}`, icon:"", cls:"border-success-subtle bg-success-subtle", val:"text-success"  },
+          { label:"Balance Due",     value:`₱${(totalFees-totalPaid).toLocaleString()}`, icon:"", cls:"border-warning-subtle bg-warning-subtle", val:"text-warning" },
+          { label:"Pending Docs",    value:pendingDocs,              icon:"", cls:"border-info-subtle bg-info-subtle",         val:"text-info"     },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
@@ -323,7 +330,6 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
               <div className="d-flex flex-column gap-3">
                 {gradeData.slice(0,4).map((g,i) => (
                   <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:36, height:36, fontSize:18 }}>{g.icon}</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{g.subject}</div>
                       <div className="progress mt-1" style={{ height:4 }}><div className="progress-bar bg-primary" style={{ width:`${g.term1.pct}%` }} /></div>
@@ -563,7 +569,7 @@ function GradesRequestOpen({ term }: { term: string }) {
       {allRequested && (
         <div className="d-flex align-items-center gap-3 px-4 py-3 rounded-3"
           style={{ background:"rgba(16,185,129,0.07)", border:"1.5px solid rgba(16,185,129,0.3)" }}>
-          <span style={{ fontSize:20 }}>✅</span>
+          <span style={{ fontSize:20 }}></span>
           <span className="fw-semibold small text-dark">
             All grade requests sent! Please wait for your teachers to release your grades.
           </span>
@@ -586,7 +592,7 @@ function GradesRequestOpen({ term }: { term: string }) {
                       style={{ width:40, height:40, fontSize:20 }}>{g.icon}</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="fw-bold small text-dark text-truncate">{g.subject}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>👨‍🏫 {g.teacher}</div>
+                      <div className="text-muted" style={{ fontSize:11 }}> {g.teacher}</div>
                     </div>
                   </div>
 
@@ -595,7 +601,7 @@ function GradesRequestOpen({ term }: { term: string }) {
                     <button onClick={() => setConfirmSubject(g.subject)}
                       className="btn btn-primary btn-sm w-100 rounded-2 fw-semibold"
                       style={{ fontSize:12 }}>
-                      📨 Request Grade
+                      Request Grade
                     </button>
                   )}
 
@@ -603,7 +609,7 @@ function GradesRequestOpen({ term }: { term: string }) {
                     <>
                       <div className="rounded-3 p-3 text-center mb-0"
                         style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.3)" }}>
-                        <div className="fw-semibold small mb-1" style={{ color:"#d97706" }}>⏳ Request Sent</div>
+                        <div className="fw-semibold small mb-1" style={{ color:"#d97706" }}> Request Sent</div>
                         <div className="text-muted" style={{ fontSize:11 }}>Waiting for your teacher.</div>
                       </div>
                       <WorkflowTracker subject={g.subject} currentStep={0} />
@@ -614,12 +620,12 @@ function GradesRequestOpen({ term }: { term: string }) {
                     <div className="d-flex flex-column gap-2">
                       <div className="rounded-3 p-2 text-center"
                         style={{ background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.25)" }}>
-                        <div className="fw-semibold small" style={{ color:"#dc2626" }}>❌ Request Rejected</div>
+                        <div className="fw-semibold small" style={{ color:"#dc2626" }}>Request Rejected</div>
                         <div className="text-muted" style={{ fontSize:11 }}>Contact your teacher for details.</div>
                       </div>
                       <button onClick={() => setConfirmSubject(g.subject)}
                         className="btn btn-outline-danger btn-sm w-100 rounded-2" style={{ fontSize:11 }}>
-                        🔄 Re-request Grade
+                        Re-request Grade
                       </button>
                     </div>
                   )}
@@ -681,7 +687,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div><h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2><p className="text-muted small mb-0">Term 1 · 2025–2026</p></div>
         <button onClick={() => onAskJobert(`Today is ${day}. My classes are: ${timetable[day].map(c=>c.subject).join(", ")}. Give me study tips.`)}
-          className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}>🤖 Study tips for today</button>
+          className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}> Study tips for today</button>
       </div>
       <div className="d-flex gap-2 overflow-auto pb-1">
         {days.map(d => (
@@ -757,7 +763,7 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       </div>
       {balance>0 && (
         <div className="alert alert-warning d-flex align-items-start gap-2">
-          <span>💳</span>
+          
           <div className="small">You have an outstanding balance of <strong>₱{balance.toLocaleString()}</strong>. Please settle at the Finance Office or visit the Student Portal for online payment options.</div>
         </div>
       )}
@@ -934,6 +940,247 @@ function NotificationsView() {
   );
 }
 
+/* ── Profile Panel ── */
+function ProfilePanel() {
+  interface ProfileData {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    course: string;
+    yearLevel: string;
+    dateOfBirth: string;
+    guardianName: string;
+    guardianContact: string;
+    enrollmentDate: string;
+  }
+
+  const INITIAL_PROFILE: ProfileData = {
+    id: "202400001",
+    name: "Jamie Santos",
+    email: "jamie.santos@student.cfei.edu",
+    phone: "+63 912 345 6789",
+    address: "123 Basak, Lapu-Lapu City, Cebu",
+    course: "STEM",
+    yearLevel: "Grade 11",
+    dateOfBirth: "2008-05-15",
+    guardianName: "Maria Santos",
+    guardianContact: "+63 912 345 6788",
+    enrollmentDate: "2024-08-15",
+  };
+
+  const [profile, setProfile] = useState(INITIAL_PROFILE);
+  const [editMode, setEditMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string>("/cfei-logo.jpg");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSave = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setEditMode(false);
+      setToast("Profile updated successfully!");
+      setTimeout(() => setToast(null), 3000);
+    }, 1000);
+  };
+
+  const handleCancel = () => {
+    setEditMode(false);
+    setProfile(INITIAL_PROFILE);
+    setProfilePicture("/cfei-logo.jpg");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setToast("⚠️ File size must be less than 5MB");
+        setTimeout(() => setToast(null), 3000);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicture(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="d-flex flex-column gap-4">
+      {/* Toast */}
+      {toast && (
+        <div className="position-fixed top-0 start-50 translate-middle-x mt-4" style={{ zIndex: 9999 }}>
+          <div className="alert shadow-lg rounded-3 px-4 py-3 d-flex align-items-center gap-3" style={{ minWidth: "300px", background: toast.includes("⚠️") ? "#fef2f2" : "#d1fae5", border: toast.includes("⚠️") ? "1px solid #fecaca" : "1px solid #86efac" }}>
+            <span style={{ fontSize: 24 }}>{toast.includes("⚠️") ? "⚠️" : "✅"}</span>
+            <span className="fw-semibold" style={{ color: toast.includes("⚠️") ? "#dc2626" : "#059669" }}>{toast}</span>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">My Profile</h2>
+        <p className="text-muted small mb-0">Manage your personal information</p>
+      </div>
+
+      <div className="row g-4">
+        {/* Profile Card */}
+        <div className="col-12 col-lg-4">
+          <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div className="card-body p-0">
+              {/* Cover */}
+              <div className="position-relative" style={{ height: "120px", background: "linear-gradient(135deg, #6366f1, #7c3aed)" }}>
+                <div className="position-absolute top-50 start-50 translate-middle" style={{ marginTop: "40px" }}>
+                  <div className="position-relative">
+                    <div className="rounded-circle border border-4 border-white bg-white overflow-hidden" style={{ width: "120px", height: "120px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+                      <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    {editMode && (
+                      <>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="position-absolute bottom-0 end-0 btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: 36, height: 36, padding: 0 }}
+                          title="Change photo"
+                        >
+                          📷
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="d-none"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="pt-5 mt-4 px-4 pb-4 text-center">
+                <h3 className="fw-bold mb-1" style={{ color: "#1e293b" }}>{profile.name}</h3>
+                <p className="text-muted small mb-3">ID: {profile.id}</p>
+                <div className="d-flex justify-content-center gap-2 mb-4">
+                  <span className="badge rounded-pill px-3 py-2" style={{ background: "linear-gradient(135deg, #6366f1, #7c3aed)", color: "white" }}>
+                    {profile.course}
+                  </span>
+                  <span className="badge rounded-pill px-3 py-2 bg-light text-dark border">
+                    {profile.yearLevel}
+                  </span>
+                </div>
+
+                {/* Stats */}
+                <div className="row g-3">
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 bg-light border">
+                      <div className="text-muted small mb-1">Member Since</div>
+                      <div className="fw-bold small text-primary">{new Date(profile.enrollmentDate).getFullYear()}</div>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 bg-light border">
+                      <div className="text-muted small mb-1">Status</div>
+                      <div className="fw-bold small text-success">Active</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Details */}
+        <div className="col-12 col-lg-8">
+          <div className="card border-0 shadow-sm rounded-4">
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h4 className="fw-bold mb-1" style={{ color: "#1e293b" }}>Profile Information</h4>
+                  <p className="text-muted small mb-0">Update your personal details</p>
+                </div>
+                {!editMode ? (
+                  <button onClick={() => setEditMode(true)} className="btn btn-primary px-4">
+                    ✏️ Edit Profile
+                  </button>
+                ) : (
+                  <div className="d-flex gap-2">
+                    <button onClick={handleCancel} className="btn btn-outline-secondary px-3">
+                      Cancel
+                    </button>
+                    <button onClick={handleSave} disabled={loading} className="btn btn-primary px-4">
+                      {loading ? "Saving..." : "💾 Save Changes"}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="row g-4">
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Full Name</label>
+                  <input type="text" className="form-control" value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Student ID</label>
+                  <input type="text" className="form-control" value={profile.id} disabled style={{ background: "#f1f5f9" }} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Email</label>
+                  <input type="email" className="form-control" value={profile.email} onChange={e => setProfile({ ...profile, email: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Phone</label>
+                  <input type="tel" className="form-control" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Address</label>
+                  <input type="text" className="form-control" value={profile.address} onChange={e => setProfile({ ...profile, address: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Course</label>
+                  <select className="form-select" value={profile.course} onChange={e => setProfile({ ...profile, course: e.target.value })} disabled={!editMode}>
+                    <option value="STEM">STEM</option>
+                    <option value="HUMSS">HUMSS</option>
+                    <option value="ABM">ABM</option>
+                    <option value="TVL-TechPro">TVL-TechPro</option>
+                  </select>
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Year Level</label>
+                  <select className="form-select" value={profile.yearLevel} onChange={e => setProfile({ ...profile, yearLevel: e.target.value })} disabled={!editMode}>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                  </select>
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Date of Birth</label>
+                  <input type="date" className="form-control" value={profile.dateOfBirth} onChange={e => setProfile({ ...profile, dateOfBirth: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Enrollment Date</label>
+                  <input type="date" className="form-control" value={profile.enrollmentDate} disabled style={{ background: "#f1f5f9" }} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Guardian Name</label>
+                  <input type="text" className="form-control" value={profile.guardianName} onChange={e => setProfile({ ...profile, guardianName: e.target.value })} disabled={!editMode} />
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label fw-semibold small text-uppercase text-muted">Guardian Contact</label>
+                  <input type="tel" className="form-control" value={profile.guardianContact} onChange={e => setProfile({ ...profile, guardianContact: e.target.value })} disabled={!editMode} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 export default function DashboardPage() {
   const [panel, setPanel]         = useState<Panel>("home");
@@ -952,6 +1199,7 @@ export default function DashboardPage() {
 
   function renderPanel() {
     switch (panel) {
+      case "profile":       return <ProfilePanel />;
       case "grades":        return <GradesView       onAskJobert={askJobert} />;
       case "schedule":      return <ScheduleView     onAskJobert={askJobert} />;
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
@@ -963,28 +1211,34 @@ export default function DashboardPage() {
 
   return (
     <div className="d-flex" style={{ height:"100vh", overflow:"hidden", background:"#f0f4ff" }} suppressHydrationWarning>
-      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} unreadCount={unreadCount} />
+      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} />
 
       <div className="d-flex flex-column flex-grow-1 overflow-hidden" style={{ marginLeft:80 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
-          <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor" }} />
-          </button>
-          <div className="fw-bold text-dark d-none d-sm-block">
-            {navItems.find(n => n.id===panel)?.label ?? "Dashboard"}
+          {/* Left side - Logo */}
+          <div className="d-flex align-items-center gap-3">
+            <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>
+              <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
+              <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
+              <div style={{ width:20, height:2, background:"currentColor" }} />
+            </button>
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width:36, height:36, objectFit:"cover", border:"2px solid #dc2626" }} />
+            <div className="d-none d-sm-block">
+              <div className="fw-bold" style={{ color:"#dc2626", fontSize:14 }}>CFEI Portal</div>
+              <div className="text-muted" style={{ fontSize:11 }}>Student Dashboard</div>
+            </div>
           </div>
+
+          {/* Right side - Active Status & Notifications */}
           <div className="d-flex align-items-center gap-3 ms-auto">
             <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
               <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />Active Student
             </span>
             <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)}>
-              <span style={{ fontSize:20 }}>🔔</span>
-              {unreadCount>0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
+              <span style={{ fontSize:22 }}>🔔</span>
+              {unreadCount>0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:18, height:18, fontSize:10, fontWeight:"bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>JS</div>
           </div>
         </header>
 

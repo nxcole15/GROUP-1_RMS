@@ -91,16 +91,16 @@ const adminNotifications = [
 ];
 
 const navItems = [
-  { id:"overview",      label:"Overview",          icon:"🏠" },
-  { id:"students",      label:"Students",          icon:"🎓" },
-  { id:"teachers",      label:"Teachers",          icon:"👨‍🏫" },
-  { id:"grades",        label:"Grades",            icon:"📊" },
-  { id:"requests",      label:"Grade Requests",    icon:"📨" },
-  { id:"documents",     label:"Documents",         icon:"📄" },
-  { id:"enrollment",    label:"Enrollment",        icon:"📋" },
-  { id:"tuition",       label:"Tuition",           icon:"💰" },
-  { id:"announcements", label:"Announcements",     icon:"📢" },
-  { id:"timelog",       label:"Teacher Time Logs", icon:"🕐" },
+  { id:"overview",      label:"Overview", },
+  { id:"students",      label:"Students", },
+  { id:"teachers",      label:"Teachers", },
+  { id:"grades",        label:"Grades",   },
+  { id:"requests",      label:"Grade Requests",},
+  { id:"documents",     label:"Documents",},
+  { id:"enrollment",    label:"Enrollment",},
+  { id:"tuition",       label:"Tuition",  },
+  { id:"announcements", label:"Announcements",},
+  { id:"timelog",       label:"Teacher Time Logs",}
 ];
 
 function initials(name: string) { return name.split(" ").map(n => n[0]).join("").slice(0, 2); }
@@ -148,16 +148,26 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
         
-        {/* Admin badge */}
+        {/* Profile - Right after Admin Panel */}
         {expanded && (
-          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-            <span>🛡️</span>
-            <div><div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Administrator</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
+          <div className="px-3 mt-3 mb-2">
+            <Link href="/admin/profile" className="text-decoration-none">
+              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
+                <div className="flex-grow-1 overflow-hidden">
+                  <div className="text-white small fw-semibold text-truncate">Admin User</div>
+                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Administrator</div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>👤</span>
+              </div>
+            </Link>
           </div>
         )}
         
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1">
+        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 ${active === item.id ? "text-white" : ""}`}
@@ -168,20 +178,21 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
                 whiteSpace: "nowrap"
               }}
               title={item.label}>
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ fontSize: 18 }}></span>
               {expanded && <span>{item.label}</span>}
             </button>
           ))}
         </nav>
         
-        {/* User */}
+        {/* Logout button - More visible at bottom */}
         {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
-              <div className="flex-grow-1 overflow-hidden"><div className="text-white small fw-semibold text-truncate">Admin User</div><div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@inform.edu</div></div>
-              <Link href="/" className="text-decoration-none" style={{ color:"rgba(255,255,255,0.3)", fontSize:16 }} title="Log out">↩</Link>
-            </div>
+          <div className="px-3 py-3 border-top border-white border-opacity-10">
+            <Link href="/" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}>
+              <span style={{ fontSize: 16 }}>↩</span>
+              <span>Log Out</span>
+            </Link>
           </div>
         )}
       </div>
@@ -230,7 +241,7 @@ function Overview({ setActive }: { setActive: (s: string) => void }) {
 
   return (
     <div className="d-flex flex-column gap-4">
-      {/* Welcome banner */}
+      {/* ```Welcome ```banner */}
       <div className="rounded-3 p-4"
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin 👋</h2>
@@ -1980,24 +1991,30 @@ export default function AdminDashboardPage() {
       <div className="d-lg-flex d-none flex-column flex-grow-1 overflow-hidden" style={{ marginLeft: "80px", transition: "margin-left 0.3s ease" }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-3 px-sm-4 py-3 d-flex align-items-center gap-3 flex-shrink-0 shadow-sm">
-          <button className="btn btn-link text-muted p-1 d-lg-none" onClick={() => setMobileOpen(true)}>
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
-            <div style={{ width:20, height:2, background:"currentColor" }} />
-          </button>
-          <div className="input-group flex-grow-1" style={{ maxWidth:400 }}>
+          {/* Left side - Logo */}
+          <div className="d-flex align-items-center gap-3">
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 36, height: 36, objectFit: "cover", border: "2px solid #dc2626" }} />
+            <div className="d-none d-sm-block">
+              <div className="fw-bold" style={{ color: "#dc2626", fontSize: 14 }}>CFEI Portal</div>
+              <div className="text-muted" style={{ fontSize: 11 }}>Admin Dashboard</div>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="input-group flex-grow-1 d-none d-md-flex" style={{ maxWidth:400 }}>
             <span className="input-group-text bg-light border-end-0 text-muted">🔍</span>
             <input type="text" placeholder="Search students, records..." className="form-control bg-light border-start-0" />
           </div>
+
+          {/* Right side - Status & Notification */}
           <div className="d-flex align-items-center gap-3 ms-auto">
             <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
               <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
             </span>
             <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
-              <span style={{ fontSize:20 }}>🔔</span>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
+              <span style={{ fontSize:22 }}>🔔</span>
+              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:18, height:18, fontSize:10, fontWeight:"bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
           </div>
         </header>
 
@@ -2015,19 +2032,21 @@ export default function AdminDashboardPage() {
             <div style={{ width:20, height:2, background:"currentColor", marginBottom:4 }} />
             <div style={{ width:20, height:2, background:"currentColor" }} />
           </button>
-          <div className="input-group flex-grow-1" style={{ maxWidth:400 }}>
-            <span className="input-group-text bg-light border-end-0 text-muted">🔍</span>
-            <input type="text" placeholder="Search students, records..." className="form-control bg-light border-start-0" />
+
+          {/* Left side - Logo */}
+          <div className="d-flex align-items-center gap-2">
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 32, height: 32, objectFit: "cover", border: "2px solid #dc2626" }} />
           </div>
+
+          {/* Right side */}
           <div className="d-flex align-items-center gap-3 ms-auto">
             <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
-              <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
+              <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />Online
             </span>
             <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
-              <span style={{ fontSize:20 }}>🔔</span>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
+              <span style={{ fontSize:22 }}>🔔</span>
+              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:18, height:18, fontSize:10, fontWeight:"bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
           </div>
         </header>
 
