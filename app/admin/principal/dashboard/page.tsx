@@ -27,7 +27,7 @@ export default function PrincipalDashboardPage() {
       </div>
 
       {/* Admin dashboard — banner hidden, sidebar expand tracked */}
-      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} />
+      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} readOnly />
     </div>
   );
 }
