@@ -123,7 +123,7 @@ const navItems = [
 function initials(name: string) { return name.split(" ").map(n => n[0]).join("").slice(0, 2); }
 
 /*  Sidebar  */
-function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void }) {
+function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean }) {
   const [expanded, setExpanded] = useState(false);
 
   const handleMouseEnter = () => {
@@ -165,7 +165,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
-          {navItems.map(item => (
+          {navItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 ${active === item.id ? "text-white" : ""}`}
               style={{ 
@@ -194,9 +194,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
                 </div>
               </div>
               {/* Logout button below */}
-              <Link href="/" className="btn btn-sm btn-danger w-100 text-decoration-none fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
+              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
                 Logout
-              </Link>
+              </button>
             </div>
           </div>
         )}
@@ -524,11 +524,49 @@ function StudentsPanel() {
   const [search, setSearch] = useState("");
   const [selectedTrack, setSelectedTrack] = useState("All");
   const [selectedGrade, setSelectedGrade] = useState("All");
+  const [apiStudents, setApiStudents] = useState<typeof students | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
   const grades = ["All", "11", "12"];
 
-  const filtered = students.filter(s => {
+  // Debounced search against real API
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_") || search.trim().length < 2) {
+      setApiStudents(null);
+      return;
+    }
+    setSearchLoading(true);
+    const timer = setTimeout(() => {
+      fetch(`http://localhost:4000/api/admin/students/search?q=${encodeURIComponent(search.trim())}`, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.students) {
+            setApiStudents(data.students.map((s: {id:number;student_id:string;full_name:string;track?:string;grade_level?:number;status?:string;tuition_status?:string}) => ({
+              id: s.student_id || String(s.id),
+              name: s.full_name,
+              track: s.track || "STEM",
+              grade: s.grade_level || 11,
+              gwa: 0,
+              status: s.status || "Active",
+              tuition: s.tuition_status || "Unknown",
+              room: 1,
+            })));
+          }
+        })
+        .catch(() => setApiStudents(null))
+        .finally(() => setSearchLoading(false));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const sourceStudents = apiStudents ?? students;
+
+  const filtered = sourceStudents.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
     const matchTrack  = selectedTrack === "All" || s.track === selectedTrack;
     const matchGrade  = selectedGrade === "All" || s.grade === Number(selectedGrade);
@@ -539,7 +577,7 @@ function StudentsPanel() {
     <div className="d-flex flex-column gap-4">
       <div>
         <h2 className="fw-black fs-4 text-dark mb-0">Students</h2>
-        <p className="text-muted small mb-0">{filtered.length} student{filtered.length !== 1 ? "s" : ""} found</p>
+        <p className="text-muted small mb-0">{filtered.length} student{filtered.length !== 1 ? "s" : ""} found {apiStudents ? "(live results)" : "(cached)"}</p>
       </div>
 
       {/* Filters */}
@@ -927,7 +965,7 @@ function daysUntil(d: Date): number {
   return Math.ceil((d.getTime() - Date.now()) / 86400000);
 }
 
-function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
+function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; registrarView?: boolean } = {}) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -1031,7 +1069,8 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
         </div>
       </div>
 
-      {/* Deadline status bar */}
+      {/* Deadline status bar — admin only */}
+      {!registrarView && (
       <div className="rounded-3 p-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3"
         style={{
           background: isPastDeadline ? "#fef2f2" : daysLeft <= 7 ? "#fffbeb" : "#eff6ff",
@@ -1067,6 +1106,7 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
           </div>
         )}
       </div>
+      )}
 
       {/* Filters */}
       <div className="d-flex flex-column flex-sm-row gap-3">
@@ -1095,8 +1135,8 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
             <div key={t.id} className={`card border-0 shadow-sm rounded-3 overflow-hidden ${isLocked || autoLocked ? "border border-danger-subtle" : ""}`}
               style={{ opacity: isLocked ? 0.85 : 1 }}>
 
-              {/* Locked banner */}
-              {(isLocked || autoLocked) && (
+              {/* Locked banner — admin only */}
+              {!registrarView && (isLocked || autoLocked) && (
                 <div className="px-4 py-2 d-flex align-items-center gap-2"
                   style={{ background: "#fef2f2", borderBottom: "1px solid #fecaca" }}>
                   <span></span>
@@ -1131,13 +1171,16 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
                     <span className="text-muted" style={{ fontSize: 11 }}>·</span>
                     <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: 11 }}> {t.section}</span>
                     <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: 11 }}>Room {t.room}</span>
-                    {pending > 0 && (
+                    {!registrarView && pending > 0 && (
                       <span className="badge bg-danger text-white" style={{ fontSize: 11 }}>
                          {pending} pending request{pending !== 1 ? "s" : ""}
                       </span>
                     )}
-                    {pending === 0 && (
+                    {!registrarView && pending === 0 && (
                       <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}> All resolved</span>
+                    )}
+                    {registrarView && (
+                      <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}>Active</span>
                     )}
                   </div>
                 </div>
@@ -1152,7 +1195,8 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
               {expanded === t.id && (
                 <div className="border-top px-4 py-3" style={{ background: "#f8f9ff" }}>
 
-                  {/* Reminder & Lock actions */}
+                  {/* Reminder & Lock actions — admin only */}
+                  {!registrarView && (
                   <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                     <p className="text-muted text-uppercase fw-semibold mb-0" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Grade Submission — {currentTerm}</p>
                     <div className="d-flex gap-2 align-items-center">
@@ -1179,9 +1223,10 @@ function TeachersPanel({ readOnly }: { readOnly?: boolean } = {}) {
                       )}
                     </div>
                   </div>
+                  )}
 
-                  {/* Pending requests for this teacher */}
-                  {pending > 0 && (
+                  {/* Pending requests — admin only */}
+                  {!registrarView && pending > 0 && (
                     <div className="mb-3">
                       <div className="small fw-semibold text-danger mb-2"> Pending student grade requests:</div>
                       <div className="d-flex flex-column gap-1">
@@ -1967,11 +2012,22 @@ function AdminTimeLogPanel() {
 }
 
 /*  Page  */
-export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean } = {}) {
+export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
+  // Route protection — only runs when used as standalone page (not wrapped)
+  useEffect(() => {
+    if (hideBanner) return; // wrapped by principal/registrar — they handle auth
+    const token = localStorage.getItem("inform_token");
+    const role  = localStorage.getItem("inform_role");
+    const adminRoles = ["Registrar", "Principal", "Admin"];
+    if (!token || !adminRoles.includes(role ?? "")) {
+      window.location.replace("/login");
+    }
+  }, [hideBanner]);
   const [notifs, setNotifs] = useState(() => {
     // Load base notifications + any registrar inquiries from localStorage
     const base = [...adminNotifications];
@@ -2008,7 +2064,7 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
   function renderPanel() {
     switch (activeNav) {
       case "students":      return <StudentsPanel />;
-      case "teachers":      return <TeachersPanel readOnly={readOnly} />;
+      case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} />;
       case "grades":        return <GradesPanel />;
       case "requests":      return <AdminRequestsPanel />;
       case "documents":     return <AdminDocumentsPanel />;
@@ -2024,11 +2080,12 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
 
   return (
     <div className="admin-dashboard-layout" suppressHydrationWarning>
-      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} />
+      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} />
 
       {/* Main content - responsive for all screen sizes */}
       <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
-        {/* Topbar */}
+        {/* Topbar — hidden when parent supplies its own banner (e.g. Principal portal) */}
+        {!hideTopbarControls && (
         <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
           <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -2050,6 +2107,7 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
             <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
           </div>
         </header>
+        )}
 
         <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4">
           {renderPanel()}

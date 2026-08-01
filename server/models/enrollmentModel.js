@@ -4,16 +4,16 @@
 const db = require("../config/db");
 
 const EnrollmentModel = {
-  async findByStudentAndSemester(student_id, semester) {
+  async findByStudentAndTerm(student_id, term) {
     const [rows] = await db.query(
       `SELECT e.*,
               GROUP_CONCAT(es.subject_id ORDER BY es.subject_id) AS subject_ids
        FROM enrollments e
        LEFT JOIN enrollment_subjects es ON es.enrollment_id = e.id
-       WHERE e.student_id = ? AND e.semester = ?
+       WHERE e.student_id = ? AND e.term = ?
        GROUP BY e.id
        LIMIT 1`,
-      [student_id, semester]
+      [student_id, term]
     );
     if (!rows[0]) return null;
     const row = rows[0];
@@ -63,15 +63,15 @@ const EnrollmentModel = {
     });
   },
 
-  async create({ student_id, semester, subjects }) {
+  async create({ student_id, term, subjects }) {
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
 
       const [result] = await conn.query(
-        `INSERT INTO enrollments (student_id, semester, status, created_at)
+        `INSERT INTO enrollments (student_id, term, status, created_at)
          VALUES (?, ?, 'pending', NOW())`,
-        [student_id, semester]
+        [student_id, term]
       );
       const enrollmentId = result.insertId;
 

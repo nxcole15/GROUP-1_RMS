@@ -187,9 +187,10 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         {/* Logout button - More visible at bottom */}
         {expanded && (
           <div className="px-3 py-3 border-top border-white border-opacity-10">
-            <Link href="/teacher/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+            <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+              onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
               <span style={{ fontSize: 16 }}>↩</span>
               <span>Log Out</span>
             </Link>
@@ -456,8 +457,33 @@ function StudentsPanel() {
 /* ── Grades Panel ── */
 function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
-  const subjectGrades = grades.filter(g => g.subject === subjects.find(s => s.id === selectedSubject)?.name);
-  const avg = subjectGrades.length > 0 ? Math.round(subjectGrades.reduce((a, g) => a + g.percentage, 0) / subjectGrades.length) : 0;
+  const [apiGrades, setApiGrades] = useState<{student_id:string;full_name:string;percentage:number;term:string}[]>([]);
+  const [gradesLoading, setGradesLoading] = useState(false);
+  const [gradesError, setGradesError] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setGradesLoading(true);
+    setGradesError(false);
+    fetch(`http://localhost:4000/api/teacher/grades/${selectedSubject}`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.grades?.length) setApiGrades(data.grades);
+        else setApiGrades([]);
+      })
+      .catch(() => setGradesError(true))
+      .finally(() => setGradesLoading(false));
+  }, [selectedSubject]);
+
+  const displayGrades = apiGrades.length > 0
+    ? apiGrades.map(g => ({ student_id: g.student_id, name: g.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", percentage: g.percentage, term: g.term }))
+    : grades.filter(g => g.subject === subjects.find(s => s.id === selectedSubject)?.name);
+
+  const avg = displayGrades.length > 0 ? Math.round(displayGrades.reduce((a, g) => a + g.percentage, 0) / displayGrades.length) : 0;
   return (
     <div className="d-flex flex-column gap-4">
       <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2><p className="text-muted small mb-0">Submit and manage student grades</p></div>
@@ -480,7 +506,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <span style={{ fontSize: 24 }}>📊</span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{subjectGrades.length} students graded</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
             <div className="fw-black fs-3 text-success">{avg}%</div>
           </div>
         </div>
@@ -497,25 +523,30 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
               </tr>
             </thead>
             <tbody>
-              {subjectGrades.map((g, i) => (
-                <tr key={i}>
-                  <td className="ps-4 small fw-medium text-dark">{g.name}</td>
-                  <td className="d-none d-sm-table-cell small text-muted">{g.student_id}</td>
-                  <td className="text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <div className="progress flex-shrink-0" style={{ width: 60, height: 6 }}>
-                        <div className="progress-bar bg-success" style={{ width: `${g.percentage}%` }} />
+              {gradesLoading ? (
+                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
+              ) : (
+                displayGrades.map((g, i) => (
+                  <tr key={i}>
+                    <td className="ps-4 small fw-medium text-dark">{g.name}</td>
+                    <td className="d-none d-sm-table-cell small text-muted">{g.student_id}</td>
+                    <td className="text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-2">
+                        <div className="progress flex-shrink-0" style={{ width: 60, height: 6 }}>
+                          <div className="progress-bar bg-success" style={{ width: `${g.percentage}%` }} />
+                        </div>
+                        <span className="small fw-semibold text-dark">{g.percentage}%</span>
                       </div>
-                      <span className="small fw-semibold text-dark">{g.percentage}%</span>
-                    </div>
-                  </td>
-                  <td className="text-end pe-4 fw-black small text-success">{g.percentage >= 90 ? "A" : g.percentage >= 80 ? "B" : "C"}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="text-end pe-4 fw-black small text-success">{g.percentage >= 90 ? "A" : g.percentage >= 80 ? "B" : "C"}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      {gradesError && <div className="alert alert-warning small mt-3">Could not load grades from server. Showing cached data.</div>}
     </div>
   );
 }
@@ -571,6 +602,18 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     setGrading(prev => { const n = { ...prev }; delete n[id]; return n; });
     reload();
     showToast(`📤 Grade submitted to Admin for verification`);
+
+    // Also post to real API
+    const token = typeof window !== "undefined" ? localStorage.getItem("inform_token") : null;
+    const req = requests.find(r => r.id === id);
+    if (token && !token.startsWith("demo_") && req) {
+      fetch("http://localhost:4000/api/teacher/grades", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ student_id: req.studentId || req.student, subject_id: id, percentage: score }),
+      }).catch(() => {}); // localStorage already updated
+    }
   }
 
   function releaseToStudent(id: number) {
@@ -941,10 +984,60 @@ function NotificationsPanel() {
 /* ── Attendance Panel ── */
 function AttendancePanel() {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
-  const subjectAttendance = attendance.filter(a => a.subject === subjects.find(s => s.id === selectedSubject)?.name);
-  const avgAttendance = subjectAttendance.length > 0 ? Math.round(subjectAttendance.reduce((a, att) => a + att.percentage, 0) / subjectAttendance.length) : 0;
+  const [apiAttendance, setApiAttendance] = useState<{student_id:string;full_name:string;total_meetings:number;days_present:number}[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
+  const [attError, setAttError] = useState(false);
+  const [attToast, setAttToast] = useState<string|null>(null);
+
+  function showAttToast(msg: string) { setAttToast(msg); setTimeout(() => setAttToast(null), 3000); }
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setAttLoading(true);
+    setAttError(false);
+    fetch(`http://localhost:4000/api/teacher/attendance/${selectedSubject}`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.attendance?.length) setApiAttendance(data.attendance);
+        else setApiAttendance([]);
+      })
+      .catch(() => setAttError(true))
+      .finally(() => setAttLoading(false));
+  }, [selectedSubject]);
+
+  function markAttendance(studentId: string, present: boolean) {
+    const token = localStorage.getItem("inform_token");
+    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === subjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
+      .find(a => a.student_id === studentId);
+    const newPresent = present
+      ? Math.min((record?.days_present ?? 0) + 1, record?.total_meetings ?? 20)
+      : Math.max((record?.days_present ?? 1) - 1, 0);
+
+    // Optimistic update
+    setApiAttendance(prev => prev.map(a => a.student_id === studentId ? { ...a, days_present: newPresent } : a));
+    showAttToast(present ? "✓ Marked Present" : "✕ Marked Absent");
+
+    if (!token || token.startsWith("demo_")) return;
+    fetch("http://localhost:4000/api/teacher/attendance", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ student_id: studentId, subject_id: selectedSubject, total_meetings: record?.total_meetings ?? 20, days_present: newPresent }),
+    }).catch(() => {}); // UI already updated
+  }
+
+  const displayAttendance = apiAttendance.length > 0
+    ? apiAttendance.map(a => ({ student_id: a.student_id, name: a.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", present: a.days_present, total: a.total_meetings, percentage: a.total_meetings > 0 ? Math.round((a.days_present/a.total_meetings)*100) : 0 }))
+    : attendance.filter(a => a.subject === subjects.find(s => s.id === selectedSubject)?.name);
+
+  const avgAttendance = displayAttendance.length > 0 ? Math.round(displayAttendance.reduce((a, att) => a + att.percentage, 0) / displayAttendance.length) : 0;
   return (
     <div className="d-flex flex-column gap-4">
+      {attToast && <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 220, animation: "fadeInUp 0.3s ease" }}>{attToast}</div>}
       <div><h2 className="fw-black fs-4 text-dark mb-1">Attendance Management</h2><p className="text-muted small mb-0">Track student attendance per subject</p></div>
       <div className="d-flex gap-3 flex-wrap align-items-center">
         <div style={{ width: 220 }}>
@@ -956,11 +1049,12 @@ function AttendancePanel() {
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <span style={{ fontSize: 24 }}>✅</span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{subjectAttendance.length} students tracked</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
             <div className="fw-black fs-3 text-success">{avgAttendance}%</div>
           </div>
         </div>
       </div>
+      {attError && <div className="alert alert-warning small">Could not load attendance from server. Showing cached data.</div>}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
@@ -973,19 +1067,23 @@ function AttendancePanel() {
               </tr>
             </thead>
             <tbody>
-              {subjectAttendance.map((a, i) => (
-                <tr key={i}>
-                  <td className="ps-4 small fw-medium text-dark">{a.name}</td>
-                  <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
-                  <td className="text-center">
-                    <div className="d-flex justify-content-center gap-2">
-                      <button className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ Present</button>
-                      <button className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>✕ Absent</button>
-                    </div>
-                  </td>
-                  <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
-                </tr>
-              ))}
+              {attLoading ? (
+                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
+              ) : (
+                displayAttendance.map((a, i) => (
+                  <tr key={i}>
+                    <td className="ps-4 small fw-medium text-dark">{a.name}</td>
+                    <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
+                    <td className="text-center">
+                      <div className="d-flex justify-content-center gap-2">
+                        <button onClick={() => markAttendance(a.student_id, true)}  className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ Present</button>
+                        <button onClick={() => markAttendance(a.student_id, false)} className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>✕ Absent</button>
+                      </div>
+                    </td>
+                    <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1159,9 +1257,22 @@ export default function TeacherDashboardPage() {
   const [showNotif, setShowNotif]   = useState(false);
   const [notifs, setNotifs]         = useState(teacherNotifications);
   const [pendingCount, setPendingCount] = useState(0);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // ── Route protection ──────────────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    const role  = localStorage.getItem("inform_role");
+    if (!token || role !== "Teacher") {
+      window.location.replace("/login");
+    } else {
+      setAuthChecked(true);
+    }
+  }, []);
 
   // Load live pending count from shared store
   useEffect(() => {
+    if (!authChecked) return;
     const { loadRequests } = require("../../lib/gradeRequests");
     const reqs = loadRequests();
     const count = reqs.filter((r: { teacher: string; status: string }) =>
@@ -1169,7 +1280,22 @@ export default function TeacherDashboardPage() {
       ["student_requested", "teacher_calculating"].includes(r.status)
     ).length;
     setPendingCount(count);
-  }, [panel]); // re-check when user navigates panels
+
+    // Fetch real teacher dashboard data from API
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    fetch("http://localhost:4000/api/teacher/dashboard", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.stats?.pending_requests !== undefined) {
+          setPendingCount(data.stats.pending_requests);
+        }
+      })
+      .catch(() => {}); // keep local store count on error
+  }, [panel, authChecked]); // re-check when user navigates panels
   const deadlinePassed = isDeadlinePassed();
   const isGradeLocked  = deadlinePassed && pendingCount > 0;
   const activeTerm     = getActiveTerm();

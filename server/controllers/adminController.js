@@ -77,7 +77,7 @@ async function approveEnrollment(req, res, next) {
     if (enrollment.status !== "pending") return res.status(409).json({ error: "This request has already been processed." });
 
     const updated = await EnrollmentModel.approve(id, req.admin.admin_id);
-    sendNotification({ student_id: updated.student_id, message: `Your enrollment for ${updated.semester} has been approved.`, type: "enrollment" });
+    sendNotification({ student_id: updated.student_id, message: `Your enrollment for ${updated.term} has been approved.`, type: "enrollment" });
     await AuditModel.log({ admin_id: req.admin.admin_id, action: "APPROVE_ENROLLMENT", target_request_id: id });
     res.json({ message: "Enrollment approved.", enrollment: updated });
   } catch (err) { next(err); }
@@ -96,7 +96,7 @@ async function rejectEnrollment(req, res, next) {
 
     const reason  = rejection_reason.trim();
     const updated = await EnrollmentModel.reject(id, req.admin.admin_id, reason);
-    sendNotification({ student_id: updated.student_id, message: `Your enrollment for ${updated.semester} was rejected. Reason: ${reason}`, type: "enrollment" });
+    sendNotification({ student_id: updated.student_id, message: `Your enrollment for ${updated.term} was rejected. Reason: ${reason}`, type: "enrollment" });
     await AuditModel.log({ admin_id: req.admin.admin_id, action: "REJECT_ENROLLMENT", target_request_id: id });
     res.json({ message: "Enrollment rejected.", enrollment: updated });
   } catch (err) { next(err); }

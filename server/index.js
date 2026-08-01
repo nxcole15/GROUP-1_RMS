@@ -1,12 +1,13 @@
-const express = require("express");
-const cors    = require("cors");
+const express      = require("express");
+const cors         = require("cors");
 const cookieParser = require("cookie-parser");
-const { PORT } = require("./config/env");
+const { PORT }     = require("./config/env");
 const errorHandler = require("./middleware/errorHandler");
 
 // Routes
 const authRoutes          = require("./routes/authRoutes");
 const adminRoutes         = require("./routes/adminRoutes");
+const teacherRoutes       = require("./routes/teacherRoutes");
 const enrollmentRoutes    = require("./routes/enrollmentRoutes");
 const gradesRoutes        = require("./routes/gradesRoutes");
 const attendanceRoutes    = require("./routes/attendanceRoutes");
@@ -25,7 +26,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 /* ── Health check ── */
-app.get("/api/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
+app.get("/api/health", (req, res) =>
+  res.json({ status: "ok", timestamp: new Date().toISOString() })
+);
 
 /* ── Student routes ── */
 app.use("/api/auth",          authRoutes);
@@ -35,6 +38,9 @@ app.use("/api/attendance",    attendanceRoutes);
 app.use("/api/payments",      paymentsRoutes);
 app.use("/api/documents",     documentsRoutes);
 app.use("/api/notifications", notificationsRoutes);
+
+/* ── Teacher routes ── */
+app.use("/api/teacher", teacherRoutes);
 
 /* ── Admin routes ── */
 app.use("/api/admin", adminRoutes);

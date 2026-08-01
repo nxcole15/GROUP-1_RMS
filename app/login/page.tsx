@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type UserRole = "Student" | "Teacher" | "Registrar" | "Principal" | "Dean" | "Accounting";
+type UserRole = "Student" | "Teacher" | "Registrar" | "Principal" | "Accounting";
 
 type Account = {
   id: string;
@@ -26,8 +26,8 @@ const USER_ACCOUNTS: Account[] = [
   { id: "T003",      password: "ana",        role: "Teacher",    name: "Ana Reyes",         subtitle: "Science",              redirect: "/teacher/dashboard" },
   { id: "T004",      password: "carlos",     role: "Teacher",    name: "Carlos Fernandez",  subtitle: "History",              redirect: "/teacher/dashboard" },
   { id: "P001",      password: "principal",  role: "Principal",  name: "Principal",         subtitle: "School Principal",     redirect: "/admin/principal/dashboard", altIds: ["PRINCIPAL@INFORM.EDU"] },
-  { id: "R001",      password: "Reg@2026",   role: "Registrar",  name: "Registrar Office",  subtitle: "Registrar",            redirect: "/admin/dashboard", altIds: ["REGISTRAR@INFORM.EDU"] },
-  { id: "D001",      password: "Dean@2026",  role: "Dean",       name: "Dean of Students",  subtitle: "Dean",                 redirect: "/admin/dashboard", altIds: ["DEAN@INFORM.EDU"] },
+  { id: "R001",      password: "Reg@2026",   role: "Registrar",  name: "Registrar Office",  subtitle: "Registrar",            redirect: "/admin/registrar/dashboard", altIds: ["REGISTRAR@INFORM.EDU"] },
+
   { id: "A001",      password: "accounting", role: "Accounting", name: "Accounting Office", subtitle: "Accounting",           redirect: "/accounting/dashboard" },
 ];
 
@@ -42,11 +42,9 @@ function detectRole(id: string): string {
   if (/^T/i.test(value)) return "Teacher";
   if (/^R/i.test(value)) return "Registrar";
   if (/^P/i.test(value)) return "Principal";
-  if (/^D/i.test(value)) return "Dean";
   if (/^A/i.test(value)) return "Accounting";
   if (value.includes("REGISTRAR@")) return "Registrar";
   if (value.includes("PRINCIPAL@")) return "Principal";
-  if (value.includes("DEAN@")) return "Dean";
   return "";
 }
 
@@ -91,10 +89,55 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push(match.redirect);
-    }, 800);
+
+    // Try real API first, fall back to demo accounts if backend is offline
+    const role = match.role;
+    let endpoint = "http://localhost:4000/api/auth/login";
+    let body: Record<string, string> = { student_id: normalizedId, password: form.password };
+
+    if (role === "Teacher") {
+      endpoint = "http://localhost:4000/api/teacher/login";
+      body = { teacher_id: normalizedId, password: form.password };
+    } else if (role === "Registrar" || role === "Principal") {
+      endpoint = "http://localhost:4000/api/admin/login";
+      body = { admin_id: normalizedId, password: form.password };
+    }
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "include",
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (res.ok && data.token) {
+          // Store real JWT
+          localStorage.setItem("inform_token", data.token);
+          localStorage.setItem("inform_role",  role);
+          localStorage.setItem("inform_user",  JSON.stringify(
+            data.student || data.teacher || data.admin || { name: match.name }
+          ));
+        } else {
+          // Backend rejected — still allow demo login
+          localStorage.setItem("inform_token", `demo_${role}_${Date.now()}`);
+          localStorage.setItem("inform_role",  role);
+          localStorage.setItem("inform_user",  JSON.stringify({ name: match.name, id: match.id }));
+        }
+      })
+      .catch(() => {
+        // Backend offline — fall back to demo session
+        localStorage.setItem("inform_token", `demo_${role}_${Date.now()}`);
+        localStorage.setItem("inform_role",  role);
+        localStorage.setItem("inform_user",  JSON.stringify({ name: match.name, id: match.id }));
+      })
+      .finally(() => {
+        if (match.role === "Accounting") {
+          try { localStorage.setItem("inform_accounting_active", JSON.stringify({ id: match.id, name: match.name })); } catch { /* ignore */ }
+        }
+        setLoading(false);
+        router.push(match.redirect);
+      });
   }
 
   function handleForgotPasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -224,7 +267,7 @@ export default function LoginPage() {
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
                     />
-                    <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, dean, or accounting ID.</div>
+                    <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, or accounting ID.</div>
                   </div>
 
                   <div className="mb-4">
