@@ -97,4 +97,42 @@ async function submitEnrollment(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMyEnrollment, getAvailableSubjects, submitEnrollment };
+async function getMySchedule(req, res, next) {
+  try {
+    const { student_id } = req.student;
+    const db = require("../../config/db");
+
+    // Find any approved enrollment for this student directly
+    const [enrollRows] = await db.query(
+      `SELECT e.id FROM enrollments e
+       WHERE e.student_id = ? AND e.status = 'approved'
+       ORDER BY e.created_at DESC LIMIT 1`,
+      [student_id]
+    );
+
+    if (!enrollRows[0]) {
+      return res.json({ schedule: [] });
+    }
+
+    const enrollment = await EnrollmentModel.findById(enrollRows[0].id);
+
+    if (!enrollment || !enrollment.subjects?.length) {
+      return res.json({ schedule: [] });
+    }
+
+    const [rows] = await db.query(
+      `SELECT sc.id, sc.day, sc.time_start, sc.time_end, sc.room,
+              s.code, s.name AS subject_name, t.full_name AS teacher_name
+       FROM schedule sc
+       JOIN subjects s ON s.id = sc.subject_id
+       JOIN teachers t ON t.id = s.teacher_id
+       WHERE sc.subject_id IN (?)
+       ORDER BY FIELD(sc.day,'Monday','Tuesday','Wednesday','Thursday','Friday'), sc.time_start`,
+      [enrollment.subjects]
+    );
+
+    res.json({ schedule: rows });
+  } catch (err) { next(err); }
+}
+
+module.exports = { getMyEnrollment, getAvailableSubjects, submitEnrollment, getMySchedule };

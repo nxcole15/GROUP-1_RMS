@@ -1,7 +1,8 @@
 const express = require("express");
 const router  = express.Router();
 
-const { login, logout, getProfile, getDashboard }                             = require("./teacherAuthController");
+
+const { login, logout, getProfile, getDashboard, getNotifications }           = require("./teacherAuthController");
 const { getSubjectGrades, submitGrade, getClassGradeStats }                   = require("./teacherGradesController");
 const { getSubjectAttendance, updateAttendance, getClassAttendanceStats }      = require("./teacherAttendanceController");
 const { authenticateTeacher }                                                  = require("./teacherMiddleware");
@@ -15,6 +16,7 @@ router.use(authenticateTeacher);
 
 // Profile & Dashboard
 router.get("/profile",   getProfile);
+router.get("/notifications", getNotifications);
 router.get("/dashboard", getDashboard);
 
 // Grades
@@ -26,5 +28,6 @@ router.get("/grades/class/:subject_id", getClassGradeStats);
 router.get("/attendance/:subject_id",        getSubjectAttendance);
 router.post("/attendance",                   updateAttendance);
 router.get("/attendance/class/:subject_id",  getClassAttendanceStats);
+
 
 module.exports = router;

@@ -89,12 +89,12 @@ async function me(req, res, next) {
     const student = await StudentModel.findByStudentId(req.student.student_id);
     if (!student) return res.status(404).json({ error: "Student not found." });
     res.json({
-      student_id: student.student_id,
-      full_name:  student.full_name,
-      course:     student.course,
-      year_level: student.year_level,
-      semester:   student.semester,
-      email:      student.email,
+      student_id:  student.student_id,
+      full_name:   student.full_name,
+      pathway:     student.pathway,
+      grade_level: student.grade_level,
+      term:        student.term,
+      email:       student.email,
     });
   } catch (err) { next(err); }
 }
@@ -114,11 +114,11 @@ async function universalLogin(req, res, next) {
       if (admin && await bcrypt.compare(password, admin.password)) {
         const { ADMIN_JWT_SECRET } = require("../../config/env");
         const token = jwt.sign(
-          { id: admin.id, admin_id: admin.admin_id, full_name: admin.full_name, role: "admin" },
+          { id: admin.id, admin_id: admin.admin_id, full_name: admin.full_name, role: admin.role },
           ADMIN_JWT_SECRET, { expiresIn: "8h" }
         );
         return res.cookie("admin_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
-          .json({ message: "Login successful.", role: "admin", full_name: admin.full_name, token });
+          .json({ message: "Login successful.", role: admin.role, full_name: admin.full_name, token });
       }
     }
 

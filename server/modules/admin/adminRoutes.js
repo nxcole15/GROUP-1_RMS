@@ -13,6 +13,7 @@ const {
   getPendingDocuments,
   approveDocument,
   rejectDocument,
+  getTeachers,
 } = require("./adminController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
@@ -27,6 +28,7 @@ router.use(authenticateAdmin);
 router.get("/dashboard",       getDashboard);
 router.get("/students/search", searchStudents);
 router.get("/audit-log",       getAuditLog);
+router.get("/teachers", getTeachers);
 
 // Enrollments
 router.get("/enrollments",               getPendingEnrollments);

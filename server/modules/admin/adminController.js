@@ -180,9 +180,22 @@ async function rejectDocument(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function getTeachers(req, res, next) {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, teacher_id, full_name, department, email, created_at
+       FROM teachers
+       ORDER BY full_name`
+    );
+    res.json({ teachers: rows });
+  } catch (err) { next(err); }
+}
+
+
 module.exports = {
   getDashboard, searchStudents,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
+  getTeachers,
 };

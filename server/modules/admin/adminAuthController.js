@@ -24,7 +24,7 @@ async function adminLogin(req, res, next) {
       id:        admin.id,
       admin_id:  admin.admin_id,
       full_name: admin.full_name,
-      role:      "admin",
+      role:      admin.role,
     };
     const token = jwt.sign(payload, ADMIN_JWT_SECRET, { expiresIn: "8h" });
 
@@ -37,7 +37,7 @@ async function adminLogin(req, res, next) {
       })
       .json({
         message: "Admin login successful.",
-        admin:   { admin_id: admin.admin_id, full_name: admin.full_name },
+        admin:   { admin_id: admin.admin_id, full_name: admin.full_name, role: admin.role },
         token,
       });
   } catch (err) { next(err); }

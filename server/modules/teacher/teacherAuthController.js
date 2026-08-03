@@ -90,4 +90,20 @@ async function getDashboard(req, res, next) {
   }
 }
 
-module.exports = { login, logout, getProfile, getDashboard };
+async function getNotifications(req, res, next) {
+  try {
+    const { teacher_id } = req.teacher;
+    const activity = await TeacherModel.getRecentActivity(teacher_id, 10);
+    const notifs = activity.map((a, i) => ({
+      id: i + 1,
+      type: "grade",
+      title: "Grade Submitted",
+      message: `${a.student_name} — ${a.subject_name}`,
+      time: new Date(a.created_at).toLocaleDateString("en-PH"),
+      read: false,
+    }));
+    res.json({ notifications: notifs });
+  } catch (err) { next(err); }
+}
+
+module.exports = { login, logout, getProfile, getDashboard, getNotifications };

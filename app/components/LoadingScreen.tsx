@@ -15,8 +15,8 @@ export default function LoadingScreen({ onDone }: { onDone: () => void }) {
         return prev + 100 / steps;
       });
     }, 50);
-    const fadeTimer = setTimeout(() => setFadeOut(true), 2400);
-    const doneTimer = setTimeout(() => onDone(), 2900);
+    const fadeTimer = setTimeout(() => setFadeOut(true), 0);
+    const doneTimer = setTimeout(() => onDone(), 0);
     return () => { clearInterval(interval); clearTimeout(fadeTimer); clearTimeout(doneTimer); };
   }, [onDone]);
 
@@ -26,7 +26,7 @@ export default function LoadingScreen({ onDone }: { onDone: () => void }) {
       style={{
         zIndex: 9999,
         background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
-        opacity: fadeOut ? 0 : 1,
+        opacity: fadeOut ? 0 : 0,
         transition: "opacity 0.5s",
         pointerEvents: fadeOut ? "none" : "auto",
       }}

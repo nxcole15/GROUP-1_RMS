@@ -50,14 +50,32 @@ export default function AccountingDashboardPage() {
   const [active, setActive] = useState<AccountingActive>(null);
   const [paymentLog, setPaymentLog] = useState<PaymentRecord[]>(PAYMENT_LOG_SEED);
   const [panel, setPanel] = useState<"tuition" | "payments" | "students">("tuition");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"All" | "For Verification" | "Verified">("All");
 
   useEffect(() => {
+    // Route protection
+    const token = localStorage.getItem("inform_token");
+    const role  = localStorage.getItem("inform_role");
+    if (!token || role !== "accounting") {
+      window.location.replace("/login");
+      return;
+    }
+
     try {
       const raw = localStorage.getItem(LS_ACTIVE_KEY);
-      setActive(raw ? (JSON.parse(raw) as AccountingActive) : null);
+      if (raw) {
+        setActive(JSON.parse(raw) as AccountingActive);
+      } else {
+        // Fall back to the logged-in admin's info
+        const userRaw = localStorage.getItem("inform_user");
+        const userObj = userRaw ? JSON.parse(userRaw) : null;
+        if (userObj) {
+          setActive({ id: userObj.admin_id || "ADMIN003", name: userObj.full_name || "Accounting Office" });
+        }
+      }
     } catch {
       setActive(null);
     }
@@ -67,6 +85,28 @@ export default function AccountingDashboardPage() {
       if (rawLog) setPaymentLog(JSON.parse(rawLog) as PaymentRecord[]);
     } catch {
       setPaymentLog(PAYMENT_LOG_SEED);
+    }
+
+    // Fetch real payments from API if backend is live
+    if (!token.startsWith("demo_")) {
+      fetch("http://localhost:4000/api/admin/payments", {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.payments?.length) {
+            setPaymentLog(data.payments.map((p: {id: number; student_id: string; fee_item: string; amount: number; status: string}) => ({
+              id:        p.id,
+              studentId: p.student_id,
+              student:   p.student_id,
+              feeItem:   p.fee_item,
+              amount:    Number(p.amount),
+              status:    p.status === "verified" ? "Verified" : "For Verification",
+            })));
+          }
+        })
+        .catch(() => {}); // keep seed data on error
     }
   }, []);
 
@@ -122,7 +162,7 @@ export default function AccountingDashboardPage() {
     } catch {
       // ignore
     }
-    window.location.href = "/accounting/login";
+    window.location.href = "/login";
   }
 
   if (!active) {
@@ -131,8 +171,8 @@ export default function AccountingDashboardPage() {
         <div className="card shadow-sm p-4" style={{ maxWidth: 520, width: "100%" }}>
           <div className="fw-bold" style={{ color: "#dc2626" }}>Accounting session not found</div>
           <p className="text-muted small mb-3">Please login again.</p>
-          <a href="/accounting/login" className="btn" style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white" }}>
-            Go to Accounting Login
+          <a href="/login" className="btn" style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white" }}>
+            Go to Login
           </a>
         </div>
       </div>
@@ -140,19 +180,16 @@ export default function AccountingDashboardPage() {
   }
 
   return (
-    <div className="d-flex" style={{ height: "100vh", overflow: "hidden", background: "#0b1020" }}>
+    <div className="accounting-dashboard-layout" style={{ minHeight: "100vh", background: "#0b1020" }} suppressHydrationWarning>
+      {mobileOpen && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setMobileOpen(false)} />}
       <aside
-        className="d-none d-lg-flex flex-column"
+        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 ${mobileOpen ? "" : "d-none d-lg-flex"}`}
         style={{ width: 280, background: "linear-gradient(180deg,#111827,#1f2937)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
       >
-        <div className="px-4 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <div className="d-flex align-items-center gap-3">
-            <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)" }} />
-            <div>
-              <div className="fw-bold" style={{ color: "#fbbf24" }}>INFORM</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Accounting</div>
-            </div>
-          </div>
+        <div className="px-4 py-4 d-flex flex-column align-items-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-2" style={{ width: 52, height: 52, objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
+          <div className="fw-bold" style={{ color: "#fbbf24", fontSize: 15 }}>CFEI</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Accounting</div>
         </div>
 
         <div className="px-3 py-3 d-flex flex-column gap-3" style={{ flex: 1, overflow: "auto" }}>
@@ -163,9 +200,9 @@ export default function AccountingDashboardPage() {
 
           <div className="d-flex flex-column gap-2">
             {[
-              { id: "tuition", label: "Tuition", icon: "💰" },
-              { id: "payments", label: "Payments", icon: "📄" },
-              { id: "students", label: "Students", icon: "🎓" },
+              { id: "tuition", label: "Tuition" },
+              { id: "payments", label: "Payments" },
+              { id: "students", label: "Students" },
             ].map(item => (
               <button
                 key={item.id}
@@ -177,45 +214,28 @@ export default function AccountingDashboardPage() {
                   border: panel === item.id ? "1px solid rgba(220,38,38,0.35)" : "1px solid transparent",
                 }}
               >
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
+                <span style={{ fontSize: 18 }}>{}</span>
                 <span className="fw-semibold">{item.label}</span>
               </button>
             ))}
           </div>
 
-          <button onClick={logout} className="btn btn-outline-light mt-auto" style={{ borderRadius: 12 }}>
-            Log out
+          <button onClick={logout} className="btn btn-danger mt-auto fw-semibold d-flex align-items-center justify-content-center gap-2" style={{ borderRadius: 12 }}>
+            <span>↩</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      <section className="d-flex flex-column flex-grow-1 overflow-hidden">
+      <section className="accounting-dashboard-main d-flex flex-column flex-grow-1 overflow-hidden">
         <header style={{ flexShrink: 0, borderBottom: "1px solid rgba(0,0,0,0.08)" }} className="bg-white">
           <div className="d-flex align-items-center gap-3 px-4 py-3">
+            <button className="btn btn-link text-dark p-1 d-lg-none" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
+              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
+              <div style={{ width: 20, height: 2, background: "currentColor" }} />
+            </button>
             <h4 className="mb-0" style={{ color: "#dc2626" }}>Accounting Dashboard</h4>
-            <div className="ms-auto d-flex align-items-center gap-2">
-              <div className="input-group" style={{ width: 320 }}>
-                <span className="input-group-text bg-light">🔎</span>
-                <input
-                  className="form-control"
-                  placeholder="Search student..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              {panel === "payments" && (
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: 200 }}
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
-                >
-                  <option value="All">All Status</option>
-                  <option value="For Verification">For Verification</option>
-                  <option value="Verified">Verified</option>
-                </select>
-              )}
-            </div>
           </div>
         </header>
 
@@ -223,8 +243,8 @@ export default function AccountingDashboardPage() {
           {panel === "tuition" && (
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "linear-gradient(135deg, rgba(220,38,38,0.12), rgba(251,191,36,0.12))", border: "1px solid rgba(220,38,38,0.25)" }}>
-                <div className="fw-bold" style={{ color: "#111827" }}>Tuition Summary</div>
-                <div className="text-muted small">Demo-only: accounting can view tuition and balances.</div>
+                <div className="fw-bold" style={{ color: "#ecececff" }}>Tuition Summary</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Demo-only: accounting can view tuition and balances.</div>
               </div>
 
               <div className="row g-3">
@@ -291,8 +311,8 @@ export default function AccountingDashboardPage() {
           {panel === "payments" && (
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.18)" }}>
-                <div className="fw-bold" style={{ color: "#111827" }}>Payment Verification</div>
-                <div className="text-muted small">Only accounting sees this verification panel (demo).</div>
+                <div className="fw-bold" style={{ color: "#ffffffff" }}>Payment Verification</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Only accounting sees this verification panel (demo).</div>
               </div>
 
               <div className="card rounded-4 overflow-hidden">
@@ -333,14 +353,14 @@ export default function AccountingDashboardPage() {
                                       className="btn btn-sm"
                                       style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "white", border: "none" }}
                                     >
-                                      ✅ Verify
+                                       Verify
                                     </button>
                                     <button
                                       onClick={() => rejectPayment(p.id)}
                                       className="btn btn-sm"
                                       style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white", border: "none" }}
                                     >
-                                      ✕ Reject
+                                       Reject
                                     </button>
                                   </div>
                                 ) : (
@@ -361,8 +381,8 @@ export default function AccountingDashboardPage() {
           {panel === "students" && (
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)" }}>
-                <div className="fw-bold" style={{ color: "#111827" }}>Students (Tuition Related)</div>
-                <div className="text-muted small">Accounting can access tuition-related student info (demo).</div>
+                <div className="fw-bold" style={{ color: "#f7faffff" }}>Students (Tuition Related)</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Accounting can access tuition-related student info (demo).</div>
               </div>
 
               <div className="card rounded-4 overflow-hidden">

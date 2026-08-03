@@ -43,6 +43,7 @@ app.use("/api/payments",      paymentsRoutes);
 app.use("/api/documents",     documentsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 
+
 /* ── Admin routes ── */
 app.use("/api/admin",   adminRoutes);
 
