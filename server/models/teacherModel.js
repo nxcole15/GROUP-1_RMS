@@ -116,9 +116,9 @@ const TeacherModel = {
   async getClassStatistics(teacher_id) {
     const [rows] = await db.query(
       `SELECT
-         COUNT(DISTINCT s.id)  AS total_subjects,
-         COUNT(DISTINCT e.student_id) AS total_students,
-         AVG(g.percentage)     AS avg_grade
+         COUNT(DISTINCT s.id)          AS total_subjects,
+         COUNT(DISTINCT e.student_id)  AS total_students,
+         ROUND(AVG(g.percentage), 2)   AS avg_grade
        FROM subjects s
        LEFT JOIN enrollment_subjects es ON s.id = es.subject_id
        LEFT JOIN enrollments e ON es.enrollment_id = e.id

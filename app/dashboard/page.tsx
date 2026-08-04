@@ -485,18 +485,19 @@ function GradesRequestOpen({ term }: { term: string }) {
     showToast(`📨 Grade request for ${subject} has been sent to your teacher.`);
 
     // Persist to shared localStorage store (used by teacher + admin portals)
-    const { addRequest } = require("../../lib/gradeRequests");
-    const token = typeof window !== "undefined" ? localStorage.getItem("inform_token") : null;
-    const user  = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("inform_user") || "{}") : {};
-    addRequest({
-      student:      user.full_name || "Student",
-      studentId:    user.student_id || user.id || "unknown",
-      subject,
-      teacher:      gradeData.find(g => g.subject === subject)?.teacher || "Teacher",
-      term,
-      status:       "student_requested",
-      requestedAt:  new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
+    import("../lib/gradeRequests").then(({ addRequest }) => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("inform_token") : null;
+      const user  = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("inform_user") || "{}") : {};
+      addRequest({
+        student:      user.full_name || "Student",
+        studentId:    user.student_id || user.id || "unknown",
+        subject,
+        teacher:      gradeData.find(g => g.subject === subject)?.teacher || "Teacher",
+        term,
+        status:       "student_requested",
+        requestedAt:  new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
+      });
+    }).catch(() => {});
   }
 
   const allRequested      = gradeData.every(g => requestMap[g.subject] !== "idle");

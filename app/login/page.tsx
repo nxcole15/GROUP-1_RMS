@@ -232,19 +232,20 @@ export default function LoginPage() {
                 Back to Home
               </Link>
 
-              <div className="text-center mb-5">
-                <h1 className="display-4 fw-bold mb-3" style={{ color: "#dc2626" }}>Login</h1>
-                <p className="text-muted lead">Enter your User ID and password. The portal detects your role automatically.</p>
-              </div>
-
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
-                <div className="d-flex justify-content-center mb-5">
-                  <div className="d-flex align-items-center gap-4">
-                    <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
-                    <div style={{ width: "2px", height: "48px", background: "linear-gradient(180deg, #dc2626, #f97316, #fbbf24)" }} />
-                    <img src="/newimlogo.png" alt="INFORM" className="rounded-3" style={{ width: "56px", height: "56px", objectFit: "cover" }} />
-                  </div>
+                {/* Logos */}
+                <div className="d-flex justify-content-center mb-4">
+                  <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid #dc2626" }} />
                 </div>
+
+                {/* Title inside card */}
+                <div className="text-center mb-4">
+                  <h1 className="fw-black mb-2" style={{ color: "#dc2626", fontSize: "2rem", letterSpacing: "-0.5px" }}>Login</h1>
+                  <p className="text-muted small mb-0" style={{ lineHeight: 1.6 }}>Enter your User ID and password.<br />The portal detects your role automatically.</p>
+                </div>
+
+                {/* Divider */}
+                <div className="mb-4" style={{ height: "1px", background: "linear-gradient(90deg, transparent, #fbbf24, transparent)" }} />
 
                 {detectedRole && (
                   <div className="mb-4 text-center">
