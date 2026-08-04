@@ -49,12 +49,13 @@ async function login(req, res, next) {
     await StudentModel.resetFailedAttempts(student_id);
 
     const payload = {
-      id:         student.id,
-      student_id: student.student_id,
-      full_name:  student.full_name,
-      course:     student.course,
-      semester:   student.semester,
-      role:       "student",
+      id:          student.id,
+      student_id:  student.student_id,
+      full_name:   student.full_name,
+      strand:      student.pathway,
+      grade_level: student.grade_level,
+      term:        student.term,
+      role:        "student",
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -69,10 +70,11 @@ async function login(req, res, next) {
       .json({
         message: "Login successful.",
         student: {
-          student_id: student.student_id,
-          full_name:  student.full_name,
-          course:     student.course,
-          semester:   student.semester,
+          student_id:  student.student_id,
+          full_name:   student.full_name,
+          strand:      student.pathway,
+          grade_level: student.grade_level,
+          term:        student.term,
         },
         token,
       });

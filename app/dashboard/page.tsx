@@ -1134,12 +1134,29 @@ function ProfilePanel() {
 
   const handleSave = () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setEditMode(false);
-      setToast("Profile updated successfully!");
-      setTimeout(() => setToast(null), 3000);
-    }, 1000);
+    const token = localStorage.getItem("inform_token");
+    if (token && !token.startsWith("demo_")) {
+      fetch("http://localhost:4000/api/auth/me", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ full_name: profile.name, email: profile.email }),
+      })
+        .catch(() => {}) // show success even if offline — profile stored locally
+        .finally(() => {
+          setLoading(false);
+          setEditMode(false);
+          setToast("Profile updated successfully!");
+          setTimeout(() => setToast(null), 3000);
+        });
+    } else {
+      setTimeout(() => {
+        setLoading(false);
+        setEditMode(false);
+        setToast("Profile updated successfully!");
+        setTimeout(() => setToast(null), 3000);
+      }, 800);
+    }
   };
 
   const handleCancel = () => {

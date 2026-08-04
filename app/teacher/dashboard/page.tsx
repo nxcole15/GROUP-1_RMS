@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
@@ -76,10 +76,10 @@ const attendance = [
 ];
 
 const recentActivity = [
-  { action: "Grade Submitted",    name: "Jamie Santos",    time: "2h ago",   icon: "📊" },
-  { action: "Attendance Updated", name: "Maria Reyes",     time: "3h ago",   icon: "✅" },
-  { action: "Grade Submitted",    name: "Carlo Dela Cruz", time: "5h ago",   icon: "📊" },
-  { action: "Attendance Updated", name: "Luis Fernandez",  time: "Yesterday",icon: "✅" },
+  { action: "Grade Submitted",    name: "Jamie Santos",    time: "2h ago"},
+  { action: "Attendance Updated", name: "Maria Reyes",     time: "3h ago"},
+  { action: "Grade Submitted",    name: "Carlo Dela Cruz", time: "5h ago"},
+  { action: "Attendance Updated", name: "Luis Fernandez",  time: "Yesterday"},
 ];
 
 const teacherNotifications = [
@@ -112,16 +112,16 @@ function isDeadlinePassed() {
 
 type Panel = "overview"|"subjects"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog";
 
-const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
-  { id: "overview",       label: "Overview",        icon: "🏠" },
-  { id: "subjects",       label: "My Classes",       icon: "📚" },
-  { id: "schedule",       label: "My Schedule",      icon: "📅" },
-  { id: "students",       label: "My Students",      icon: "🎓" },
-  { id: "grades",         label: "Submit Grades",    icon: "📊" },
-  { id: "requests",       label: "Grade Requests",   icon: "📨" },
-  { id: "attendance",     label: "Attendance",       icon: "✅" },
-  { id: "documents",      label: "Documents",        icon: "📄" },
-  { id: "timelog" as Panel, label: "Time Log", icon: "🕐" },
+const navItems: { id: Panel|"overview"; label: string; icon: React.ReactNode }[] = [
+  { id: "overview",      label: "Overview",       icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+  { id: "subjects",      label: "My Classes",     icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg> },
+  { id: "schedule",      label: "My Schedule",    icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+  { id: "students",      label: "My Students",    icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+  { id: "grades",        label: "Submit Grades",  icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+  { id: "requests",      label: "Grade Requests", icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 0118 2.18 2 2 0 0120 2h0"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/><polyline points="12 17 16 17 16 21"/></svg> },
+  { id: "attendance",    label: "Attendance",     icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+  { id: "documents",     label: "Documents",      icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+  { id: "timelog" as Panel, label: "Time Log",    icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
 ];
 
 /* ── Sidebar ── */
@@ -178,7 +178,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
               style={{ color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", background: active === item.id ? "#059669" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
               title={item.label}>
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              {item.icon}
               {expanded && <span>{item.label}</span>}
             </button>
           ))}
@@ -202,17 +202,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* ── Overview ── */
-function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string }) {
+function Overview({ setActive: _setActive, isGradeLocked, activeTerm }: { setActive: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string }) {
   const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
   const avgGrade = Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length);
-
-  const quickLinks = [
-    { id: "subjects"  as Panel, label: "My Classes",     icon: "📚", bg: "#3b82f6" },
-    { id: "grades"    as Panel, label: "Submit Grades",  icon: "📊", bg: isGradeLocked ? "#94a3b8" : "#8b5cf6" },
-    { id: "requests"  as Panel, label: "Grade Requests", icon: "📨", bg: isGradeLocked ? "#94a3b8" : "#f59e0b" },
-    { id: "attendance"as Panel, label: "Attendance",     icon: "✅", bg: "#14b8a6" },
-    { id: "documents" as Panel, label: "Documents",      icon: "📄", bg: "#ec4899" },
-  ];
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -236,47 +228,20 @@ function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Pan
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label: "My Classes",       value: subjects.length,    icon: "📚", cls: "border-primary-subtle bg-primary-subtle",   val: "text-primary"   },
-          { label: "My Students",      value: students.length,    icon: "🎓", cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
-          { label: "Class Avg. Grade", value: `${avgGrade}%`,     icon: "📈", cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
-          { label: "Pending Requests", value: pendingRequests,    icon: "📨", cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
+          { label: "My Classes",       value: subjects.length,    cls: "border-primary-subtle bg-primary-subtle",   val: "text-primary"   },
+          { label: "My Students",      value: students.length,    cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
+          { label: "Class Avg. Grade", value: `${avgGrade}%`,     cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
+          { label: "Pending Requests", value: pendingRequests,    cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
               <div className="card-body p-3">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="text-muted small">{s.label}</span>
-                  <span style={{ fontSize: 20 }}>{s.icon}</span>
-                </div>
+                <div className="text-muted small mb-2">{s.label}</div>
                 <div className={`fw-black fs-3 ${s.val}`}>{s.value}</div>
               </div>
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Quick Access */}
-      <div>
-        <p className="text-muted text-uppercase small fw-semibold mb-3" style={{ letterSpacing: "0.08em" }}>Quick Access</p>
-        <div className="row g-3">
-          {quickLinks.map(q => {
-            const locked = isGradeLocked && (q.id === "grades" || q.id === "requests");
-            return (
-              <div key={q.id} className="col-6 col-sm-4 col-lg-2">
-                <button onClick={() => !locked && setActive(q.id)}
-                  disabled={locked}
-                  title={locked ? "Locked — visit Registrar's Office" : undefined}
-                  className="btn w-100 py-3 d-flex flex-column align-items-center gap-2 rounded-3 text-white border-0 shadow-sm"
-                  style={{ background: q.bg, transition: "transform 0.15s", opacity: locked ? 0.5 : 1, cursor: locked ? "not-allowed" : "pointer" }}
-                  onMouseEnter={e => { if (!locked) e.currentTarget.style.transform = "scale(1.04)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}>
-                  <span style={{ fontSize: 28 }}>{locked ? "🔒" : q.icon}</span>
-                  <span className="small fw-bold">{q.label}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* Recent Activity + Class Summary */}
@@ -288,7 +253,9 @@ function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Pan
               <div className="d-flex flex-column gap-3">
                 {recentActivity.map((a, i) => (
                   <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 18 }}>{a.icon}</div>
+                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36 }}>
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
                       <div className="text-muted" style={{ fontSize: 11 }}>{a.name}</div>
@@ -307,7 +274,9 @@ function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Pan
               <div className="d-flex flex-column gap-3">
                 {subjects.map(s => (
                   <div key={s.id} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 18 }}>📚</div>
+                    <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36 }}>
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#059669" }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                    </div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
                       <div className="text-muted" style={{ fontSize: 11 }}>{s.code} · {s.units} units</div>

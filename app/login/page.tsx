@@ -17,18 +17,19 @@ type Account = {
 };
 
 const USER_ACCOUNTS: Account[] = [
-  { id: "202400001", password: "jamie",      role: "Student",    name: "Jamie Santos",      subtitle: "STEM Grade 11",        redirect: "/dashboard" },
-  { id: "202400002", password: "maria",      role: "Student",    name: "Maria Reyes",       subtitle: "HUMSS Grade 11",       redirect: "/dashboard" },
-  { id: "202400003", password: "carlo",      role: "Student",    name: "Carlo Dela Cruz",   subtitle: "ABM Grade 12",         redirect: "/dashboard" },
-  { id: "202400004", password: "ana",        role: "Student",    name: "Ana Villanueva",    subtitle: "TVL-TechPro Grade 11", redirect: "/dashboard" },
-  { id: "T001",      password: "maria",      role: "Teacher",    name: "Maria Santos",      subtitle: "Mathematics",          redirect: "/teacher/dashboard" },
-  { id: "T002",      password: "juan",       role: "Teacher",    name: "Juan Dela Cruz",    subtitle: "English",              redirect: "/teacher/dashboard" },
-  { id: "T003",      password: "ana",        role: "Teacher",    name: "Ana Reyes",         subtitle: "Science",              redirect: "/teacher/dashboard" },
-  { id: "T004",      password: "carlos",     role: "Teacher",    name: "Carlos Fernandez",  subtitle: "History",              redirect: "/teacher/dashboard" },
-  { id: "P001",      password: "principal",  role: "Principal",  name: "Principal",         subtitle: "School Principal",     redirect: "/admin/principal/dashboard", altIds: ["PRINCIPAL@INFORM.EDU"] },
-  { id: "R001",      password: "Reg@2026",   role: "Registrar",  name: "Registrar Office",  subtitle: "Registrar",            redirect: "/admin/registrar/dashboard", altIds: ["REGISTRAR@INFORM.EDU"] },
-
-  { id: "A001",      password: "accounting", role: "Accounting", name: "Accounting Office", subtitle: "Accounting",           redirect: "/accounting/dashboard" },
+  { id: "202500001", password: "jamie123",     role: "Student",    name: "Jamie Santos",      subtitle: "STEM Grade 11",        redirect: "/dashboard" },
+  { id: "202500002", password: "maria456",     role: "Student",    name: "Maria Reyes",       subtitle: "HUMMS Grade 11",       redirect: "/dashboard" },
+  { id: "202500003", password: "carlo789",     role: "Student",    name: "Carlo Dela Cruz",   subtitle: "ABM Grade 12",         redirect: "/dashboard" },
+  { id: "202500004", password: "ana2025",      role: "Student",    name: "Ana Villanueva",    subtitle: "TVL-TechPro Grade 11", redirect: "/dashboard" },
+  { id: "202500005", password: "luis2025",     role: "Student",    name: "Luis Fernandez",    subtitle: "STEM Grade 12",        redirect: "/dashboard" },
+  { id: "202500006", password: "craig2025",    role: "Student",    name: "Craig Cabahug O",   subtitle: "TVL-TechPro Grade 12", redirect: "/dashboard" },
+  { id: "T001",      password: "teacher001",   role: "Teacher",    name: "Dr. Rosa Mendoza",  subtitle: "Computer Science",     redirect: "/teacher/dashboard" },
+  { id: "T002",      password: "teacher002",   role: "Teacher",    name: "Prof. Ben Aquino",  subtitle: "Mathematics",          redirect: "/teacher/dashboard" },
+  { id: "T003",      password: "teacher003",   role: "Teacher",    name: "Ms. Clara Tan",     subtitle: "English",              redirect: "/teacher/dashboard" },
+  { id: "T004",      password: "teacher004",   role: "Teacher",    name: "Mr. Carlos Reyes",  subtitle: "Science",              redirect: "/teacher/dashboard" },
+  { id: "ADMIN001",  password: "principal2026", role: "Principal", name: "School Principal",  subtitle: "School Principal",     redirect: "/admin/principal/dashboard", altIds: ["PRINCIPAL@CFEI.EDU"] },
+  { id: "ADMIN002",  password: "registrar2026", role: "Registrar", name: "Registrar Office",  subtitle: "Registrar",            redirect: "/admin/registrar/dashboard", altIds: ["REGISTRAR@CFEI.EDU"] },
+  { id: "ADMIN003",  password: "accounting2026",role: "Accounting",name: "Accounting Office", subtitle: "Accounting",           redirect: "/accounting/dashboard",       altIds: ["ACCOUNTING@CFEI.EDU"] },
 ];
 
 function normalizeId(value: string) {
@@ -39,12 +40,11 @@ function detectRole(id: string): string {
   const value = normalizeId(id);
   if (!value) return "";
   if (/^[0-9]{8,12}$/.test(value)) return "Student";
-  if (/^T/i.test(value)) return "Teacher";
-  if (/^R/i.test(value)) return "Registrar";
-  if (/^P/i.test(value)) return "Principal";
-  if (/^A/i.test(value)) return "Accounting";
-  if (value.includes("REGISTRAR@")) return "Registrar";
-  if (value.includes("PRINCIPAL@")) return "Principal";
+  if (/^T\d/i.test(value)) return "Teacher";
+  if (value === "ADMIN001" || value.includes("PRINCIPAL@")) return "Principal";
+  if (value === "ADMIN002" || value.includes("REGISTRAR@")) return "Registrar";
+  if (value === "ADMIN003" || value.includes("ACCOUNTING@")) return "Accounting";
+  if (/^ADMIN/i.test(value)) return "Admin";
   return "";
 }
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
     if (role === "Teacher") {
       endpoint = "http://localhost:4000/api/teacher/login";
       body = { teacher_id: normalizedId, password: form.password };
-    } else if (role === "Registrar" || role === "Principal") {
+    } else if (role === "Registrar" || role === "Principal" || role === "Accounting") {
       endpoint = "http://localhost:4000/api/admin/login";
       body = { admin_id: normalizedId, password: form.password };
     }

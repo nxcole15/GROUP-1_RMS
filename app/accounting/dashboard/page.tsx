@@ -112,22 +112,35 @@ export default function AccountingDashboardPage() {
 
   const enrichedStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = !q
-      ? STUDENT_TUITION
-      : STUDENT_TUITION.filter(s => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
-
-    return list.map(s => ({
-      ...s,
-      balance: Math.max(0, s.total - s.paid),
-    }));
-  }, [search]);
+    // Build per-student summary from real paymentLog data
+    const byStudent: Record<string, { id: string; name: string; track: string; level: string; total: number; paid: number }> = {};
+    paymentLog.forEach(p => {
+      if (!byStudent[p.studentId]) {
+        byStudent[p.studentId] = { id: p.studentId, name: p.student, track: "—", level: "—", total: 22050, paid: 0 };
+      }
+      if (p.status === "Verified") byStudent[p.studentId].paid += p.amount;
+    });
+    // Fall back to STUDENT_TUITION if no real payments yet
+    const sourceList = Object.keys(byStudent).length > 0
+      ? Object.values(byStudent)
+      : STUDENT_TUITION;
+    const filtered = !q
+      ? sourceList
+      : sourceList.filter(s => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+    return filtered.map(s => ({ ...s, balance: Math.max(0, s.total - s.paid) }));
+  }, [search, paymentLog]);
 
   const totals = useMemo(() => {
-    const totalAssessment = STUDENT_TUITION.reduce((a, s) => a + s.total, 0);
-    const totalCollected = STUDENT_TUITION.reduce((a, s) => a + s.paid, 0);
-    const totalBalance = totalAssessment - totalCollected;
+    const base = Object.keys(
+      paymentLog.reduce((acc, p) => { acc[p.studentId] = true; return acc; }, {} as Record<string, boolean>)
+    ).length > 0
+      ? enrichedStudents
+      : STUDENT_TUITION.map(s => ({ ...s, balance: Math.max(0, s.total - s.paid) }));
+    const totalAssessment = base.reduce((a, s) => a + s.total, 0);
+    const totalCollected  = base.reduce((a, s) => a + s.paid,  0);
+    const totalBalance    = totalAssessment - totalCollected;
     return { totalAssessment, totalCollected, totalBalance };
-  }, []);
+  }, [enrichedStudents, paymentLog]);
 
   const filteredPayments = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -140,6 +153,13 @@ export default function AccountingDashboardPage() {
 
   function verifyPayment(id: number) {
     setPaymentLog(prev => prev.map(p => (p.id === id ? { ...p, status: "Verified" } : p)));
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    fetch(`http://localhost:4000/api/admin/payments/${id}/verify`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    }).catch(() => {});
   }
 
   function rejectPayment(id: number) {

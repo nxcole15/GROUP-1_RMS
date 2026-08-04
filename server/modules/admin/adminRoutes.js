@@ -14,6 +14,7 @@ const {
   approveDocument,
   rejectDocument,
   getTeachers,
+  getStudentGrades,
 } = require("./adminController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
@@ -25,10 +26,11 @@ router.post("/logout", adminLogout);
 router.use(authenticateAdmin);
 
 // Dashboard & search
-router.get("/dashboard",       getDashboard);
-router.get("/students/search", searchStudents);
-router.get("/audit-log",       getAuditLog);
-router.get("/teachers", getTeachers);
+router.get("/dashboard",              getDashboard);
+router.get("/students/search",        searchStudents);
+router.get("/students/:student_id/grades", getStudentGrades);
+router.get("/audit-log",              getAuditLog);
+router.get("/teachers",               getTeachers);
 
 // Enrollments
 router.get("/enrollments",               getPendingEnrollments);

@@ -645,8 +645,11 @@ function StudentsPanel() {
 /*  Grades Panel  */
 function GradesPanel() {
   const [selected, setSelected] = useState(students[0].id);
-  const student = students.find(s => s.id === selected)!;
-  const grades = [
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState(false);
+  const [apiGrades, setApiGrades] = useState<{subject:string; grade:string; pct:number; units:number; teacher:string}[]>([]);
+
+  const MOCK_GRADES = [
     { subject:"Mathematics",        grade:"A",  pct:92, units:3, teacher:"Mr. Dela Cruz"  },
     { subject:"Physics",            grade:"B+", pct:87, units:3, teacher:"Ms. Villanueva" },
     { subject:"English Literature", grade:"A+", pct:96, units:3, teacher:"Ms. Santos"     },
@@ -654,14 +657,46 @@ function GradesPanel() {
     { subject:"History",            grade:"B+", pct:85, units:3, teacher:"Ms. Reyes"      },
     { subject:"Computer Science",   grade:"A",  pct:93, units:3, teacher:"Mr. Uy"         },
   ];
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setLoading(true);
+    setApiError(false);
+    fetch(`http://localhost:4000/api/admin/students/${encodeURIComponent(selected)}/grades`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.grades?.length) {
+          setApiGrades(data.grades.map((g: {subject_name:string; letter_grade:string; percentage:number; units:number; teacher_name:string}) => ({
+            subject: g.subject_name,
+            grade:   g.letter_grade,
+            pct:     g.percentage,
+            units:   g.units,
+            teacher: g.teacher_name,
+          })));
+        } else {
+          setApiGrades([]); // no grades yet — fall back to mock
+        }
+      })
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
+  const student = students.find(s => s.id === selected)!;
+  const grades = apiGrades.length ? apiGrades : MOCK_GRADES;
   const avg = Math.round(grades.reduce((a, g) => a + g.pct, 0) / grades.length);
 
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
         <div><h2 className="fw-black fs-4 text-dark mb-0">Grades Management</h2><p className="text-muted small mb-0">View and manage student grades</p></div>
-        <button className="btn btn-primary btn-sm fw-bold shadow-sm">+ Submit Grades</button>
       </div>
+      {apiError && <div className="alert alert-warning small py-2">Could not load live grades. Showing cached data.</div>}
+      {loading && <div className="text-center py-2"><div className="spinner-border spinner-border-sm text-primary" role="status" /></div>}
       <div className="d-flex flex-column flex-sm-row gap-3">
         <div style={{ width: 220 }}>
           <label className="form-label text-muted fw-semibold text-uppercase mb-1" style={{ fontSize:11 }}>Select Student</label>
@@ -715,35 +750,85 @@ function GradesPanel() {
 /*  Enrollment Panel  */
 function EnrollmentPanel() {
   const DEADLINE = new Date("2026-06-15");
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState(false);
 
   const [enrollments, setEnrollments] = useState([
-    { name:"Jamie Santos",    id:"STU-2024-001", track:"STEM",  grade:11, date:"May 18, 2026", enrollDate: new Date("2026-05-18"), status:"Confirmed", photo: null as string | null },
-    { name:"Maria Reyes",     id:"STU-2024-002", track:"HUMMS", grade:11, date:"May 19, 2026", enrollDate: new Date("2026-05-19"), status:"Pending",   photo: null as string | null },
-    { name:"Carlo Dela Cruz", id:"STU-2024-003", track:"ABM",   grade:12, date:"May 17, 2026", enrollDate: new Date("2026-05-17"), status:"Confirmed", photo: null as string | null },
-    { name:"Ana Villanueva",  id:"STU-2024-004", track:"TVL-TechPro",   grade:11, date:"May 20, 2026", enrollDate: new Date("2026-05-20"), status:"Pending",   photo: null as string | null },
-    { name:"Luis Fernandez",  id:"STU-2024-005", track:"STEM",  grade:12, date:"Jun 16, 2026", enrollDate: new Date("2026-06-16"), status:"Confirmed", photo: null as string | null },
-    { name:"Rosa Bautista",   id:"STU-2024-006", track:"TVL-TechPro",   grade:11, date:"Jun 18, 2026", enrollDate: new Date("2026-06-18"), status:"Confirmed", photo: null as string | null },
+    { id: 1, name:"Jamie Santos",    studentId:"STU-2024-001", track:"STEM",  grade:11, date:"May 18, 2026", enrollDate: new Date("2026-05-18"), status:"approved", photo: null as string | null },
+    { id: 2, name:"Maria Reyes",     studentId:"STU-2024-002", track:"HUMMS", grade:11, date:"May 19, 2026", enrollDate: new Date("2026-05-19"), status:"pending",  photo: null as string | null },
+    { id: 3, name:"Carlo Dela Cruz", studentId:"STU-2024-003", track:"ABM",   grade:12, date:"May 17, 2026", enrollDate: new Date("2026-05-17"), status:"approved", photo: null as string | null },
+    { id: 4, name:"Ana Villanueva",  studentId:"STU-2024-004", track:"TVL-TechPro", grade:11, date:"May 20, 2026", enrollDate: new Date("2026-05-20"), status:"pending", photo: null as string | null },
   ]);
 
-  function confirmEnrollment(id: string) {
-    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Confirmed" } : e));
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setLoading(true);
+    fetch("http://localhost:4000/api/admin/enrollments", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.enrollments?.length) {
+          setEnrollments(data.enrollments.map((e: {id:number; student_id:string; student_name:string; term:string; status:string; created_at:string}) => ({
+            id:         e.id,
+            name:       e.student_name || e.student_id,
+            studentId:  e.student_id,
+            track:      "—",
+            grade:      0,
+            date:       new Date(e.created_at).toLocaleDateString("en-PH", {month:"short", day:"numeric", year:"numeric"}),
+            enrollDate: new Date(e.created_at),
+            status:     e.status,
+            photo:      null,
+          })));
+        }
+      })
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function confirmEnrollment(id: number) {
+    const token = localStorage.getItem("inform_token");
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "approved" } : e));
+    if (!token || token.startsWith("demo_")) return;
+    fetch(`http://localhost:4000/api/admin/enrollments/${id}/approve`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    }).catch(() => {});
   }
 
-  function handlePhotoUpload(id: string, file: File) {
+  function rejectEnrollment(id: number) {
+    const token = localStorage.getItem("inform_token");
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "rejected" } : e));
+    if (!token || token.startsWith("demo_")) return;
+    fetch(`http://localhost:4000/api/admin/enrollments/${id}/reject`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ rejection_reason: "Rejected by admin." }),
+    }).catch(() => {});
+  }
+
+  function handlePhotoUpload(id: number, file: File) {
     const url = URL.createObjectURL(file);
     setEnrollments(prev => prev.map(e => e.id === id ? { ...e, photo: url } : e));
   }
 
-  const confirmed = enrollments.filter(e => e.status === "Confirmed");
-  const pending   = enrollments.filter(e => e.status === "Pending");
+  const confirmed = enrollments.filter(e => e.status === "approved");
+  const pending   = enrollments.filter(e => e.status === "pending");
   const late      = enrollments.filter(e => e.enrollDate > DEADLINE);
 
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year 20252026 · Deadline: June 15, 2026</p></div>
-        <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2"> Enrollment period is open</span>
+        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year 2025–2026 · Deadline: June 15, 2026</p></div>
+        <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">Enrollment period is open</span>
       </div>
+
+      {apiError && <div className="alert alert-warning small py-2">Could not load live data. Showing cached records.</div>}
+      {loading && <div className="text-center py-3"><div className="spinner-border spinner-border-sm text-primary" role="status" /></div>}
 
       {/* Stats */}
       <div className="row g-3">
@@ -785,14 +870,8 @@ function EnrollmentPanel() {
                   <tr key={e.id} style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
                     <td className="ps-4">
                       <div className="d-flex align-items-center gap-2">
-                        {/* ID Photo or initials avatar */}
                         {e.photo ? (
-                          <img
-                            src={e.photo}
-                            alt={e.name}
-                            className="rounded-circle flex-shrink-0"
-                            style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }}
-                          />
+                          <img src={e.photo} alt={e.name} className="rounded-circle flex-shrink-0" style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }} />
                         ) : (
                           <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:11 }}>
                             {initials(e.name)}
@@ -800,34 +879,29 @@ function EnrollmentPanel() {
                         )}
                         <div>
                           <div className="small fw-medium text-dark">{e.name}</div>
-                          {isLate && (
-                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}> Late Enrollee</span>
-                          )}
+                          {isLate && <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>}
                         </div>
                       </div>
                     </td>
-                    <td className="d-none d-sm-table-cell font-mono text-muted small">{e.id}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
+                    <td className="d-none d-sm-table-cell font-mono text-muted small">{e.studentId}</td>
+                    <td className="d-none d-lg-table-cell text-muted small">{e.track}{e.grade > 0 ? ` Grade ${e.grade}` : ""}</td>
                     <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
                     <td>
-                      <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
-                        {e.status}
+                      <span className={`badge ${e.status==="approved" ? "bg-success-subtle text-success border border-success-subtle" : e.status==="rejected" ? "bg-danger-subtle text-danger border border-danger-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
+                        {e.status === "approved" ? "Confirmed" : e.status === "rejected" ? "Rejected" : "Pending"}
                       </span>
                     </td>
                     <td className="text-end pe-4">
                       <div className="d-flex gap-2 justify-content-end align-items-center">
-                        {/* Upload ID photo */}
                         <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
-                          Add Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display:"none" }}
-                            onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }}
-                          />
+                          Photo
+                          <input type="file" accept="image/*" style={{ display:"none" }} onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }} />
                         </label>
-                        {e.status === "Pending" && (
-                          <button onClick={() => confirmEnrollment(e.id)} className="btn btn-primary btn-sm" style={{ fontSize:11 }}>Confirm</button>
+                        {e.status === "pending" && (
+                          <>
+                            <button onClick={() => confirmEnrollment(e.id)} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Confirm</button>
+                            <button onClick={() => rejectEnrollment(e.id)} className="btn btn-outline-danger btn-sm" style={{ fontSize:11 }}>✕</button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -844,26 +918,71 @@ function EnrollmentPanel() {
 
 /*  Tuition Panel  */
 function TuitionPanel() {
-  const allRecords = students.map(s => ({ ...s, total:22050, paid:s.tuition==="Paid"?22050:18500, balance:s.tuition==="Paid"?0:3550 }));
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState(false);
+  const [paymentRecords, setPaymentRecords] = useState(
+    students.map(s => ({ ...s, total:22050, paid:s.tuition==="Paid"?22050:18500, balance:s.tuition==="Paid"?0:3550, paymentId: 0 }))
+  );
   const [search, setSearch]         = useState("");
   const [filterTrack, setFilterTrack] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
 
-  const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setLoading(true);
+    fetch("http://localhost:4000/api/admin/payments", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.payments?.length) {
+          // Aggregate payments per student
+          const byStudent: Record<string, {paid:number; total:number; name:string; track:string; paymentId:number; status:string}> = {};
+          data.payments.forEach((p: {id:number; student_id:string; student_name:string; amount:number; status:string}) => {
+            if (!byStudent[p.student_id]) byStudent[p.student_id] = { paid:0, total:22050, name:p.student_name||p.student_id, track:"—", paymentId:p.id, status:"Unpaid" };
+            if (p.status === "verified") byStudent[p.student_id].paid += Number(p.amount);
+          });
+          const merged = Object.entries(byStudent).map(([id, v]) => ({
+            id, name:v.name, track:v.track, grade:0, gwa:0, status:"Active", tuition:v.paid>=v.total?"Paid":"Unpaid", room:0,
+            total:v.total, paid:v.paid, balance:Math.max(0, v.total-v.paid), paymentId:v.paymentId,
+          }));
+          if (merged.length) setPaymentRecords(merged as typeof paymentRecords);
+        }
+      })
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false));
+  }, []);
 
+  function verifyPayment(paymentId: number, studentId: string) {
+    const token = localStorage.getItem("inform_token");
+    setPaymentRecords(prev => prev.map(r => r.id === studentId ? { ...r, tuition:"Paid", balance:0, paid:r.total } : r));
+    if (!token || token.startsWith("demo_") || !paymentId) return;
+    fetch(`http://localhost:4000/api/admin/payments/${paymentId}/verify`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    }).catch(() => {});
+  }
+
+  const allRecords = paymentRecords;
+  const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
   const filtered = allRecords.filter(r => {
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
     const matchTrack  = filterTrack === "All" || r.track === filterTrack;
     const matchStatus = filterStatus === "All" || r.tuition === filterStatus;
     return matchSearch && matchTrack && matchStatus;
   });
-
   const totalCollected = allRecords.reduce((a,r) => a + r.paid, 0);
   const totalBalance   = allRecords.reduce((a,r) => a + r.balance, 0);
 
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Term 1 · Academic Year 20252026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Term 1 · Academic Year 2025–2026</p></div>
+
+      {apiError && <div className="alert alert-warning small py-2">Could not load live data. Showing cached records.</div>}
+      {loading && <div className="text-center py-3"><div className="spinner-border spinner-border-sm text-primary" role="status" /></div>}
 
       {/* Stats */}
       <div className="row g-3">
@@ -914,12 +1033,13 @@ function TuitionPanel() {
                 <th className="small text-muted fw-semibold text-uppercase text-end d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Total</th>
                 <th className="small text-muted fw-semibold text-uppercase text-end d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Paid</th>
                 <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Balance</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
+                <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Status</th>
+                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center text-muted py-4 small">No records found.</td></tr>
+                <tr><td colSpan={7} className="text-center text-muted py-4 small">No records found.</td></tr>
               ) : filtered.map((r, i) => (
                 <tr key={i}>
                   <td className="ps-4">
@@ -928,11 +1048,16 @@ function TuitionPanel() {
                       <span className="small fw-medium text-dark">{r.name}</span>
                     </div>
                   </td>
-                  <td className="d-none d-sm-table-cell text-muted small">{r.track} Grade {r.grade}</td>
-                  <td className="d-none d-sm-table-cell text-muted small text-end">{r.total.toLocaleString()}</td>
-                  <td className="d-none d-sm-table-cell text-success small fw-semibold text-end">{r.paid.toLocaleString()}</td>
-                  <td className={`small fw-semibold text-end ${r.balance > 0 ? "text-danger" : "text-muted"}`}>{r.balance > 0 ? `${r.balance.toLocaleString()}` : ""}</td>
-                  <td className="text-end pe-4"><span className={`badge ${r.tuition==="Paid" ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"}`}>{r.tuition}</span></td>
+                  <td className="d-none d-sm-table-cell text-muted small">{r.track}{r.grade > 0 ? ` Grade ${r.grade}` : ""}</td>
+                  <td className="d-none d-sm-table-cell text-muted small text-end">₱{r.total.toLocaleString()}</td>
+                  <td className="d-none d-sm-table-cell text-success small fw-semibold text-end">₱{r.paid.toLocaleString()}</td>
+                  <td className={`small fw-semibold text-end ${r.balance > 0 ? "text-danger" : "text-muted"}`}>{r.balance > 0 ? `₱${r.balance.toLocaleString()}` : "—"}</td>
+                  <td className="text-end"><span className={`badge ${r.tuition==="Paid" ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"}`}>{r.tuition}</span></td>
+                  <td className="text-end pe-4">
+                    {r.tuition !== "Paid" && r.paymentId > 0 && (
+                      <button onClick={() => verifyPayment(r.paymentId, r.id)} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Verify</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1469,15 +1594,47 @@ function AdminDocumentsPanel() {
   const [docs, setDocs] = useState(allDocumentRequests);
   const [approving, setApproving] = useState<number | null>(null);
   const [releaseDate, setReleaseDate] = useState("");
-  // Rejection modal state
   const [rejecting, setRejecting] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectReasonOther, setRejectReasonOther] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setLoading(true);
+    fetch("http://localhost:4000/api/admin/documents", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.documents?.length) {
+          setDocs(data.documents.map((d: {id:number; student_id:string; student_name?:string; document_type:string; status:string; expected_release_date?:string; created_at:string}) => ({
+            id:          d.id,
+            student:     d.student_name || d.student_id,
+            type:        d.document_type,
+            status:      d.status,
+            requestedAt: new Date(d.created_at).toLocaleDateString("en-PH", {month:"long", day:"numeric", year:"numeric"}),
+            approvedAt:  null,
+            approvedBy:  null,
+            releaseDate: d.expected_release_date || null,
+            downloadUrl: null,
+            teacher:     "—",
+            grade:       0,
+            track:       "—",
+          })));
+        }
+      })
+      .catch(() => setApiError(true))
+      .finally(() => setLoading(false));
+  }, []);
 
   const REJECT_REASONS = [
     "Incomplete requirements",
     "Document type not available",
-    "Outstanding balance  fees not cleared",
+    "Outstanding balance — fees not cleared",
     "Enrollment not yet confirmed",
     "Duplicate request already on file",
     "Student record under review",
@@ -1487,15 +1644,17 @@ function AdminDocumentsPanel() {
   function confirmApprove(id: number) {
     if (!releaseDate) return;
     const formatted = new Date(releaseDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    setDocs(prev =>
-      prev.map(d =>
-        d.id === id
-          ? { ...d, status: "approved", approvedAt: new Date().toLocaleDateString(), releaseDate: formatted }
-          : d
-      )
-    );
+    setDocs(prev => prev.map(d => d.id === id ? { ...d, status: "approved", approvedAt: new Date().toLocaleDateString(), releaseDate: formatted } : d));
     setApproving(null);
     setReleaseDate("");
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    fetch(`http://localhost:4000/api/admin/documents/${id}/approve`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ expected_release_date: releaseDate }),
+    }).catch(() => {});
   }
 
   function confirmReject() {
@@ -1504,11 +1663,16 @@ function AdminDocumentsPanel() {
       ? rejectReasonOther.trim() || "No reason provided"
       : rejectReason;
     if (!finalReason) return;
-    setDocs(prev => prev.map(d =>
-      d.id === rejecting
-        ? { ...d, status: "rejected", rejectionReason: finalReason, rejectedAt: new Date().toLocaleDateString() }
-        : d
-    ));
+    setDocs(prev => prev.map(d => d.id === rejecting ? { ...d, status: "rejected" } : d));
+    const token = localStorage.getItem("inform_token");
+    if (token && !token.startsWith("demo_")) {
+      fetch(`http://localhost:4000/api/admin/documents/${rejecting}/reject`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rejection_reason: finalReason }),
+      }).catch(() => {});
+    }
     setRejecting(null);
     setRejectReason("");
     setRejectReasonOther("");
@@ -1524,6 +1688,8 @@ function AdminDocumentsPanel() {
         <h2 className="fw-black fs-4 text-dark mb-0">Document Management</h2>
         <p className="text-muted small mb-0">Manage all student document requests</p>
       </div>
+      {apiError && <div className="alert alert-warning small py-2">Could not load live data. Showing cached records.</div>}
+      {loading && <div className="text-center py-3"><div className="spinner-border spinner-border-sm text-primary" role="status" /></div>}
 
       {/* Rejection reason modal */}
       {rejecting !== null && (() => {
@@ -2023,7 +2189,7 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
     if (hideBanner) return; // wrapped by principal/registrar — they handle auth
     const token = localStorage.getItem("inform_token");
     const role  = localStorage.getItem("inform_role");
-    const adminRoles = ["Registrar", "Principal", "Admin"];
+    const adminRoles = ["Registrar", "Principal", "Admin", "Accounting"];
     if (!token || !adminRoles.includes(role ?? "")) {
       window.location.replace("/login");
     }

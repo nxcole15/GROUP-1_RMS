@@ -191,11 +191,75 @@ async function getTeachers(req, res, next) {
   } catch (err) { next(err); }
 }
 
+/* ── Student Grades (admin view) ───────────────────────────── */
+async function getStudentGrades(req, res, next) {
+  try {
+    const { student_id } = req.params;
+
+    // Validate student exists
+    const [students] = await db.query(
+      "SELECT student_id, full_name, pathway, grade_level FROM students WHERE student_id = ? LIMIT 1",
+      [student_id]
+    );
+    if (!students[0]) {
+      return res.status(404).json({ error: "Student not found." });
+    }
+
+    // Fetch all grades for this student with subject + teacher info
+    const [grades] = await db.query(
+      `SELECT g.id, g.percentage, g.term, g.created_at,
+              s.code  AS subject_code,
+              s.name  AS subject_name,
+              s.units AS units,
+              t.full_name AS teacher_name
+       FROM grades g
+       JOIN subjects s ON s.id = g.subject_id
+       JOIN teachers t ON t.id = g.teacher_id
+       WHERE g.student_id = ?
+       ORDER BY s.name ASC, g.term ASC`,
+      [student_id]
+    );
+
+    // Compute letter grade from percentage (Philippine grading scale)
+    const toLetterGrade = (pct) => {
+      if (pct >= 97) return "A+";
+      if (pct >= 93) return "A";
+      if (pct >= 90) return "A-";
+      if (pct >= 87) return "B+";
+      if (pct >= 83) return "B";
+      if (pct >= 80) return "B-";
+      if (pct >= 77) return "C+";
+      if (pct >= 73) return "C";
+      if (pct >= 70) return "C-";
+      if (pct >= 65) return "D";
+      return "F";
+    };
+
+    const enriched = grades.map(g => ({
+      ...g,
+      percentage:  parseFloat(g.percentage),
+      letter_grade: toLetterGrade(parseFloat(g.percentage)),
+      passed:      parseFloat(g.percentage) >= 70,
+    }));
+
+    // Compute GWA
+    const gwa = enriched.length
+      ? parseFloat((enriched.reduce((a, g) => a + g.percentage, 0) / enriched.length).toFixed(2))
+      : null;
+
+    res.json({
+      student:  students[0],
+      grades:   enriched,
+      gwa:      gwa ?? "N/A",
+      count:    enriched.length,
+    });
+  } catch (err) { next(err); }
+}
 
 module.exports = {
   getDashboard, searchStudents,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
-  getTeachers,
+  getTeachers, getStudentGrades,
 };
