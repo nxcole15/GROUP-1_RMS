@@ -167,3 +167,15 @@ CREATE TABLE IF NOT EXISTS enrollment_config (
   active_term     VARCHAR(50)  NOT NULL,
   deadline        DATETIME     NOT NULL
 );
+
+-- ── Schedule ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS schedule (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  subject_id  INT UNSIGNED NOT NULL,
+  day         ENUM('Monday','Tuesday','Wednesday','Thursday','Friday') NOT NULL,
+  time_start  TIME NOT NULL,
+  time_end    TIME NOT NULL,
+  room        VARCHAR(50) NOT NULL DEFAULT 'TBA',
+  FOREIGN KEY (subject_id) REFERENCES subjects(id)
+);
+

@@ -1,49 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * GET /api/teacher/dashboard
- * Get teacher dashboard data
- */
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+
 export async function GET(req: NextRequest) {
   try {
-    const teacher_id = req.cookies.get("teacher_id")?.value;
+    const token = req.cookies.get("teacher_token")?.value;
 
-    if (!teacher_id) {
-      return NextResponse.json(
-        { error: "Unauthorized. Please log in." },
-        { status: 401 }
-      );
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
-    // Demo data (in production, query database)
-    const dashboardData = {
-      teacher: {
-        teacher_id,
-        full_name: "Maria Santos",
-        department: "Mathematics",
-        email: "maria.santos@cfei.edu",
+    const backendRes = await fetch(`${BACKEND_URL}/api/teacher/dashboard`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
       },
-      subjects: [
-        { id: 1, code: "MATH101", name: "Algebra I", units: 3, enrolled: 35, max: 40 },
-        { id: 2, code: "MATH102", name: "Geometry", units: 3, enrolled: 32, max: 40 },
-        { id: 3, code: "MATH201", name: "Calculus I", units: 4, enrolled: 28, max: 35 },
-      ],
-      stats: {
-        total_subjects: 3,
-        total_students: 95,
-        avg_grade: 90.5,
-      },
-      activity: [
-        { action: "Grade Submitted", name: "Jamie Santos", time: "2h ago", icon: "📊" },
-        { action: "Attendance Updated", name: "Maria Reyes", time: "3h ago", icon: "✓" },
-      ],
-    };
+    });
 
-    return NextResponse.json(dashboardData);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 }
-    );
+    const data = await backendRes.json();
+    return NextResponse.json(data, { status: backendRes.status });
+
+  } catch {
+    return NextResponse.json({ error: "Could not connect to server." }, { status: 503 });
   }
 }

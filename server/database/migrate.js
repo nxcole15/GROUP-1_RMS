@@ -206,6 +206,20 @@ async function migrate() {
 
   console.log("✅  All tables created");
 
+  await conn.query(`
+  CREATE TABLE schedule (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    subject_id  INT UNSIGNED NOT NULL,
+    day         ENUM('Monday','Tuesday','Wednesday','Thursday','Friday') NOT NULL,
+    time_start  TIME NOT NULL,
+    time_end    TIME NOT NULL,
+    room        VARCHAR(50) NOT NULL DEFAULT 'TBA',
+    FOREIGN KEY (subject_id) REFERENCES subjects(id)
+  )
+`);
+console.log("✅  Schedule table created");
+
+
   // ── Seed: Teachers ───────────────────────────────────────────
   const teachers = [
     ["T001", await bcrypt.hash("teacher001", 10), "Dr. Rosa Mendoza",   "Computer Science", "r.mendoza@inform.edu"],
@@ -223,8 +237,9 @@ async function migrate() {
 
   // ── Seed: Admins ─────────────────────────────────────────────
   const admins = [
-    ["ADMIN001", await bcrypt.hash("admin2024",   10), "Registrar Office", "admin", "registrar@inform.edu"],
-    ["ADMIN002", await bcrypt.hash("cashier2024", 10), "Cashier Office",   "admin", "cashier@inform.edu"],
+    ["ADMIN001", await bcrypt.hash("principal2026",  10), "School Principal",  "principal",  "principal@cfei.edu"],
+    ["ADMIN002", await bcrypt.hash("registrar2026",  10), "Registrar Office",  "registrar",  "registrar@cfei.edu"],
+    ["ADMIN003", await bcrypt.hash("accounting2026", 10), "Accounting Office", "accounting", "accounting@cfei.edu"],
   ];
   for (const a of admins) {
     await conn.query(
@@ -269,6 +284,36 @@ async function migrate() {
     );
   }
   console.log("✅  Subjects seeded");
+
+  // ── Seed: Schedule ────────────────────────────────────────────
+const scheduleEntries = [
+  // subject pk 1 = CS401 (Dr. Rosa Mendoza)
+  [1, "Monday",    "07:30:00", "09:00:00", "Room 301"],
+  [1, "Wednesday", "07:30:00", "09:00:00", "Room 301"],
+  [1, "Friday",    "07:30:00", "09:00:00", "Room 301"],
+  // subject pk 2 = CS402
+  [2, "Tuesday",   "09:00:00", "10:30:00", "Room 302"],
+  [2, "Thursday",  "09:00:00", "10:30:00", "Room 302"],
+  // subject pk 3 = MATH301
+  [3, "Monday",    "10:00:00", "11:30:00", "Room 205"],
+  [3, "Wednesday", "10:00:00", "11:30:00", "Room 205"],
+  // subject pk 4 = ENG201
+  [4, "Tuesday",   "13:00:00", "14:30:00", "Room 108"],
+  [4, "Thursday",  "13:00:00", "14:30:00", "Room 108"],
+  // subject pk 5 = CS403
+  [5, "Friday",    "10:00:00", "11:30:00", "ICT Lab"],
+  // subject pk 6 = SCI301
+  [6, "Monday",    "14:00:00", "15:30:00", "Sci. Lab"],
+  [6, "Wednesday", "14:00:00", "15:30:00", "Sci. Lab"],
+];
+for (const [subject_id, day, time_start, time_end, room] of scheduleEntries) {
+  await conn.query(
+    `INSERT INTO schedule (subject_id, day, time_start, time_end, room) VALUES (?, ?, ?, ?, ?)`,
+    [subject_id, day, time_start, time_end, room]
+  );
+}
+console.log("✅  Schedule seeded");
+
 
   // ── Seed: Enrollments ────────────────────────────────────────
   // Student 202500001 — approved
@@ -393,7 +438,7 @@ async function migrate() {
   console.log("   Students  : 202500001 / jamie123  |  202500002 / maria456  |  202500003 / carlo789");
   console.log("   Students  : 202500004 / ana2025   |  202500005 / luis2025  |  202500006 / craig2025");
   console.log("   Teachers  : T001 / teacher001  |  T002 / teacher002  |  T003 / teacher003  |  T004 / teacher004");
-  console.log("   Admins    : ADMIN001 / admin2024  |  ADMIN002 / cashier2024");
+  console.log("   Admins    : ADMIN001 / principal2026  |  ADMIN002 / registrar2026 | ADMIN003 / accounting2026");
 
   await conn.end();
 }
