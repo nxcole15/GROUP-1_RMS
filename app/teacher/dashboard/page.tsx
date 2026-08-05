@@ -557,33 +557,42 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
 
 /* ── Grade Requests Panel ── */
 function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
-  const [requests, setRequests] = useState<import("../../lib/gradeRequests").GradeRequest[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const [grading, setGrading] = useState<Record<number, { score: string; remarks: string }>>({});
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const { loadRequests } = require("../../lib/gradeRequests");
-    // Teacher T001 = "Mr. Dela Cruz" — show requests assigned to this teacher
-    setRequests(loadRequests().filter((r: import("../../lib/gradeRequests").GradeRequest) =>
-      r.teacher === "Mr. Dela Cruz"
-    ));
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/teacher", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
   }, []);
+  
+
 
   function reload() {
-    const { loadRequests } = require("../../lib/gradeRequests");
-    setRequests(loadRequests().filter((r: import("../../lib/gradeRequests").GradeRequest) =>
-      r.teacher === "Mr. Dela Cruz"
-    ));
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/teacher", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
   }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   function acceptRequest(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, { status: "teacher_calculating" });
-    reload();
     showToast("📝 Request accepted — enter the calculated grade below");
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "teacher_calculating" } : r));
   }
 
   function submitToAdmin(id: number) {
@@ -595,60 +604,71 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-"
       : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-"
       : score >= 65 ? "D" : "F";
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, {
-      status: "submitted_to_admin",
-      score,
-      letterGrade,
-      remarks: g.remarks || "",
-      submittedToAdminAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
+      
+    const token = localStorage.getItem("inform_token");
+      if (token) {
+        fetch(`http://localhost:4000/api/grade-requests/teacher/${id}/submit`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ score, remarks: g.remarks || "" }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data?.request) reload(); })
+          .catch(() => {});
+    }
     setGrading(prev => { const n = { ...prev }; delete n[id]; return n; });
     reload();
-    showToast(`📤 Grade submitted to Admin for verification`);
-
-    // Also post to real API
-    const token = typeof window !== "undefined" ? localStorage.getItem("inform_token") : null;
-    const req = requests.find(r => r.id === id);
-    if (token && !token.startsWith("demo_") && req) {
-      fetch("http://localhost:4000/api/teacher/grades", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ student_id: req.studentId || req.student, subject_id: id, percentage: score }),
-      }).catch(() => {}); // localStorage already updated
-    }
+    showToast(`📤 Grade submitted to Registrar for review`);
   }
 
   function releaseToStudent(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, {
-      status: "released_to_student",
-      releasedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
-    reload();
-    showToast("🎓 Grade released to student!");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/teacher/${id}/release`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("🎓 Grade released to student!"); })
+      .catch(() => {});
   }
+
 
   function rejectRequest(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, {
-      status: "rejected",
-      rejectedBy: "Teacher",
-      rejectedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
     reload();
     showToast("✕ Request rejected");
   }
 
-  const { statusLabel, statusBadgeClass } = require("../../lib/gradeRequests");
+  function statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      student_requested:  "📨 Requested",
+      teacher_calculating:"📝 Calculating",
+      registrar_review:   "📤 Sent to Registrar",
+      principal_review:   "👀 Principal Review",
+      principal_approved: "✅ Principal Approved",
+      registrar_released: "📬 Released by Registrar",
+      released_to_student:"🎓 Grade Released",
+      rejected:           "✕ Rejected",
+    };
+    return labels[status] || status;
+  }
+
+  function statusBadgeClass(status: string): string {
+    if (status === "released_to_student" || status === "principal_approved") return "bg-success text-white";
+    if (status === "rejected") return "bg-danger-subtle text-danger border border-danger-subtle";
+    if (status === "student_requested") return "bg-warning-subtle text-warning border border-warning-subtle";
+    return "bg-primary-subtle text-primary border border-primary-subtle";
+  }
 
   const newRequests     = requests.filter(r => r.status === "student_requested");
   const inProgress      = requests.filter(r => r.status === "teacher_calculating");
-  const pendingAdmin    = requests.filter(r => r.status === "submitted_to_admin");
-  const verifiedByAdmin = requests.filter(r => r.status === "admin_verified");
+  const pendingAdmin    = requests.filter(r => r.status === "registrar_review");
+  const verifiedByAdmin = requests.filter(r => r.status === "principal_approved" || r.status === "registrar_released");
   const released        = requests.filter(r => r.status === "released_to_student");
   const rejected        = requests.filter(r => r.status === "rejected");
 
@@ -933,10 +953,10 @@ function DocumentApprovalsPanel() {
 function NotificationsPanel() {
   const [notifs, setNotifs] = useState(teacherNotifications);
 
-  useEffect(() => {
+  function fetchNotifs() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("http://localhost:4000/api/teacher/notifications", {
+    fetch("http://localhost:4000/api/grade-requests/staff-notifications", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -944,12 +964,37 @@ function NotificationsPanel() {
       .then(data => {
         if (data?.notifications?.length) {
           setNotifs(data.notifications.map((n: {
-            id: number; type: string; title: string; message: string; time: string; read: boolean;
-          }) => ({ ...n, icon: "📊" })));
+            id: number; type: string; title: string; message: string; created_at: string; is_read: boolean;
+          }) => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+            read: !!n.is_read,
+            icon: n.type === "grade_request" ? "📨" : "�",
+          })));
         }
       })
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 15000);
+    return () => clearInterval(interval);
   }, []);
+
+  function markAllRead() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/staff-notifications/read", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    }).catch(() => {});
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+  }
 
   const unread = notifs.filter(n => !n.read);
   const read   = notifs.filter(n =>  n.read);
@@ -957,7 +1002,7 @@ function NotificationsPanel() {
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-center justify-content-between">
         <div><h2 className="fw-black fs-4 text-dark mb-1">Notifications</h2><p className="text-muted small mb-0">{unread.length} unread</p></div>
-        {unread.length > 0 && <button onClick={() => setNotifs(prev => prev.map(n => ({ ...n, read: true })))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>Mark all read</button>}
+        {unread.length > 0 && <button onClick={markAllRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>Mark all read</button>}
       </div>
       {unread.length > 0 && (
         <div>
@@ -974,7 +1019,11 @@ function NotificationsPanel() {
                       <div className="text-muted mt-1" style={{ fontSize: 11 }}>{n.time}</div>
                     </div>
                     <div className="d-flex gap-1">
-                      <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>✓</button>
+                      <button onClick={() => {
+                        const token = localStorage.getItem("inform_token");
+                        if (token) fetch(`http://localhost:4000/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>✓</button>
                       <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>✕</button>
                     </div>
                   </div>
@@ -1282,6 +1331,37 @@ export default function TeacherDashboardPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
 
+  // Poll staff notifications for the topbar bell unread count
+  useEffect(() => {
+    function fetchNotifs() {
+      const token = localStorage.getItem("inform_token");
+      if (!token) return;
+      fetch("http://localhost:4000/api/grade-requests/staff-notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.notifications?.length) {
+            setNotifs(prev => {
+              // Preserve locally-marked-read states so poll doesn't undo them
+              const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
+              return data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id, type: n.type, title: n.title, message: n.message,
+                time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                read: readIds.has(n.id) ? true : !!n.is_read,
+                icon: "📨",
+              }));
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    const interval = setInterval(fetchNotifs, 15000);
+    fetchNotifs();
+    return () => clearInterval(interval);
+  }, []);
+
     const [apiTeacher, setApiTeacher] = useState<{
     teacher_id: string; full_name: string; department: string; email: string;
   } | null>(null);
@@ -1303,18 +1383,9 @@ export default function TeacherDashboardPage() {
     }
   }, []);
 
-  // Load live pending count from shared store
+  // Fetch real teacher dashboard data from API
   useEffect(() => {
     if (!authChecked) return;
-    const { loadRequests } = require("../../lib/gradeRequests");
-    const reqs = loadRequests();
-    const count = reqs.filter((r: { teacher: string; status: string }) =>
-      r.teacher === "Mr. Dela Cruz" &&
-      ["student_requested", "teacher_calculating"].includes(r.status)
-    ).length;
-    setPendingCount(count);
-
-    // Fetch real teacher dashboard data from API
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
     fetch("http://localhost:4000/api/teacher/dashboard", {
@@ -1329,8 +1400,8 @@ export default function TeacherDashboardPage() {
         if (data.subjects?.length) setApiSubjects(data.subjects);
         if (data.students?.length) setApiStudents(data.students);
       })
-      .catch(() => {}); // keep local store count on error
-  }, [panel, authChecked]); // re-check when user navigates panels
+      .catch(() => {});
+  }, [panel, authChecked]);
   const deadlinePassed = isDeadlinePassed();
   const isGradeLocked  = deadlinePassed && pendingCount > 0;
   const activeTerm     = getActiveTerm();

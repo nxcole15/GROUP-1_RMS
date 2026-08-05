@@ -77,6 +77,247 @@ function PrincipalProfile({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ── Grade Requests Panel for Principal ── */
+function PrincipalGradeRequestsPanel() {
+  const [requests, setRequests]   = useState<any[]>([]);
+  const [termConfig, setTermConfig] = useState<{ term: string; is_open: number }[]>([]);
+  const [toast, setToast]         = useState<string | null>(null);
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3500); }
+
+  function reload() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/principal", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => {
+        if (r.status === 401) { showToast("⚠️ Session expired. Please log in again."); return null; }
+        return r.ok ? r.json() : null;
+      })
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
+
+    fetch("http://localhost:4000/api/grade-requests/config")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.config) setTermConfig(data.config); })
+      .catch(() => {});
+  }
+
+  // Re-fetch config only (lighter than full reload)
+  function reloadConfig() {
+    fetch("http://localhost:4000/api/grade-requests/config")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.config) setTermConfig(data.config); })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    reload();
+    const interval = setInterval(reload, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function toggleTerm(term: string, open: boolean) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) { showToast("⚠️ Session expired. Please log in again."); return; }
+    // Optimistic update — flip immediately so UI responds at once
+    setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
+    fetch(`http://localhost:4000/api/grade-requests/principal/${open ? "open" : "close"}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ term }),
+    })
+      .then(r => {
+        if (r.status === 401) { showToast("⚠️ Session expired. Please log in again."); return null; }
+        return r.ok ? r.json() : Promise.reject(r.status);
+      })
+      .then(data => {
+        if (!data) return;
+        showToast(open ? `🟢 ${term} grade requests opened.` : `🔴 ${term} grade requests closed.`);
+        reloadConfig(); // confirm from server
+      })
+      .catch(() => {
+        // Revert optimistic update on failure
+        setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 0 : 1 } : c));
+        showToast("⚠️ Failed to update term status. Please try again.");
+      });
+  }
+
+  function approveRequest(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/principal/${id}/approve`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("✅ Grade approved. Sent back to Registrar."); })
+      .catch(() => showToast("⚠️ Failed to approve."));
+  }
+
+  function rejectRequest(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    const reason = prompt("Reason for rejection (required):") || "";
+    if (!reason.trim()) { showToast("⚠️ Rejection reason is required."); return; }
+    fetch(`http://localhost:4000/api/grade-requests/principal/${id}/reject`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ rejection_reason: reason }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("✕ Grade request rejected."); })
+      .catch(() => showToast("⚠️ Failed to reject."));
+  }
+
+  const forReview = requests.filter(r => r.status === "principal_review");
+  const approved  = requests.filter(r => r.status === "principal_approved");
+  const rejected  = requests.filter(r => r.status === "rejected");
+  const others    = requests.filter(r => !["principal_review", "principal_approved", "rejected"].includes(r.status));
+
+  return (
+    <div className="d-flex flex-column gap-4 p-3 p-md-4">
+        {toast && (
+          <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 280 }}>{toast}</div>
+        )}
+
+        {/* Open/Close Term Controls */}
+        <div>
+          <h2 className="fw-black fs-4 text-dark mb-1">Grade Request Controls</h2>
+          <p className="text-muted small mb-3">Open or close the grade request window for each term</p>
+          <div className="row g-3">
+            {["Term 1", "Term 2", "Term 3"].map(term => {
+              const config = termConfig.find(c => c.term === term);
+              const isOpen = !!config?.is_open;
+              return (
+                <div key={term} className="col-12 col-md-4">
+                  <div className={`card border-0 shadow-sm rounded-3 ${isOpen ? "border-start border-4 border-success" : ""}`}
+                    style={{ borderLeft: isOpen ? "4px solid #10b981" : "4px solid #e2e8f0" }}>
+                    <div className="card-body p-4">
+                      <div className="d-flex align-items-center justify-content-between mb-3">
+                        <div className="fw-bold text-dark">{term}</div>
+                        <span className={`badge ${isOpen ? "bg-success text-white" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
+                          {isOpen ? "🟢 Open" : "🔴 Closed"}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => toggleTerm(term, !isOpen)}
+                        className={`btn btn-sm w-100 ${isOpen ? "btn-outline-danger" : "btn-success"}`}>
+                        {isOpen ? "🔴 Close Requests" : "🟢 Open Requests"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Grade Requests — Review */}
+        <div>
+          <h2 className="fw-black fs-4 text-dark mb-1">Grade Requests</h2>
+          <p className="text-muted small mb-0">Approve or reject grade requests forwarded by the Registrar</p>
+        </div>
+
+        {forReview.length > 0 && (
+          <div>
+            <h3 className="fw-bold small text-dark mb-3">👀 Needs Your Approval</h3>
+            <div className="d-flex flex-column gap-2">
+              {forReview.map((req: any) => (
+                <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ borderLeft: "4px solid #8b5cf6" }}>
+                  <div className="card-body p-4">
+                    <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                      <div>
+                        <div className="fw-bold text-dark small">{req.student_name || req.student}</div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_name || req.subject} · {req.term}</div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>Score: <strong>{req.score}</strong> · Teacher: {req.teacher_name || req.teacher}</div>
+                        {req.registrar_note && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Registrar note: {req.registrar_note}</div>}
+                      </div>
+                      <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: 10 }}>👀 Review</span>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button onClick={() => approveRequest(req.id)} className="btn btn-success btn-sm flex-grow-1">✅ Approve</button>
+                      <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">✕ Reject</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {approved.length > 0 && (
+          <div>
+            <h3 className="fw-bold small text-dark mb-3">✅ Approved</h3>
+            <div className="d-flex flex-column gap-2">
+              {approved.map((req: any) => (
+                <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
+                  <div className="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                      <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} · Sent back to Registrar</div>
+                    </div>
+                    <span className="badge bg-success text-white" style={{ fontSize: 10 }}>✅ Approved</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {rejected.length > 0 && (
+          <div>
+            <h3 className="fw-bold small text-dark mb-3">✕ Rejected</h3>
+            <div className="d-flex flex-column gap-2">
+              {rejected.map((req: any) => (
+                <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
+                  <div className="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                      <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Rejected</div>
+                    </div>
+                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 10 }}>✕ Rejected</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {others.length > 0 && (
+          <div>
+            <h3 className="fw-bold small text-dark mb-3">📋 Other Requests</h3>
+            <div className="d-flex flex-column gap-2">
+              {others.map((req: any) => (
+                <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
+                  <div className="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                      <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.status}</div>
+                    </div>
+                    <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style={{ fontSize: 10 }}>{req.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {requests.length === 0 && forReview.length === 0 && (
+          <div className="card border-0 shadow-sm rounded-3">
+            <div className="card-body p-4 text-center text-muted small">No grade requests forwarded yet.</div>
+          </div>
+        )}
+      </div>
+  );
+}
+
 /* ── Main Page ── */
 export default function PrincipalDashboardPage() {
   const [sidebarExpanded, setSidebarExpanded]   = useState(false);
@@ -109,7 +350,7 @@ export default function PrincipalDashboardPage() {
             style={{ position: "relative", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "50%", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", transition: "background 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.22)")}
             onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ animation: unreadCount > 0 ? "swing 1s ease-in-out 0.5s 2" : "none" }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
             {unreadCount > 0 && <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #1d4ed8" }}>{unreadCount}</span>}
@@ -151,8 +392,12 @@ export default function PrincipalDashboardPage() {
         </>
       )}
 
-      {/* Full admin dashboard — principal sees everything including grade requests */}
-      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} hideTopbarControls />
+      <AdminDashboardPage
+        hideBanner
+        onSidebarExpandChange={setSidebarExpanded}
+        hideTopbarControls
+        role="principal"
+      />
 
       {/* Profile overlay */}
       {showProfile && (

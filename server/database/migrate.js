@@ -179,7 +179,7 @@ async function migrate() {
       id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       student_id VARCHAR(12)  NOT NULL,
       message    TEXT         NOT NULL,
-      type       ENUM('enrollment','payment','document','system') NOT NULL,
+      type       ENUM('enrollment','payment','document','grade','system') NOT NULL,
       is_read    TINYINT(1)   NOT NULL DEFAULT 0,
       created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (student_id) REFERENCES students(student_id)
@@ -219,8 +219,69 @@ async function migrate() {
 `);
 console.log("✅  Schedule table created");
 
+await conn.query(`
+  CREATE TABLE grade_requests (
+    id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id         VARCHAR(12)  NOT NULL,
+    subject_id         INT UNSIGNED NOT NULL,
+    teacher_id         INT UNSIGNED NOT NULL,
+    term               VARCHAR(50)  NOT NULL,
+    status             ENUM(
+      'student_requested',
+      'teacher_calculating',
+      'teacher_submitted',
+      'registrar_review',
+      'principal_review',
+      'principal_approved',
+      'registrar_released',
+      'teacher_released',
+      'released_to_student',
+      'rejected'
+    ) NOT NULL DEFAULT 'student_requested',
+    score              DECIMAL(5,2) NULL,
+    letter_grade       VARCHAR(5)   NULL,
+    remarks            TEXT         NULL,
+    rejection_reason   TEXT         NULL,
+    rejected_by        VARCHAR(20)  NULL,
+    principal_note     TEXT         NULL,
+    registrar_note     TEXT         NULL,
+    created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(id),
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+  )
+`);
+console.log("✅  Grade requests table created");
 
-  // ── Seed: Teachers ───────────────────────────────────────────
+await conn.query(`
+  CREATE TABLE grade_request_config (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    term        VARCHAR(50) NOT NULL UNIQUE,
+    is_open     TINYINT(1)  NOT NULL DEFAULT 0,
+    opened_by   VARCHAR(20) NULL,
+    opened_at   DATETIME    NULL,
+    closed_by   VARCHAR(20) NULL,
+    closed_at   DATETIME    NULL
+  )
+`);
+console.log("✅  Grade request config table created");
+
+await conn.query(`
+  CREATE TABLE staff_notifications (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    recipient   VARCHAR(20)  NOT NULL COMMENT 'teacher_id or admin_id',
+    role        ENUM('teacher','registrar','principal') NOT NULL,
+    title       VARCHAR(100) NOT NULL,
+    message     TEXT         NOT NULL,
+    type        VARCHAR(40)  NOT NULL DEFAULT 'grade_request',
+    is_read     TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+console.log("✅  Staff notifications table created");
+
+
   const teachers = [
     ["T001", await bcrypt.hash("teacher001", 10), "Dr. Rosa Mendoza",   "Computer Science", "r.mendoza@inform.edu"],
     ["T002", await bcrypt.hash("teacher002", 10), "Prof. Ben Aquino",   "General Mathworld",      "b.aquino@inform.edu"],
@@ -432,6 +493,15 @@ console.log("✅  Schedule seeded");
     [TERM]
   );
   console.log("✅  Enrollment config seeded");
+
+  await conn.query(`
+  INSERT INTO grade_request_config (term, is_open) VALUES
+  ('Term 1', 0),
+  ('Term 2', 0),
+  ('Term 3', 0)
+`);
+console.log("✅  Grade request config seeded");
+
 
   console.log("\n🎉  Migration complete — database is ready!");
   console.log("\n📋  Demo credentials:");

@@ -18,7 +18,8 @@ function authenticateAdmin(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, ADMIN_JWT_SECRET);
-    if (decoded.role !== "admin") {
+    const allowedRoles = ["admin", "principal", "registrar", "accounting"];
+    if (!allowedRoles.includes(decoded.role)) {
       return res.status(403).json({ error: "Access denied." });
     }
     req.admin = decoded;

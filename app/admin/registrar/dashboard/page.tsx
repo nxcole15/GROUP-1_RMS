@@ -3,6 +3,216 @@
 import { useState, useEffect } from "react";
 import AdminDashboardPage from "../../dashboard/page";
 
+/* ── Grade Requests Panel for Registrar ── */
+function RegistrarGradeRequestsPanel() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3500); }
+
+  function reload() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/registrar", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    reload();
+    const interval = setInterval(reload, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function sendToPrincipal(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/send-to-principal`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("👀 Sent to Principal for approval."); })
+      .catch(() => showToast("⚠️ Failed to send to Principal."));
+  }
+
+  function releaseToTeacher(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/release`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("📬 Released back to Teacher."); })
+      .catch(() => showToast("⚠️ Failed to release."));
+  }
+
+  const forReview   = requests.filter(r => r.status === "registrar_review");
+  const atPrincipal = requests.filter(r => r.status === "principal_review");
+  const approved    = requests.filter(r => r.status === "principal_approved");
+  const released    = requests.filter(r => ["registrar_released", "released_to_student"].includes(r.status));
+  const rejected    = requests.filter(r => r.status === "rejected");
+
+  return (
+    <div className="d-flex flex-column gap-4 p-3 p-md-4">
+      {toast && (
+        <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 280 }}>{toast}</div>
+      )}
+
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">Grade Requests</h2>
+        <p className="text-muted small mb-0">Review and forward grade requests to the Principal</p>
+      </div>
+
+      {/* Pipeline summary */}
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-3">
+          <div className="fw-bold small text-dark mb-3">📊 Pipeline</div>
+          <div className="d-flex gap-3 flex-wrap">
+            {[
+              { label: "Needs Review",     count: forReview.length,   color: "#f59e0b" },
+              { label: "At Principal",     count: atPrincipal.length, color: "#8b5cf6" },
+              { label: "Approved",         count: approved.length,    color: "#10b981" },
+              { label: "Released",         count: released.length,    color: "#059669" },
+              { label: "Rejected",         count: rejected.length,    color: "#ef4444" },
+            ].map(s => (
+              <div key={s.label} className="text-center flex-grow-1" style={{ minWidth: 80 }}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-black mx-auto mb-1"
+                  style={{ width: 36, height: 36, background: s.color, fontSize: 15 }}>{s.count}</div>
+                <div style={{ fontSize: 10, color: "#64748b" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Step 1 — Needs Registrar review */}
+      {forReview.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">📋 Needs Review — Send to Principal</h3>
+          <div className="d-flex flex-column gap-2">
+            {forReview.map((req: any) => (
+              <div key={req.id} className="card border-0 shadow-sm rounded-3">
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                      <div className="fw-bold text-dark small">{req.student_name || req.student}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_name || req.subject} · {req.term}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Score: <strong>{req.score}</strong> · Teacher: {req.teacher_name || req.teacher}</div>
+                    </div>
+                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: 10 }}>📋 Needs Review</span>
+                  </div>
+                  <button onClick={() => sendToPrincipal(req.id)} className="btn btn-primary btn-sm w-100">👀 Send to Principal</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 2 — Waiting for Principal */}
+      {atPrincipal.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">⏳ Waiting for Principal Approval</h3>
+          <div className="d-flex flex-column gap-2">
+            {atPrincipal.map((req: any) => (
+              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-85">
+                <div className="card-body p-3 d-flex align-items-center gap-3">
+                  <div className="rounded-3 bg-purple bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 40, height: 40, fontSize: 18, background: "rgba(139,92,246,0.1)" }}>👀</div>
+                  <div className="flex-grow-1">
+                    <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} · Waiting for Principal</div>
+                  </div>
+                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: 10 }}>At Principal</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3 — Principal approved, release back to teacher */}
+      {approved.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">✅ Principal Approved — Release to Teacher</h3>
+          <div className="d-flex flex-column gap-2">
+            {approved.map((req: any) => (
+              <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                      <div className="fw-bold text-dark small">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} · Approved by Principal</div>
+                    </div>
+                    <span className="badge bg-success text-white" style={{ fontSize: 10 }}>✅ Approved</span>
+                  </div>
+                  <button onClick={() => releaseToTeacher(req.id)} className="btn btn-success btn-sm w-100">📬 Release to Teacher</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Done */}
+      {released.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">🎓 Released</h3>
+          <div className="d-flex flex-column gap-2">
+            {released.map((req: any) => (
+              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
+                <div className="card-body p-3 d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}</div>
+                  </div>
+                  <span className="badge bg-success text-white" style={{ fontSize: 10 }}>🎓 Released</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rejected */}
+      {rejected.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">✕ Rejected</h3>
+          <div className="d-flex flex-column gap-2">
+            {rejected.map((req: any) => (
+              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
+                <div className="card-body p-3 d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="fw-bold small text-dark">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Rejected</div>
+                  </div>
+                  <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 10 }}>✕ Rejected</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {requests.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted small">No grade requests at this time.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RegistrarDashboardPage() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
@@ -103,7 +313,7 @@ export default function RegistrarDashboardPage() {
         </>
       )}
 
-      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} readOnly={false} hideTopbarControls hideRequests />
+      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} readOnly={false} hideTopbarControls role="registrar" />
     </div>
   );
 }

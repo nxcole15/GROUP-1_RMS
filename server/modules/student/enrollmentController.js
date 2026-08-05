@@ -121,7 +121,7 @@ async function getMySchedule(req, res, next) {
     }
 
     const [rows] = await db.query(
-      `SELECT sc.id, sc.day, sc.time_start, sc.time_end, sc.room,
+      `SELECT sc.id, sc.subject_id, sc.day, sc.time_start, sc.time_end, sc.room,
               s.code, s.name AS subject_name, t.full_name AS teacher_name
        FROM schedule sc
        JOIN subjects s ON s.id = sc.subject_id

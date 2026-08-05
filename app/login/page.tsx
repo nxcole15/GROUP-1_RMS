@@ -86,6 +86,14 @@ export default function LoginPage() {
         data.student || data.teacher || data.admin || {}
       ));
 
+      // Also save role-specific token to prevent tab collisions
+      const adminRoles = ["principal", "registrar", "accounting", "admin"];
+      if (adminRoles.includes(data.role)) {
+        localStorage.setItem("inform_admin_token", data.token);
+      } else if (data.role === "teacher") {
+        localStorage.setItem("inform_teacher_token", data.token);
+      }
+
 
       // Redirect based on role returned from backend
       if (data.role === "principal") router.push("/admin/principal/dashboard");

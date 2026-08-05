@@ -15,6 +15,8 @@ const paymentsRoutes      = require("./modules/payments/paymentsRoutes");
 const documentsRoutes     = require("./modules/documents/documentsRoutes");
 const notificationsRoutes = require("./modules/notifications/notificationsRoutes");
 const teacherRoutes       = require("./modules/teacher/teacherRoutes");
+const gradeRequestRoutes = require("./modules/gradeRequests/gradeRequestRoutes");
+
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use("/api/admin",   adminRoutes);
 
 /* ── Teacher routes ── */
 app.use("/api/teacher", teacherRoutes);
+
+app.use("/api/grade-requests", gradeRequestRoutes);
 
 /* ── 404 handler ── */
 app.use((req, res) => res.status(404).json({ error: "Route not found." }));

@@ -48,6 +48,7 @@ function formatCurrencyPHP(amount: number) {
 
 export default function AccountingDashboardPage() {
   const [active, setActive] = useState<AccountingActive>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [paymentLog, setPaymentLog] = useState<PaymentRecord[]>(PAYMENT_LOG_SEED);
   const [panel, setPanel] = useState<"tuition" | "payments" | "students">("tuition");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -86,6 +87,8 @@ export default function AccountingDashboardPage() {
     } catch {
       setPaymentLog(PAYMENT_LOG_SEED);
     }
+
+    setAuthLoading(false);
 
     // Fetch real payments from API if backend is live
     if (!token.startsWith("demo_")) {
@@ -164,6 +167,8 @@ export default function AccountingDashboardPage() {
     }
     window.location.href = "/login";
   }
+
+  if (authLoading) return null;
 
   if (!active) {
     return (

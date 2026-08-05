@@ -347,18 +347,7 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
 
 /* ── Grades View ── */
 
-// Mock term status — swap these values to test different states.
-// Replace with real API data from backend later.
-// "not_available" = term is ongoing, no grades yet
-// "request_open"  = admin opened the grade request window
-// "released"      = teacher has released grades to this student
 type TermStatus = "not_available" | "request_open" | "released";
-
-const termStatusMock: Record<"term1"|"term2"|"term3", TermStatus> = {
-  term1: "request_open",  // ← set to "not_available" to go back to the empty state
-  term2: "not_available",
-  term3: "not_available",
-};
 
 function GradeColorLegend() {
   return (
@@ -467,40 +456,91 @@ function WorkflowTracker({ subject, currentStep }: { subject: string; currentSte
   );
 }
 
-function GradesRequestOpen({ term }: { term: string }) {
-  const [requestMap, setRequestMap] = useState<Record<string, SubjectRequestStatus>>(
-    () => Object.fromEntries(gradeData.map(g => [g.subject, "idle" as SubjectRequestStatus]))
-  );
+function GradesRequestOpen({ term, existingRequests = [] }: { term: string; existingRequests?: any[] }) {
+  // Fetch real enrolled subjects with their DB IDs
+  const [enrolledSubjects, setEnrolledSubjects] = useState<{id: number; code: string; subject_name: string; teacher_name: string}[]>([]);
+  const [requestMap, setRequestMap] = useState<Record<number, SubjectRequestStatus>>({});
   const [toast, setToast]               = useState<string | null>(null);
-  const [confirmSubject, setConfirmSubject] = useState<string | null>(null);
+  const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/enrollment/schedule", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.schedule?.length) {
+          const seen = new Set<number>();
+          const unique = data.schedule.filter((s: any) => {
+            if (seen.has(s.subject_id)) return false;
+            seen.add(s.subject_id);
+            return true;
+          });
+          setEnrolledSubjects(unique.map((s: any) => ({
+            id: s.subject_id,
+            code: s.code,
+            subject_name: s.subject_name,
+            teacher_name: s.teacher_name,
+          })));
+          // Init request map — check existing requests for this term
+          const map: Record<number, SubjectRequestStatus> = {};
+          unique.forEach((s: any) => {
+            const existing = existingRequests.find(r => Number(r.subject_id) === s.subject_id);
+            if (!existing) {
+              map[s.subject_id] = "idle";
+            } else if (existing.status === "rejected") {
+              map[s.subject_id] = "rejected";
+            } else {
+              // Any other status (pending, in-progress, released) → show as "pending" (not requestable)
+              map[s.subject_id] = "pending";
+            }
+          });
+          setRequestMap(map);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term]);
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   }
 
-  function handleRequest(subject: string) {
-    setRequestMap(prev => ({ ...prev, [subject]: "pending" }));
-    setConfirmSubject(null);
-    showToast(`📨 Grade request for ${subject} has been sent to your teacher.`);
-
-    // Persist to shared localStorage store (used by teacher + admin portals)
-    const { addRequest } = require("../lib/gradeRequests");
-    const token = typeof window !== "undefined" ? localStorage.getItem("inform_token") : null;
-    const user  = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("inform_user") || "{}") : {};
-    addRequest({
-      student:      user.full_name || "Student",
-      studentId:    user.student_id || user.id || "unknown",
-      subject,
-      teacher:      gradeData.find(g => g.subject === subject)?.teacher || "Teacher",
-      term,
-      status:       "student_requested",
-      requestedAt:  new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
+  function handleRequest(subjectId: number, subjectName: string) {
+    setConfirmSubjectId(null);
+    const token = localStorage.getItem("inform_token");
+    if (token) {
+      fetch("http://localhost:4000/api/grade-requests/student", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ subject_id: subjectId, term }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            showToast(`⚠️ ${data.error}`);
+          } else {
+            setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
+            showToast(`📨 Grade request for ${subjectName} sent to your teacher.`);
+          }
+        })
+        .catch(() => {
+          setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
+          showToast(`📨 Grade request for ${subjectName} sent.`);
+        });
+    } else {
+      setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
+    }
   }
 
-  const allRequested      = gradeData.every(g => requestMap[g.subject] !== "idle");
-  const pendingCount      = gradeData.filter(g => requestMap[g.subject] === "pending").length;
+  const confirmSubject = enrolledSubjects.find(s => s.id === confirmSubjectId);
+  const allRequested   = enrolledSubjects.length > 0 && enrolledSubjects.every(s => requestMap[s.id] !== "idle");
+  const pendingCount   = enrolledSubjects.filter(s => requestMap[s.id] === "pending").length;
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -515,22 +555,22 @@ function GradesRequestOpen({ term }: { term: string }) {
 
       {/* Confirm modal */}
       {confirmSubject && (
-        <div className="modal d-block" style={{ background:"rgba(0,0,0,0.45)", zIndex:9998 }} onClick={() => setConfirmSubject(null)}>
+        <div className="modal d-block" style={{ background:"rgba(0,0,0,0.45)", zIndex:9998 }} onClick={() => setConfirmSubjectId(null)}>
           <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
             <div className="modal-content rounded-3 border-0 shadow-lg">
               <div className="modal-body p-4">
                 <div style={{ fontSize:36, marginBottom:12 }}>📨</div>
                 <h5 className="fw-black text-dark mb-1">Request Grade?</h5>
                 <p className="text-muted small mb-4">
-                  You are about to request your <strong>{term}</strong> grade for <strong>{confirmSubject}</strong>.
+                  You are about to request your <strong>{term}</strong> grade for <strong>{confirmSubject.subject_name}</strong>.
                   Your teacher will be notified to prepare and release your grade.
                 </p>
                 <div className="d-flex gap-2">
-                  <button onClick={() => handleRequest(confirmSubject)}
+                  <button onClick={() => handleRequest(confirmSubject.id, confirmSubject.subject_name)}
                     className="btn btn-primary flex-grow-1 fw-bold rounded-2">
                     Yes, Request Grade
                   </button>
-                  <button onClick={() => setConfirmSubject(null)}
+                  <button onClick={() => setConfirmSubjectId(null)}
                     className="btn btn-outline-secondary flex-grow-1 rounded-2">
                     Cancel
                   </button>
@@ -560,7 +600,7 @@ function GradesRequestOpen({ term }: { term: string }) {
           style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.25)" }}>
           <span style={{ fontSize:16 }}>⏳</span>
           <span className="small text-dark">
-            <strong>{pendingCount}</strong> of <strong>{gradeData.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent — waiting for your teachers.
+            <strong>{pendingCount}</strong> of <strong>{enrolledSubjects.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent — waiting for your teachers.
           </span>
         </div>
       )}
@@ -577,11 +617,18 @@ function GradesRequestOpen({ term }: { term: string }) {
       )}
 
       {/* Subject cards — always visible */}
+      {enrolledSubjects.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted small">
+            Loading your enrolled subjects...
+          </div>
+        </div>
+      )}
       <div className="row g-3">
-        {gradeData.map((g, i) => {
-          const status = requestMap[g.subject];
+        {enrolledSubjects.map((subj) => {
+          const status = requestMap[subj.id] ?? "idle";
           return (
-            <div key={i} className="col-12 col-sm-6">
+            <div key={subj.id} className="col-12 col-sm-6">
               <div className="card border-0 shadow-sm rounded-3 h-100"
                 style={{ borderLeft: status === "pending" ? "4px solid #f59e0b" : status === "rejected" ? "4px solid #ef4444" : "4px solid #e2e8f0" }}>
                 <div className="card-body p-4">
@@ -589,46 +636,78 @@ function GradesRequestOpen({ term }: { term: string }) {
                   {/* Subject header */}
                   <div className="d-flex align-items-center gap-3 mb-3">
                     <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{ width:40, height:40, fontSize:20 }}>{g.icon}</div>
+                      style={{ width:40, height:40, fontSize:20 }}>📚</div>
                     <div className="flex-grow-1 overflow-hidden">
-                      <div className="fw-bold small text-dark text-truncate">{g.subject}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}> {g.teacher}</div>
+                      <div className="fw-bold small text-dark text-truncate">{subj.subject_name}</div>
+                      <div className="text-muted" style={{ fontSize:11 }}>{subj.teacher_name} · {subj.code}</div>
                     </div>
                   </div>
 
                   {/* Action / status area */}
-                  {status === "idle" && (
-                    <button onClick={() => setConfirmSubject(g.subject)}
-                      className="btn btn-primary btn-sm w-100 rounded-2 fw-semibold"
-                      style={{ fontSize:12 }}>
-                      Request Grade
-                    </button>
-                  )}
-
-                  {status === "pending" && (
-                    <>
-                      <div className="rounded-3 p-3 text-center mb-0"
-                        style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.3)" }}>
-                        <div className="fw-semibold small mb-1" style={{ color:"#d97706" }}> Request Sent</div>
-                        <div className="text-muted" style={{ fontSize:11 }}>Waiting for your teacher.</div>
-                      </div>
-                      <WorkflowTracker subject={g.subject} currentStep={0} />
-                    </>
-                  )}
-
-                  {status === "rejected" && (
-                    <div className="d-flex flex-column gap-2">
-                      <div className="rounded-3 p-2 text-center"
-                        style={{ background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.25)" }}>
-                        <div className="fw-semibold small" style={{ color:"#dc2626" }}>Request Rejected</div>
-                        <div className="text-muted" style={{ fontSize:11 }}>Contact your teacher for details.</div>
-                      </div>
-                      <button onClick={() => setConfirmSubject(g.subject)}
-                        className="btn btn-outline-danger btn-sm w-100 rounded-2" style={{ fontSize:11 }}>
-                        Re-request Grade
-                      </button>
-                    </div>
-                  )}
+                  {(() => {
+                    const existing = existingRequests.find(r => Number(r.subject_id) === subj.id);
+                    // Grade fully released — show it, no re-request allowed
+                    if (existing?.status === "released_to_student") {
+                      const score = Number(existing.score);
+                      const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
+                      return (
+                        <div className="rounded-3 p-3 text-center" style={{ background: "rgba(16,185,129,0.07)", border: "1.5px solid rgba(16,185,129,0.3)" }}>
+                          <div className="fw-black text-success mb-1" style={{ fontSize: 28 }}>
+                            {score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-" : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-" : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-" : score >= 65 ? "D" : "F"}
+                          </div>
+                          <div className="fw-semibold small" style={{ color }}>Score: {existing.score}</div>
+                          <div className="text-muted mt-1" style={{ fontSize: 11 }}>🎓 Grade Released</div>
+                        </div>
+                      );
+                    }
+                    // Already requested and in-progress
+                    if (status === "pending") {
+                      return (
+                        <>
+                          <div className="rounded-3 p-3 text-center mb-0" style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.3)" }}>
+                            <div className="fw-semibold small mb-1" style={{ color:"#d97706" }}>⏳ Request Sent</div>
+                            <div className="text-muted" style={{ fontSize:11 }}>
+                              {existing ? (() => {
+                                const s = existing.status;
+                                if (s === "registrar_review") return "Registrar is reviewing";
+                                if (s === "principal_review") return "Principal is reviewing";
+                                if (s === "principal_approved") return "Approved — awaiting release";
+                                if (s === "registrar_released") return "Sent back to teacher";
+                                return "Waiting for your teacher";
+                              })() : "Waiting for your teacher."}
+                            </div>
+                          </div>
+                          <WorkflowTracker subject={subj.subject_name} currentStep={0} />
+                        </>
+                      );
+                    }
+                    // Can request
+                    if (status === "idle") {
+                      return (
+                        <button onClick={() => setConfirmSubjectId(subj.id)}
+                          className="btn btn-primary btn-sm w-100 rounded-2 fw-semibold"
+                          style={{ fontSize:12 }}>
+                          Request Grade
+                        </button>
+                      );
+                    }
+                    // Rejected — allow re-request
+                    if (status === "rejected") {
+                      return (
+                        <div className="d-flex flex-column gap-2">
+                          <div className="rounded-3 p-2 text-center" style={{ background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.25)" }}>
+                            <div className="fw-semibold small" style={{ color:"#dc2626" }}>Request Rejected</div>
+                            <div className="text-muted" style={{ fontSize:11 }}>Contact your teacher for details.</div>
+                          </div>
+                          <button onClick={() => setConfirmSubjectId(subj.id)}
+                            className="btn btn-outline-danger btn-sm w-100 rounded-2" style={{ fontSize:11 }}>
+                            Re-request Grade
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                 </div>
               </div>
@@ -643,38 +722,79 @@ function GradesRequestOpen({ term }: { term: string }) {
 
 function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const [selectedTerm, setSelectedTerm] = useState<"term1"|"term2"|"term3">("term1");
-  const [apiGrades, setApiGrades] = useState<{subject_code:string;subject_name:string;teacher_name:string;percentage:number;letter_grade:string;performance_status:string}[]>([]);
-  const [gradesLoading, setGradesLoading] = useState(false);
-  const [gradesError, setGradesError] = useState(false);
+  const [requestConfig, setRequestConfig] = useState<{term: string; is_open: number}[]>([]);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  const termLabel = selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3";
+  const configEntry = requestConfig.find(c => c.term === termLabel);
+  const isRequestOpen = !!configEntry?.is_open;
+
+  // Fetch term config (no auth needed) — poll every 15s so it auto-updates when principal opens/closes
   useEffect(() => {
-    const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return;
-    setGradesLoading(true);
-    setGradesError(false);
-    fetch("http://localhost:4000/api/grades", {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.grades?.length) setApiGrades(data.grades);
-      })
-      .catch(() => setGradesError(true))
-      .finally(() => setGradesLoading(false));
+    function fetchConfig() {
+      fetch("http://localhost:4000/api/grade-requests/config")
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.config) setRequestConfig(data.config); })
+        .catch(() => {});
+    }
+    fetchConfig();
+    const interval = setInterval(fetchConfig, 15000);
+    return () => clearInterval(interval);
   }, []);
 
-  const termStatus = termStatusMock[selectedTerm];
-  const termLabel  = selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3";
+  // Fetch student's own grade requests — poll every 15s for live status updates
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    function fetchRequests() {
+      fetch("http://localhost:4000/api/grade-requests/student", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.requests) setMyRequests(data.requests); })
+        .catch(() => {});
+    }
+    setLoading(true);
+    fetchRequests();
+    setLoading(false);
+    const interval = setInterval(fetchRequests, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Requests for selected term
+  const termRequests = myRequests.filter(r => r.term === termLabel);
+  const releasedGrades = termRequests.filter(r => r.status === "released_to_student");
+  const pendingRequests = termRequests.filter(r => r.status !== "released_to_student");
+
+  function statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      student_requested:  "📨 Requested — waiting for teacher",
+      teacher_calculating:"📝 Teacher is calculating",
+      registrar_review:   "📤 Sent to Registrar",
+      principal_review:   "👀 Principal Review",
+      principal_approved: "✅ Principal Approved",
+      registrar_released: "📬 Released by Registrar",
+      rejected:           "✕ Rejected",
+    };
+    return map[status] || status;
+  }
+
+  function statusColor(status: string): string {
+    if (status === "rejected") return "bg-danger-subtle text-danger border border-danger-subtle";
+    if (status === "student_requested") return "bg-warning-subtle text-warning border border-warning-subtle";
+    if (status === "principal_approved" || status === "registrar_released") return "bg-success-subtle text-success border border-success-subtle";
+    return "bg-primary-subtle text-primary border border-primary-subtle";
+  }
 
   return (
     <div className="d-flex flex-column gap-4">
-
-      {/* Header — title left, color guide right */}
+      {/* Header */}
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div>
           <h2 className="fw-black fs-4 text-dark mb-1">My Grades</h2>
-          <p className="text-muted small mb-0">School Year 2025–2026 · Jamie Santos</p>
+          <p className="text-muted small mb-0">School Year 2025–2026</p>
         </div>
         <GradeColorLegend />
       </div>
@@ -689,14 +809,15 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
         ))}
       </div>
 
-      {/* Loading state */}
-      {gradesLoading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
-      {gradesError && <div className="alert alert-warning small">Could not load data. Showing cached data.</div>}
+      {loading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
 
-      {/* Real API grades if available */}
-      {!gradesLoading && apiGrades.length > 0 && (
+      {/* Released grades — only shown after full workflow completion */}
+      {!loading && releasedGrades.length > 0 && (
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-          <div className="card-header bg-white border-bottom py-3 px-4"><span className="fw-bold small text-dark">Grades from Server</span></div>
+          <div className="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+            <span className="fw-bold small text-dark">Released Grades — {termLabel}</span>
+            <span className="badge bg-success text-white ms-auto" style={{ fontSize: 10 }}>✅ Official</span>
+          </div>
           <div className="table-responsive">
             <table className="table table-hover mb-0">
               <thead className="table-light">
@@ -704,12 +825,13 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
                   <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Subject</th>
                   <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Teacher</th>
                   <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Score</th>
-                  <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Grade</th>
+                  <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {apiGrades.map((g, i) => {
-                  const color = g.percentage >= 80 ? "#16a34a" : g.percentage >= 75 ? "#d97706" : "#dc2626";
+                {releasedGrades.map((g, i) => {
+                  const score = Number(g.score);
+                  const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
                   return (
                     <tr key={i}>
                       <td className="ps-4">
@@ -720,12 +842,14 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
                       <td className="text-end">
                         <div className="d-flex align-items-center justify-content-end gap-2">
                           <div className="progress flex-shrink-0" style={{ width:60, height:6 }}>
-                            <div className="progress-bar" style={{ width:`${g.percentage}%`, background:color }} />
+                            <div className="progress-bar" style={{ width:`${score}%`, background:color }} />
                           </div>
-                          <span className="small fw-semibold" style={{color}}>{g.percentage}%</span>
+                          <span className="small fw-semibold" style={{color}}>{score}</span>
                         </div>
                       </td>
-                      <td className="text-end pe-4 fw-black small" style={{color}}>{g.letter_grade}</td>
+                      <td className="text-end pe-4">
+                        <span className="badge bg-success text-white" style={{ fontSize: 10 }}>🎓 Released</span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -735,10 +859,41 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
         </div>
       )}
 
-      {/* Content based on term status (always shown as fallback/supplement) */}
-      {!gradesLoading && apiGrades.length === 0 && termStatus === "not_available" && <GradesNotAvailable term={termLabel} />}
-      {!gradesLoading && apiGrades.length === 0 && termStatus === "request_open"  && <GradesRequestOpen  term={termLabel} />}
+      {/* Pending requests — show status tracker */}
+      {!loading && pendingRequests.length > 0 && (
+        <div className="d-flex flex-column gap-2">
+          <h3 className="fw-bold small text-dark mb-1">📋 Request Status — {termLabel}</h3>
+          {pendingRequests.map((r, i) => (
+            <div key={i} className="card border-0 shadow-sm rounded-3">
+              <div className="card-body p-3 d-flex align-items-center gap-3">
+                <div className="flex-grow-1">
+                  <div className="fw-bold small text-dark">{r.subject_name}</div>
+                  <div className="text-muted" style={{ fontSize: 11 }}>{r.subject_code} · {r.teacher_name}</div>
+                </div>
+                <span className={`badge ${statusColor(r.status)}`} style={{ fontSize: 10 }}>
+                  {statusLabel(r.status)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* No requests and window closed */}
+      {!loading && termRequests.length === 0 && !isRequestOpen && (
+        <GradesNotAvailable term={termLabel} />
+      )}
+
+      {/* Grade request section — only when window is open */}
+      {!loading && isRequestOpen && (
+        <div>
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <span className="rounded-circle bg-success d-inline-block" style={{ width:8, height:8 }} />
+            <h3 className="fw-bold small text-dark mb-0">Grade Request Window Open — {termLabel}</h3>
+          </div>
+          <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1396,30 +1551,37 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // ── Fetch real notifications from API ─────────────────────────
+  // ── Fetch real notifications from API — poll every 20s ─────────
   useEffect(() => {
     if (!authChecked) return;
     const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return; // skip for demo sessions
-    fetch("http://localhost:4000/api/notifications", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.notifications?.length) {
-          setNotifList(data.notifications.map((n: {id: number; message: string; type: string; is_read: boolean; created_at: string}) => ({
-            id:      n.id,
-            type:    n.type,
-            title:   n.type.charAt(0).toUpperCase() + n.type.slice(1),
-            message: n.message,
-            time:    new Date(n.created_at).toLocaleDateString("en-PH"),
-            read:    !!n.is_read,
-            icon:    n.type === "grade" ? "📊" : n.type === "payment" ? "💰" : n.type === "document" ? "📄" : "🔔",
-          })));
-        }
+    if (!token || token.startsWith("demo_")) return;
+
+    function fetchNotifs() {
+      fetch("http://localhost:4000/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       })
-      .catch(() => {}); // keep mock data on error
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.notifications?.length) {
+            setNotifList(data.notifications.map((n: {id: number; message: string; type: string; is_read: boolean; created_at: string}) => ({
+              id:      n.id,
+              type:    n.type,
+              title:   n.type === "grade" ? "📊 Grade Update" : n.type.charAt(0).toUpperCase() + n.type.slice(1),
+              message: n.message,
+              time:    new Date(n.created_at).toLocaleDateString("en-PH"),
+              read:    !!n.is_read,
+              icon:    n.type === "grade" ? "📊" : n.type === "payment" ? "💰" : n.type === "document" ? "📄" : "🔔",
+            })));
+          }
+        })
+        .catch(() => {});
+    }
+
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 20000);
+    return () => clearInterval(interval);
   }, [authChecked]);
   const unreadCount = notifList.filter(n => !n.read).length;
 

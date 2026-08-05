@@ -1434,75 +1434,191 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
 }
 
 /*  Grade Requests Panel (Admin)  */
-function AdminRequestsPanel() {
-  const [requests, setRequests] = useState<import("../../lib/gradeRequests").GradeRequest[]>([]);
+function AdminRequestsPanel({ role }: { role?: string }) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [termConfig, setTermConfig] = useState<{ term: string; is_open: number }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    const { loadRequests } = require("../../lib/gradeRequests");
-    setRequests(loadRequests());
-  }, []);
-
-  function reload() {
-    const { loadRequests } = require("../../lib/gradeRequests");
-    setRequests(loadRequests());
-  }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
-  function verifyGrade(id: number) {
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, {
-      status: "admin_verified",
-      adminVerifiedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-      adminVerifiedBy: "Admin",
-      adminNote: "Grade verified and approved.",
-    });
-    reload();
-    showToast(" Grade verified  teacher will now release it to the student");
+  function reload() {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) return;
+    const endpoint = role === "registrar"
+      ? "http://localhost:4000/api/grade-requests/registrar"
+      : "http://localhost:4000/api/grade-requests/principal";
+    fetch(endpoint, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
+    fetch("http://localhost:4000/api/grade-requests/config")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.config) setTermConfig(data.config); })
+      .catch(() => {});
   }
 
-  function rejectGrade(id: number) {
-    const { updateRequest } = require("../../lib/gradeRequests");
-    updateRequest(id, {
-      status: "rejected",
-      rejectedBy: "Admin",
-      rejectedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-      rejectionReason: "Failed admin verification",
-    });
+  useEffect(() => {
     reload();
-    showToast(" Grade rejected  teacher must recalculate");
+    const interval = setInterval(reload, 15000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
+
+  // ── Term controls (principal only) ──────────────────────────
+  function toggleTerm(term: string, open: boolean) {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) { showToast("⚠️ Session expired. Please log in again."); return; }
+    setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
+    fetch(`http://localhost:4000/api/grade-requests/principal/${open ? "open" : "close"}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ term }),
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(() => { showToast(open ? `🟢 ${term} opened.` : `🔴 ${term} closed.`); reload(); })
+      .catch(() => {
+        setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 0 : 1 } : c));
+        showToast("⚠️ Failed to update term.");
+      });
   }
 
-  const { statusLabel, statusBadgeClass } = require("../../lib/gradeRequests");
+  // ── Registrar actions ────────────────────────────────────────
+  function sendToPrincipal(id: number) {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/send-to-principal`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("👀 Sent to Principal for approval."); })
+      .catch(() => showToast("⚠️ Failed."));
+  }
 
-  const awaitingVerification = requests.filter(r => r.status === "submitted_to_admin");
-  const verified             = requests.filter(r => r.status === "admin_verified");
-  const released             = requests.filter(r => r.status === "released_to_student");
-  const other                = requests.filter(r => !["submitted_to_admin","admin_verified","released_to_student"].includes(r.status));
+  function releaseToTeacher(id: number) {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/release`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("📬 Released back to Teacher."); })
+      .catch(() => showToast("⚠️ Failed."));
+  }
+
+  // ── Principal actions ────────────────────────────────────────
+  function approveRequest(id: number) {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/principal/${id}/approve`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("✅ Grade approved."); })
+      .catch(() => showToast("⚠️ Failed to approve."));
+  }
+
+  function rejectRequest(id: number) {
+    const token = localStorage.getItem("inform_admin_token");
+    if (!token) return;
+    const reason = prompt("Reason for rejection (required):") || "";
+    if (!reason.trim()) { showToast("⚠️ Rejection reason is required."); return; }
+    fetch(`http://localhost:4000/api/grade-requests/principal/${id}/reject`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ rejection_reason: reason }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("✕ Grade request rejected."); })
+      .catch(() => showToast("⚠️ Failed."));
+  }
+
+  function badgeClass(status: string) {
+    if (status === "released_to_student") return "bg-success text-white";
+    if (status === "rejected") return "bg-danger-subtle text-danger border border-danger-subtle";
+    if (status === "student_requested") return "bg-warning-subtle text-warning border border-warning-subtle";
+    if (status === "principal_approved" || status === "registrar_released") return "bg-success-subtle text-success border border-success-subtle";
+    return "bg-primary-subtle text-primary border border-primary-subtle";
+  }
+
+  function statusText(status: string) {
+    const map: Record<string, string> = {
+      student_requested: "📨 Requested", registrar_review: "📋 Registrar Review",
+      principal_review: "👀 Principal Review", principal_approved: "✅ Approved",
+      registrar_released: "📬 Registrar Released", released_to_student: "🎓 Released", rejected: "✕ Rejected",
+    };
+    return map[status] || status;
+  }
+
+  const forReview = role === "registrar"
+    ? requests.filter(r => r.status === "registrar_review")
+    : requests.filter(r => r.status === "principal_review");
+  const approved   = requests.filter(r => r.status === "principal_approved");
+  const released   = requests.filter(r => ["registrar_released", "released_to_student"].includes(r.status));
+  const rejected   = requests.filter(r => r.status === "rejected");
+  const other      = requests.filter(r => !["registrar_review","principal_review","principal_approved","registrar_released","released_to_student","rejected"].includes(r.status));
 
   return (
     <div className="d-flex flex-column gap-4">
-      {/* Toast */}
       {toast && (
         <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3 d-flex align-items-center gap-2"
-          style={{ zIndex: 9999, fontSize: 13, minWidth: 280, animation: "fadeInUp 0.3s ease" }}>
-          {toast}
-        </div>
+          style={{ zIndex: 9999, fontSize: 13, minWidth: 280, animation: "fadeInUp 0.3s ease" }}>{toast}</div>
       )}
 
       <div className="d-flex align-items-start justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Grade Requests</h2><p className="text-muted small mb-0">Verify teacher-submitted grades before release to students</p></div>
-        <button onClick={reload} className="btn btn-outline-secondary btn-sm"> Refresh</button>
+        <div>
+          <h2 className="fw-black fs-4 text-dark mb-0">Grade Requests</h2>
+          <p className="text-muted small mb-0">
+            {role === "registrar" ? "Review teacher-submitted grades and forward to Principal" : "Approve or reject grade requests forwarded by the Registrar"}
+          </p>
+        </div>
+        <button onClick={reload} className="btn btn-outline-secondary btn-sm">Refresh</button>
       </div>
+
+      {/* Term controls — principal only */}
+      {role === "principal" && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">📅 Grade Request Window</h3>
+          <div className="row g-3">
+            {["Term 1", "Term 2", "Term 3"].map(term => {
+              const cfg = termConfig.find(c => c.term === term);
+              const isOpen = !!cfg?.is_open;
+              return (
+                <div key={term} className="col-12 col-md-4">
+                  <div className="card border-0 shadow-sm rounded-3" style={{ borderLeft: isOpen ? "4px solid #10b981" : "4px solid #e2e8f0" }}>
+                    <div className="card-body p-3 d-flex align-items-center justify-content-between gap-3">
+                      <div>
+                        <div className="fw-bold text-dark small">{term}</div>
+                        <span className={`badge mt-1 ${isOpen ? "bg-success text-white" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
+                          {isOpen ? "🟢 Open" : "🔴 Closed"}
+                        </span>
+                      </div>
+                      <button onClick={() => toggleTerm(term, !isOpen)} className={`btn btn-sm ${isOpen ? "btn-outline-danger" : "btn-success"}`}>
+                        {isOpen ? "Close" : "Open"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label: "Awaiting Verification", value: awaitingVerification.length, cls: "bg-warning-subtle border-warning-subtle text-warning" },
-          { label: "Verified",              value: verified.length,             cls: "bg-success-subtle border-success-subtle text-success"  },
-          { label: "Released to Students",  value: released.length,             cls: "bg-primary-subtle border-primary-subtle text-primary"  },
-          { label: "Other",                 value: other.length,                cls: "bg-secondary-subtle border-secondary-subtle text-secondary" },
+          { label: role === "registrar" ? "Awaiting Review" : "Awaiting Approval", value: forReview.length, cls: "bg-warning-subtle border-warning-subtle text-warning" },
+          { label: role === "registrar" ? "Sent to Principal" : "Approved",        value: approved.length,  cls: "bg-success-subtle border-success-subtle text-success"  },
+          { label: "Released to Students",                                           value: released.length,  cls: "bg-primary-subtle border-primary-subtle text-primary"  },
+          { label: "Other",                                                          value: other.length + rejected.length, cls: "bg-secondary-subtle border-secondary-subtle text-secondary" },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 ${s.cls}`}>
@@ -1515,33 +1631,40 @@ function AdminRequestsPanel() {
         ))}
       </div>
 
-      {/* MAIN ACTION: Grades awaiting admin verification */}
-      {awaitingVerification.length > 0 && (
+      {/* Grades awaiting action */}
+      {forReview.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3"> Grades Awaiting Your Verification</h3>
+          <h3 className="fw-bold small text-dark mb-3">
+            {role === "registrar" ? "📋 Grades Awaiting Your Review" : "👀 Grades Awaiting Your Approval"}
+          </h3>
           <div className="d-flex flex-column gap-3">
-            {awaitingVerification.map(req => (
+            {forReview.map((req: any) => (
               <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
                 <div className="card-body p-4">
                   <div className="row g-3 align-items-start mb-3">
                     <div className="col-12 col-sm-6">
-                      <div className="fw-bold text-dark mb-1">{req.student}</div>
-                      <div className="text-muted small">{req.subject} · {req.term}</div>
-                      <div className="text-muted small">Teacher: {req.teacher}</div>
-                      <div className="text-muted small">Submitted: {req.submittedToAdminAt}</div>
+                      <div className="fw-bold text-dark mb-1">{req.student_name || req.student}</div>
+                      <div className="text-muted small">{req.subject_name || req.subject} · {req.term}</div>
+                      <div className="text-muted small">Teacher: {req.teacher_name || req.teacher}</div>
+                      {req.registrar_note && <div className="text-muted small fst-italic">Note: {req.registrar_note}</div>}
                     </div>
                     <div className="col-12 col-sm-6">
                       <div className="rounded-3 p-3 bg-success-subtle border border-success-subtle text-center">
                         <div className="text-muted small mb-1">Submitted Grade</div>
-                        <div className="fw-black fs-2 text-success">{req.letterGrade}</div>
-                        <div className="fw-semibold text-success small">{req.score}%</div>
+                        <div className="fw-black text-success" style={{ fontSize: 40 }}>
+                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "—"}
+                        </div>
+                        <div className="fw-semibold text-success small">{req.score != null ? `${req.score}%` : ""}</div>
                         {req.remarks && <div className="text-muted mt-1 fst-italic" style={{ fontSize: 11 }}>&ldquo;{req.remarks}&rdquo;</div>}
                       </div>
                     </div>
                   </div>
                   <div className="d-flex gap-2">
-                    <button onClick={() => verifyGrade(req.id)} className="btn btn-success flex-grow-1"> Verify &amp; Approve</button>
-                    <button onClick={() => rejectGrade(req.id)} className="btn btn-outline-danger"> Reject</button>
+                    {role === "registrar"
+                      ? <button onClick={() => sendToPrincipal(req.id)} className="btn btn-success flex-grow-1">👀 Send to Principal</button>
+                      : <button onClick={() => approveRequest(req.id)} className="btn btn-success flex-grow-1">✅ Verify &amp; Approve</button>
+                    }
+                    <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger">Reject</button>
                   </div>
                 </div>
               </div>
@@ -1550,10 +1673,30 @@ function AdminRequestsPanel() {
         </div>
       )}
 
-      {/* Verified  waiting on teacher to release */}
-      {verified.length > 0 && (
+      {/* Principal approved — registrar releases to teacher */}
+      {role === "registrar" && approved.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3"> Verified  Awaiting Teacher Release</h3>
+          <h3 className="fw-bold small text-dark mb-3">✅ Principal Approved — Release to Teacher</h3>
+          <div className="d-flex flex-column gap-2">
+            {approved.map((req: any) => (
+              <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
+                <div className="card-body p-4 d-flex align-items-center gap-3">
+                  <div className="flex-grow-1">
+                    <div className="fw-bold text-dark small">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} · Approved by Principal</div>
+                  </div>
+                  <button onClick={() => releaseToTeacher(req.id)} className="btn btn-success btn-sm">📬 Release to Teacher</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Released — waiting on teacher final release */}
+      {released.length > 0 && (
+        <div>
+          <h3 className="fw-bold small text-dark mb-3">🎓 Released — Awaiting Teacher Final Release</h3>
           <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
@@ -1562,18 +1705,18 @@ function AdminRequestsPanel() {
                     <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
                     <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Teacher</th>
                     <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
-                    <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Grade</th>
+                    <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Score</th>
                     <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {verified.map(req => (
+                  {released.map((req: any) => (
                     <tr key={req.id}>
-                      <td className="ps-4 small fw-medium text-dark">{req.student}</td>
-                      <td className="d-none d-sm-table-cell small text-muted">{req.teacher}</td>
-                      <td className="d-none d-lg-table-cell small text-muted">{req.subject}</td>
-                      <td className="text-end small fw-bold text-success">{req.letterGrade} ({req.score}%)</td>
-                      <td className="text-end pe-4"><span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span></td>
+                      <td className="ps-4 small fw-medium text-dark">{req.student_name || req.student}</td>
+                      <td className="d-none d-sm-table-cell small text-muted">{req.teacher_name || req.teacher}</td>
+                      <td className="d-none d-lg-table-cell small text-muted">{req.subject_name || req.subject}</td>
+                      <td className="text-end small fw-bold text-success">{req.score}%</td>
+                      <td className="text-end pe-4"><span className={`badge ${badgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusText(req.status)}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1583,40 +1726,40 @@ function AdminRequestsPanel() {
         </div>
       )}
 
-      {/* Full request log */}
+      {/* All requests log */}
       <div>
-        <h3 className="fw-bold small text-dark mb-3"> All Requests Log</h3>
-        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                  <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Teacher</th>
-                  <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
-                  <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Term</th>
-                  <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map(req => (
-                  <tr key={req.id}>
-                    <td className="ps-4 small fw-medium text-dark">{req.student}</td>
-                    <td className="d-none d-sm-table-cell small text-muted">{req.teacher}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">{req.subject}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">{req.term}</td>
-                    <td><span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span></td>
+        <h3 className="fw-bold small text-dark mb-3">📋 All Requests Log</h3>
+        {requests.length === 0
+          ? <div className="card border-0 shadow-sm rounded-3"><div className="card-body p-4 text-center text-muted small">No grade requests yet.</div></div>
+          : (
+          <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
+                    <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Teacher</th>
+                    <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
+                    <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Term</th>
+                    <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {requests.map((req: any) => (
+                    <tr key={req.id}>
+                      <td className="ps-4 small fw-medium text-dark">{req.student_name || req.student}</td>
+                      <td className="d-none d-sm-table-cell small text-muted">{req.teacher_name || req.teacher}</td>
+                      <td className="d-none d-lg-table-cell small text-muted">{req.subject_name || req.subject}</td>
+                      <td className="d-none d-lg-table-cell small text-muted">{req.term}</td>
+                      <td><span className={`badge ${badgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusText(req.status)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {requests.length === 0 && (
-        <div className="card border-0 shadow-sm rounded-3"><div className="card-body p-4 text-center text-muted small">No grade requests yet.</div></div>
-      )}
     </div>
   );
 }
@@ -2225,7 +2368,7 @@ function AdminTimeLogPanel() {
 }
 
 /*  Page  */
-export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean } = {}) {
+export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -2234,7 +2377,7 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
   // Route protection — only runs when used as standalone page (not wrapped)
   useEffect(() => {
     if (hideBanner) return; // wrapped by principal/registrar — they handle auth
-    const token = localStorage.getItem("inform_token");
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
     const role  = localStorage.getItem("inform_role");
     const adminRoles = ["registrar", "principal", "accounting"];
     if (!token || !adminRoles.includes(role ?? "")) {
@@ -2260,14 +2403,75 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
     return base;
   });
 
+  // Poll staff notifications (grade request related) for registrar/principal
+  useEffect(() => {
+    if (!["registrar", "principal"].includes(role ?? "")) return;
+    function fetchStaffNotifs() {
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      if (!token) return;
+      fetch("http://localhost:4000/api/grade-requests/admin-notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.notifications?.length) {
+            setNotifs(prev => {
+              // Keep existing read states for items already marked read locally
+              const readIds = new Set(prev.filter((n: any) => n.read && n.type === "grade_request").map((n: any) => n.id));
+              const existing = prev.filter((n: any) => n.type !== "grade_request");
+              const fresh = data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id + 100000,
+                type: "grade_request",
+                title: n.title,
+                message: n.message,
+                time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                // Preserve local read state if already marked, otherwise use DB value
+                read: readIds.has(n.id + 100000) ? true : !!n.is_read,
+              }));
+              return [...fresh, ...existing];
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    fetchStaffNotifs();
+    const interval = setInterval(fetchStaffNotifs, 15000);
+    return () => clearInterval(interval);
+  }, [role]);
+
   const unreadCount = notifs.filter(n => !n.read).length;
 
   function markAsRead(id: number) {
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    // Persist to DB for grade_request type notifications
+    if (["registrar", "principal"].includes(role ?? "")) {
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      // The ID is offset by 100000 for grade_request notifs — get the real DB id
+      const realId = id > 100000 ? id - 100000 : null;
+      if (token && realId) {
+        fetch(`http://localhost:4000/api/grade-requests/admin-notifications/${realId}/read`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }).catch(() => {});
+      }
+    }
   }
 
   function markAllAsRead() {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    // Also mark on server for grade request notifications
+    if (["registrar", "principal"].includes(role ?? "")) {
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      if (token) {
+        fetch("http://localhost:4000/api/grade-requests/admin-notifications/read", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }).catch(() => {});
+      }
+    }
   }
 
   function deleteNotif(id: number) {
@@ -2279,7 +2483,7 @@ export default function AdminDashboardPage({ hideBanner, onSidebarExpandChange, 
       case "students":      return <StudentsPanel />;
       case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} />;
       case "grades":        return <GradesPanel />;
-      case "requests":      return <AdminRequestsPanel />;
+      case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
       case "documents":     return <AdminDocumentsPanel />;
       case "enrollment":    return <EnrollmentPanel />;
       case "tuition":       return <TuitionPanel />;

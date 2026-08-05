@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   student_id VARCHAR(12)  NOT NULL,
   message    TEXT         NOT NULL,
-  type       ENUM('enrollment','payment','document','system') NOT NULL,
+  type       ENUM('enrollment','payment','document','grade','system') NOT NULL,
   is_read    TINYINT(1)   NOT NULL DEFAULT 0,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(student_id)
