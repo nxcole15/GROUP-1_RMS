@@ -179,9 +179,6 @@ export default function LandingPage() {
               </div>
             </Link>
             <div className="d-flex align-items-center gap-3">
-              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Student Login</Link>
-              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#f97316" }}>Teacher Login</Link>
-              <Link href="/login" className="text-decoration-none fw-medium" style={{ color: "#dc2626" }}>Accounting</Link>
               {/* Dark / Light toggle */}
 
               <button
@@ -229,7 +226,6 @@ export default function LandingPage() {
                   {dark ? "🌙" : "☀️"}
                 </span>
               </button>
-              <Link href="/login" className="btn btn-shimmer fw-semibold" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Admin</Link>
             </div>
           </div>
         </div>
@@ -252,7 +248,8 @@ export default function LandingPage() {
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                   display: "inline-block",
-                  color: "#dc2626"
+                  color: "#dc2626",
+                  paddingBottom: "0.15em",
                 }}>
                   Management System
                 </span>
@@ -262,9 +259,9 @@ export default function LandingPage() {
               </p>
               <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                 <Link href="/login" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-                  Student Portal
+                  Log In
                 </Link>
-                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl border-2 transition-all" style={{ borderColor: "#dc2626", color: "#dc2626" }}>
+                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer " style={{ background: "linear-gradient(135deg, #f97316, #ffcc00)", color: "white" }}>
                   Enroll Now
                 </Link>
               </div>
@@ -528,42 +525,32 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-5 py-md-6 py-lg-7" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-        <div className="container">
-          <div className="row justify-content-center g-4">
-            {[
-              { value: "2,400+", label: "Active Students" },
-              { value: "120+", label: "Faculty Members" },
-              { value: "99.9%", label: "System Uptime" },
-            ].map((stat, idx) => (
-              <div key={idx} className="col-12 col-md-4 text-center scroll-reveal">
-                <p className="display-4 fw-extrabold mb-1" style={{ color: "#fbbf24" }}>{stat.value}</p>
-                <p className="mb-0 fw-medium" style={{ color: "#fff7ed" }}>{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Enrollment CTA */}
-      <section className="py-5 py-md-6 py-lg-7 landing-cta" style={{ background: "#ffffff" }}>
+      {/* Visit Us CTA Section */}
+      <section className="py-5 py-md-6 py-lg-7" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)" }}>
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-10">
-              <div className="text-center p-5 p-md-6 rounded-4 scroll-reveal" style={{ background: "linear-gradient(135deg, #fef3c7, #fff7ed)", border: "2px solid #fbbf24" }}>
-                <div className="text-5xl mb-3">📋</div>
-                <h2 className="h1 fw-bold mb-3" style={{ color: "#dc2626" }}>Enrollment Period is Now Open</h2>
-                <p className="lead mb-4 text-muted">
-                  Don't miss the deadline! Enroll by <strong style={{ color: "#f97316" }}>June 15, 2026</strong>.
+            <div className="col-lg-8 text-center text-white">
+              <div className="mb-4">
+                <h2 className="h1 fw-extrabold mb-3" style={{ color: "white" }}>
+                  Experience the Vibrant Campus Life
+                </h2>
+                <p className="lead mb-3" style={{ color: "#fef3c7" }}>
+                  Come visit Cebu Far East Institute and discover our state-of-the-art facilities, welcoming community, and dynamic learning environment. Our dedicated faculty and modern infrastructure are ready to inspire your academic journey.
                 </p>
-                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-                  Enroll Now
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ms-2">
-                    <path d="M 3 8 L 13 8 M 10 5 L 13 8 L 10 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
+                <div className="mb-4">
+                  <p className="fw-semibold mb-2" style={{ color: "#fef3c7", fontSize: "1.05rem" }}>
+                    📍 Located at:
+                  </p>
+                    <div style={{ background: "rgba(255,255,255,0.15)", padding: "12px 20px", borderRadius: "8px", backdropFilter: "blur(8px)" }}>
+                      <p className="mb-0"><strong>Basak Lapu-Lapu Campus</strong></p>
+                      <p className="small mb-0" style={{ color: "#fef3c7" }}>Basak, Lapu-Lapu City</p>
+                    </div>
+                </div>
               </div>
+              <Link href="/visit-us" className="btn btn-lg px-6 py-3 fw-semibold rounded-xl btn-shimmer" style={{ background: "white", color: "#dc2626" }}>
+                🌟 VISIT US TODAY
+              </Link>
+              <p className="text-white-50 small mt-3 mb-0">Discover why hundreds of students choose CFEI for their education</p>
             </div>
           </div>
         </div>
@@ -572,20 +559,32 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-5" style={{ background: "#dc2626", color: "white" }}>
         <div className="container">
-          <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-4 mb-4">
+          <div className="d-flex flex-column flex-md-row align-items-start justify-content-between gap-4 mb-4">
             <div className="d-flex align-items-center gap-3">
-              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid white" }} />
+              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid white" }} />
               <div>
                 <h5 className="mb-0 fw-bold">Cebu Far East Institute</h5>
                 <p className="mb-0 small" style={{ color: "#fef3c7" }}>Student Information System</p>
               </div>
             </div>
-            <div className="d-flex gap-4">
-              <a href="#" className="text-decoration-none hover:underline" style={{ color: "#fef3c7" }}>Privacy Policy</a>
-              <a href="#" className="text-decoration-none hover:underline" style={{ color: "#fef3c7" }}>Help</a>
-              <a href="#" className="text-decoration-none hover:underline" style={{ color: "#fef3c7" }}>Accessibility</a>
+
+            <div style={{ color: "#fef3c7" }}>
+              <h6 className="fw-semibold mb-2">Contact Us</h6>
+              <p className="mb-1 small">Basak, Lapu-Lapu City, Cebu</p>
+              <p className="mb-1 small">Phone: (032) 273 1081</p>
+              <p className="mb-0 small">Email: <a href="mailto:cfeiinc@gmail.com" className="text-decoration-none" style={{ color: "#fef3c7" }}>cfeiinc@gmail.com</a></p>
+            </div>
+
+            <div className="text-center">
+              <h6 className="fw-semibold mb-2">Get in Touch</h6>
+              <a href="https://www.facebook.com/CFEI2021" target="_blank" rel="noopener noreferrer" className="d-inline-flex align-items-center gap-2 text-decoration-none" style={{ color: "#fef3c7" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M22 12C22 6.477 17.523 2 12 2S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.99H7.898v-2.888h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.888h-2.33v6.99C18.343 21.128 22 16.991 22 12z" fill="currentColor" />
+                </svg>
+              </a>
             </div>
           </div>
+
           <div className="border-top pt-4 text-center small" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fef3c7" }}>
             <p className="mb-0">© 2026 Cebu Far East Institute. All rights reserved.</p>
           </div>

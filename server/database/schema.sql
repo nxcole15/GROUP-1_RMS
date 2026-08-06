@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   student_id VARCHAR(12)  NOT NULL,
   message    TEXT         NOT NULL,
-  type       ENUM('enrollment','payment','document','system') NOT NULL,
+  type       ENUM('enrollment','payment','document','grade','system') NOT NULL,
   is_read    TINYINT(1)   NOT NULL DEFAULT 0,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(student_id)
@@ -167,3 +167,15 @@ CREATE TABLE IF NOT EXISTS enrollment_config (
   active_term     VARCHAR(50)  NOT NULL,
   deadline        DATETIME     NOT NULL
 );
+
+-- ── Schedule ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS schedule (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  subject_id  INT UNSIGNED NOT NULL,
+  day         ENUM('Monday','Tuesday','Wednesday','Thursday','Friday') NOT NULL,
+  time_start  TIME NOT NULL,
+  time_end    TIME NOT NULL,
+  room        VARCHAR(50) NOT NULL DEFAULT 'TBA',
+  FOREIGN KEY (subject_id) REFERENCES subjects(id)
+);
+

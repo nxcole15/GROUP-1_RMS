@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -121,7 +121,6 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "requests",       label: "Grade Requests",   icon: "📨" },
   { id: "attendance",     label: "Attendance",       icon: "✅" },
   { id: "documents",      label: "Documents",        icon: "📄" },
-  { id: "notifications",  label: "Notifications",    icon: "🔔" },
   { id: "timelog" as Panel, label: "Time Log", icon: "🕐" },
 ];
 
@@ -140,27 +139,40 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
-        <div className="d-flex align-items-center gap-3 px-4 py-4 border-bottom border-white border-opacity-10" style={{ minHeight: 80 }}>
-          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle flex-shrink-0" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)" }} />
-          {expanded && (
-            <>
-              <img src="/newimlogo.png" alt="CFEI" className="rounded-3 flex-shrink-0" style={{ width: 36, height: 36, objectFit: "cover" }} />
-              <div><div className="text-white fw-bold lh-1" style={{ fontSize: 15 }}>CFEI</div><div style={{ color: "#818cf8", fontSize: 11 }}>Teacher Portal</div></div>
-            </>
-          )}
-          {show && <button className="btn-close btn-close-white ms-auto d-lg-none" onClick={() => setShow(false)} />}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+            <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
+            {expanded && (
+              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+                <div className="sidebar-brand-title">Teacher Portal</div>
+              </div>
+            )}
+          </div>
+          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
         </div>
 
-        {/* Teacher badge */}
+        {/* Profile - Right after Teacher Portal */}
         {expanded && (
-          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.35)" }}>
-            <span>👨‍🏫</span>
-            <div><div style={{ color: "#6ee7b7", fontSize: 12, fontWeight: 700 }}>Faculty</div><div style={{ color: "rgba(110,231,183,0.6)", fontSize: 11 }}>{teacherData.department}</div></div>
+          <div className="px-3 mt-3 mb-2">
+            <Link href="/teacher/profile" className="text-decoration-none">
+              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
+                  {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                </div>
+                <div className="flex-grow-1 overflow-hidden">
+                  <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
+                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>👤</span>
+              </div>
+            </Link>
           </div>
         )}
 
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1">
+        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
@@ -172,22 +184,16 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           ))}
         </nav>
 
-        {/* User */}
+        {/* Logout button - More visible at bottom */}
         {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-              </div>
-              <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
-                <div className="text-truncate" style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>{teacherData.email}</div>
-              </div>
-              <Link href="/login" className="btn btn-sm btn-danger rounded-pill px-3 py-1 text-decoration-none d-flex align-items-center gap-1" style={{ fontSize: 11, fontWeight: 600 }} title="Log out">
-                <span>↩</span>
-                <span className="d-none d-xl-inline">Logout</span>
-              </Link>
-            </div>
+          <div className="px-3 py-3 border-top border-white border-opacity-10">
+            <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+              onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
+              <span style={{ fontSize: 16 }}>↩</span>
+              <span>Log Out</span>
+            </Link>
           </div>
         )}
       </div>
@@ -196,9 +202,11 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* ── Overview ── */
-function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string }) {
+function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
+  const displayTeacher = teacher ?? teacherData;
   const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
   const avgGrade = Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length);
+
 
   const quickLinks = [
     { id: "subjects"  as Panel, label: "My Classes",     icon: "📚", bg: "#3b82f6" },
@@ -212,8 +220,8 @@ function Overview({ setActive, isGradeLocked, activeTerm }: { setActive: (s: Pan
     <div className="d-flex flex-column gap-4">
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background: "linear-gradient(135deg,#059669,#10b981)", boxShadow: "0 8px 32px rgba(5,150,105,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {teacherData.full_name} 👋</h2>
-        <p className="text-white-50 small mb-0">Department: {teacherData.department} · {teacherData.teacher_id}</p>
+        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {displayTeacher.full_name} 👋</h2>
+        <p className="text-white-50 small mb-0">Department: {displayTeacher.department} · {displayTeacher.teacher_id}</p>
       </div>
 
       {/* Lock banner */}
@@ -365,7 +373,8 @@ function SchedulePanel() {
 }
 
 /* ── Subjects Panel ── */
-function SubjectsPanel() {
+function SubjectsPanel({ subjects: propSubjects }: { subjects?: typeof subjects } = {}) {
+  const displaySubjects = propSubjects ?? subjects;
   return (
     <div className="d-flex flex-column gap-4">
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Classes</h2><p className="text-muted small mb-0">{subjects.length} classes assigned</p></div>
@@ -405,12 +414,13 @@ function SubjectsPanel() {
 }
 
 /* ── Students Panel ── */
-function StudentsPanel() {
+function StudentsPanel({ students: propStudents }: { students?: typeof students } = {}) {
   const [search, setSearch] = useState("");
+  const displayStudents = propStudents ?? students;
   const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">My Students</h2><p className="text-muted small mb-0">{students.length} students in your classes</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-1">My Students</h2><p className="text-muted small mb-0">{displayStudents.length} students in your classes</p></div>
       <div className="input-group shadow-sm" style={{ maxWidth: 400 }}>
         <span className="input-group-text bg-white">🔍</span>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or ID..." className="form-control border-start-0" />
@@ -451,8 +461,33 @@ function StudentsPanel() {
 /* ── Grades Panel ── */
 function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
-  const subjectGrades = grades.filter(g => g.subject === subjects.find(s => s.id === selectedSubject)?.name);
-  const avg = subjectGrades.length > 0 ? Math.round(subjectGrades.reduce((a, g) => a + g.percentage, 0) / subjectGrades.length) : 0;
+  const [apiGrades, setApiGrades] = useState<{student_id:string;full_name:string;percentage:number;term:string}[]>([]);
+  const [gradesLoading, setGradesLoading] = useState(false);
+  const [gradesError, setGradesError] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setGradesLoading(true);
+    setGradesError(false);
+    fetch(`http://localhost:4000/api/teacher/grades/${selectedSubject}`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.grades?.length) setApiGrades(data.grades);
+        else setApiGrades([]);
+      })
+      .catch(() => setGradesError(true))
+      .finally(() => setGradesLoading(false));
+  }, [selectedSubject]);
+
+  const displayGrades = apiGrades.length > 0
+    ? apiGrades.map(g => ({ student_id: g.student_id, name: g.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", percentage: g.percentage, term: g.term }))
+    : grades.filter(g => g.subject === subjects.find(s => s.id === selectedSubject)?.name);
+
+  const avg = displayGrades.length > 0 ? Math.round(displayGrades.reduce((a, g) => a + g.percentage, 0) / displayGrades.length) : 0;
   return (
     <div className="d-flex flex-column gap-4">
       <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2><p className="text-muted small mb-0">Submit and manage student grades</p></div>
@@ -475,7 +510,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <span style={{ fontSize: 24 }}>📊</span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{subjectGrades.length} students graded</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
             <div className="fw-black fs-3 text-success">{avg}%</div>
           </div>
         </div>
@@ -492,58 +527,72 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
               </tr>
             </thead>
             <tbody>
-              {subjectGrades.map((g, i) => (
-                <tr key={i}>
-                  <td className="ps-4 small fw-medium text-dark">{g.name}</td>
-                  <td className="d-none d-sm-table-cell small text-muted">{g.student_id}</td>
-                  <td className="text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <div className="progress flex-shrink-0" style={{ width: 60, height: 6 }}>
-                        <div className="progress-bar bg-success" style={{ width: `${g.percentage}%` }} />
+              {gradesLoading ? (
+                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
+              ) : (
+                displayGrades.map((g, i) => (
+                  <tr key={i}>
+                    <td className="ps-4 small fw-medium text-dark">{g.name}</td>
+                    <td className="d-none d-sm-table-cell small text-muted">{g.student_id}</td>
+                    <td className="text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-2">
+                        <div className="progress flex-shrink-0" style={{ width: 60, height: 6 }}>
+                          <div className="progress-bar bg-success" style={{ width: `${g.percentage}%` }} />
+                        </div>
+                        <span className="small fw-semibold text-dark">{g.percentage}%</span>
                       </div>
-                      <span className="small fw-semibold text-dark">{g.percentage}%</span>
-                    </div>
-                  </td>
-                  <td className="text-end pe-4 fw-black small text-success">{g.percentage >= 90 ? "A" : g.percentage >= 80 ? "B" : "C"}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="text-end pe-4 fw-black small text-success">{g.percentage >= 90 ? "A" : g.percentage >= 80 ? "B" : "C"}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+      {gradesError && <div className="alert alert-warning small mt-3">Could not load grades from server. Showing cached data.</div>}
     </div>
   );
 }
 
 /* ── Grade Requests Panel ── */
 function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
-  const [requests, setRequests] = useState<import("../../../app/lib/gradeRequests").GradeRequest[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const [grading, setGrading] = useState<Record<number, { score: string; remarks: string }>>({});
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const { loadRequests } = require("../../../app/lib/gradeRequests");
-    // Teacher T001 = "Mr. Dela Cruz" — show requests assigned to this teacher
-    setRequests(loadRequests().filter((r: import("../../../app/lib/gradeRequests").GradeRequest) =>
-      r.teacher === "Mr. Dela Cruz"
-    ));
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/teacher", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
   }, []);
+  
+
 
   function reload() {
-    const { loadRequests } = require("../../../app/lib/gradeRequests");
-    setRequests(loadRequests().filter((r: import("../../../app/lib/gradeRequests").GradeRequest) =>
-      r.teacher === "Mr. Dela Cruz"
-    ));
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/teacher", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.requests) setRequests(data.requests); })
+      .catch(() => {});
   }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   function acceptRequest(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../../app/lib/gradeRequests");
-    updateRequest(id, { status: "teacher_calculating" });
-    reload();
     showToast("📝 Request accepted — enter the calculated grade below");
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "teacher_calculating" } : r));
   }
 
   function submitToAdmin(id: number) {
@@ -555,48 +604,71 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-"
       : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-"
       : score >= 65 ? "D" : "F";
-    const { updateRequest } = require("../../../app/lib/gradeRequests");
-    updateRequest(id, {
-      status: "submitted_to_admin",
-      score,
-      letterGrade,
-      remarks: g.remarks || "",
-      submittedToAdminAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
+      
+    const token = localStorage.getItem("inform_token");
+      if (token) {
+        fetch(`http://localhost:4000/api/grade-requests/teacher/${id}/submit`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ score, remarks: g.remarks || "" }),
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data?.request) reload(); })
+          .catch(() => {});
+    }
     setGrading(prev => { const n = { ...prev }; delete n[id]; return n; });
     reload();
-    showToast(`📤 Grade submitted to Admin for verification`);
+    showToast(`📤 Grade submitted to Registrar for review`);
   }
 
   function releaseToStudent(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../../app/lib/gradeRequests");
-    updateRequest(id, {
-      status: "released_to_student",
-      releasedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
-    reload();
-    showToast("🎓 Grade released to student!");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`http://localhost:4000/api/grade-requests/teacher/${id}/release`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({}),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => { reload(); showToast("🎓 Grade released to student!"); })
+      .catch(() => {});
   }
+
 
   function rejectRequest(id: number) {
     if (isGradeLocked) return;
-    const { updateRequest } = require("../../../app/lib/gradeRequests");
-    updateRequest(id, {
-      status: "rejected",
-      rejectedBy: "Teacher",
-      rejectedAt: new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }),
-    });
     reload();
     showToast("✕ Request rejected");
   }
 
-  const { statusLabel, statusBadgeClass } = require("../../../app/lib/gradeRequests");
+  function statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      student_requested:  "📨 Requested",
+      teacher_calculating:"📝 Calculating",
+      registrar_review:   "📤 Sent to Registrar",
+      principal_review:   "👀 Principal Review",
+      principal_approved: "✅ Principal Approved",
+      registrar_released: "📬 Released by Registrar",
+      released_to_student:"🎓 Grade Released",
+      rejected:           "✕ Rejected",
+    };
+    return labels[status] || status;
+  }
+
+  function statusBadgeClass(status: string): string {
+    if (status === "released_to_student" || status === "principal_approved") return "bg-success text-white";
+    if (status === "rejected") return "bg-danger-subtle text-danger border border-danger-subtle";
+    if (status === "student_requested") return "bg-warning-subtle text-warning border border-warning-subtle";
+    return "bg-primary-subtle text-primary border border-primary-subtle";
+  }
 
   const newRequests     = requests.filter(r => r.status === "student_requested");
   const inProgress      = requests.filter(r => r.status === "teacher_calculating");
-  const pendingAdmin    = requests.filter(r => r.status === "submitted_to_admin");
-  const verifiedByAdmin = requests.filter(r => r.status === "admin_verified");
+  const pendingAdmin    = requests.filter(r => r.status === "registrar_review");
+  const verifiedByAdmin = requests.filter(r => r.status === "principal_approved" || r.status === "registrar_released");
   const released        = requests.filter(r => r.status === "released_to_student");
   const rejected        = requests.filter(r => r.status === "rejected");
 
@@ -880,13 +952,57 @@ function DocumentApprovalsPanel() {
 /* ── Notifications ── */
 function NotificationsPanel() {
   const [notifs, setNotifs] = useState(teacherNotifications);
+
+  function fetchNotifs() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/staff-notifications", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.notifications?.length) {
+          setNotifs(data.notifications.map((n: {
+            id: number; type: string; title: string; message: string; created_at: string; is_read: boolean;
+          }) => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+            read: !!n.is_read,
+            icon: n.type === "grade_request" ? "📨" : "�",
+          })));
+        }
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function markAllRead() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch("http://localhost:4000/api/grade-requests/staff-notifications/read", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    }).catch(() => {});
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+  }
+
   const unread = notifs.filter(n => !n.read);
-  const read   = notifs.filter(n => n.read);
+  const read   = notifs.filter(n =>  n.read);
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-center justify-content-between">
         <div><h2 className="fw-black fs-4 text-dark mb-1">Notifications</h2><p className="text-muted small mb-0">{unread.length} unread</p></div>
-        {unread.length > 0 && <button onClick={() => setNotifs(prev => prev.map(n => ({ ...n, read: true })))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>Mark all read</button>}
+        {unread.length > 0 && <button onClick={markAllRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>Mark all read</button>}
       </div>
       {unread.length > 0 && (
         <div>
@@ -903,7 +1019,11 @@ function NotificationsPanel() {
                       <div className="text-muted mt-1" style={{ fontSize: 11 }}>{n.time}</div>
                     </div>
                     <div className="d-flex gap-1">
-                      <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>✓</button>
+                      <button onClick={() => {
+                        const token = localStorage.getItem("inform_token");
+                        if (token) fetch(`http://localhost:4000/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>✓</button>
                       <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>✕</button>
                     </div>
                   </div>
@@ -936,10 +1056,60 @@ function NotificationsPanel() {
 /* ── Attendance Panel ── */
 function AttendancePanel() {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
-  const subjectAttendance = attendance.filter(a => a.subject === subjects.find(s => s.id === selectedSubject)?.name);
-  const avgAttendance = subjectAttendance.length > 0 ? Math.round(subjectAttendance.reduce((a, att) => a + att.percentage, 0) / subjectAttendance.length) : 0;
+  const [apiAttendance, setApiAttendance] = useState<{student_id:string;full_name:string;total_meetings:number;days_present:number}[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
+  const [attError, setAttError] = useState(false);
+  const [attToast, setAttToast] = useState<string|null>(null);
+
+  function showAttToast(msg: string) { setAttToast(msg); setTimeout(() => setAttToast(null), 3000); }
+
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    setAttLoading(true);
+    setAttError(false);
+    fetch(`http://localhost:4000/api/teacher/attendance/${selectedSubject}`, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.attendance?.length) setApiAttendance(data.attendance);
+        else setApiAttendance([]);
+      })
+      .catch(() => setAttError(true))
+      .finally(() => setAttLoading(false));
+  }, [selectedSubject]);
+
+  function markAttendance(studentId: string, present: boolean) {
+    const token = localStorage.getItem("inform_token");
+    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === subjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
+      .find(a => a.student_id === studentId);
+    const newPresent = present
+      ? Math.min((record?.days_present ?? 0) + 1, record?.total_meetings ?? 20)
+      : Math.max((record?.days_present ?? 1) - 1, 0);
+
+    // Optimistic update
+    setApiAttendance(prev => prev.map(a => a.student_id === studentId ? { ...a, days_present: newPresent } : a));
+    showAttToast(present ? "✓ Marked Present" : "✕ Marked Absent");
+
+    if (!token || token.startsWith("demo_")) return;
+    fetch("http://localhost:4000/api/teacher/attendance", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ student_id: studentId, subject_id: selectedSubject, total_meetings: record?.total_meetings ?? 20, days_present: newPresent }),
+    }).catch(() => {}); // UI already updated
+  }
+
+  const displayAttendance = apiAttendance.length > 0
+    ? apiAttendance.map(a => ({ student_id: a.student_id, name: a.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", present: a.days_present, total: a.total_meetings, percentage: a.total_meetings > 0 ? Math.round((a.days_present/a.total_meetings)*100) : 0 }))
+    : attendance.filter(a => a.subject === subjects.find(s => s.id === selectedSubject)?.name);
+
+  const avgAttendance = displayAttendance.length > 0 ? Math.round(displayAttendance.reduce((a, att) => a + att.percentage, 0) / displayAttendance.length) : 0;
   return (
     <div className="d-flex flex-column gap-4">
+      {attToast && <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 220, animation: "fadeInUp 0.3s ease" }}>{attToast}</div>}
       <div><h2 className="fw-black fs-4 text-dark mb-1">Attendance Management</h2><p className="text-muted small mb-0">Track student attendance per subject</p></div>
       <div className="d-flex gap-3 flex-wrap align-items-center">
         <div style={{ width: 220 }}>
@@ -951,11 +1121,12 @@ function AttendancePanel() {
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <span style={{ fontSize: 24 }}>✅</span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{subjectAttendance.length} students tracked</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
             <div className="fw-black fs-3 text-success">{avgAttendance}%</div>
           </div>
         </div>
       </div>
+      {attError && <div className="alert alert-warning small">Could not load attendance from server. Showing cached data.</div>}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
@@ -968,19 +1139,23 @@ function AttendancePanel() {
               </tr>
             </thead>
             <tbody>
-              {subjectAttendance.map((a, i) => (
-                <tr key={i}>
-                  <td className="ps-4 small fw-medium text-dark">{a.name}</td>
-                  <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
-                  <td className="text-center">
-                    <div className="d-flex justify-content-center gap-2">
-                      <button className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ Present</button>
-                      <button className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>✕ Absent</button>
-                    </div>
-                  </td>
-                  <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
-                </tr>
-              ))}
+              {attLoading ? (
+                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
+              ) : (
+                displayAttendance.map((a, i) => (
+                  <tr key={i}>
+                    <td className="ps-4 small fw-medium text-dark">{a.name}</td>
+                    <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
+                    <td className="text-center">
+                      <div className="d-flex justify-content-center gap-2">
+                        <button onClick={() => markAttendance(a.student_id, true)}  className="btn btn-success btn-sm" style={{ fontSize: 11 }}>✓ Present</button>
+                        <button onClick={() => markAttendance(a.student_id, false)} className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>✕ Absent</button>
+                      </div>
+                    </td>
+                    <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1154,17 +1329,79 @@ export default function TeacherDashboardPage() {
   const [showNotif, setShowNotif]   = useState(false);
   const [notifs, setNotifs]         = useState(teacherNotifications);
   const [pendingCount, setPendingCount] = useState(0);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Load live pending count from shared store
+  // Poll staff notifications for the topbar bell unread count
   useEffect(() => {
-    const { loadRequests } = require("../../lib/gradeRequests");
-    const reqs = loadRequests();
-    const count = reqs.filter((r: { teacher: string; status: string }) =>
-      r.teacher === "Mr. Dela Cruz" &&
-      ["student_requested", "teacher_calculating"].includes(r.status)
-    ).length;
-    setPendingCount(count);
-  }, [panel]); // re-check when user navigates panels
+    function fetchNotifs() {
+      const token = localStorage.getItem("inform_token");
+      if (!token) return;
+      fetch("http://localhost:4000/api/grade-requests/staff-notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.notifications?.length) {
+            setNotifs(prev => {
+              // Preserve locally-marked-read states so poll doesn't undo them
+              const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
+              return data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id, type: n.type, title: n.title, message: n.message,
+                time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+                read: readIds.has(n.id) ? true : !!n.is_read,
+                icon: "📨",
+              }));
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    const interval = setInterval(fetchNotifs, 15000);
+    fetchNotifs();
+    return () => clearInterval(interval);
+  }, []);
+
+    const [apiTeacher, setApiTeacher] = useState<{
+    teacher_id: string; full_name: string; department: string; email: string;
+  } | null>(null);
+  const [apiSubjects, setApiSubjects] = useState<{
+    id: number; code: string; name: string; units: number; max_capacity: number; enrolled_count: number;
+  }[]>([]);
+  const [apiStudents, setApiStudents] = useState<{
+    student_id: string; full_name: string; email: string;
+  }[]>([]);
+
+  // ── Route protection ──────────────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    const role  = localStorage.getItem("inform_role");
+    if (!token || role !== "teacher") {
+      window.location.replace("/login");
+    } else {
+      setAuthChecked(true);
+    }
+  }, []);
+
+  // Fetch real teacher dashboard data from API
+  useEffect(() => {
+    if (!authChecked) return;
+    const token = localStorage.getItem("inform_token");
+    if (!token || token.startsWith("demo_")) return;
+    fetch("http://localhost:4000/api/teacher/dashboard", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (data.stats?.pending_requests !== undefined) setPendingCount(data.stats.pending_requests);
+        if (data.teacher) setApiTeacher(data.teacher);
+        if (data.subjects?.length) setApiSubjects(data.subjects);
+        if (data.students?.length) setApiStudents(data.students);
+      })
+      .catch(() => {});
+  }, [panel, authChecked]);
   const deadlinePassed = isDeadlinePassed();
   const isGradeLocked  = deadlinePassed && pendingCount > 0;
   const activeTerm     = getActiveTerm();
@@ -1172,16 +1409,16 @@ export default function TeacherDashboardPage() {
 
   function renderPanel() {
     switch (panel) {
-      case "subjects":      return <SubjectsPanel />;
+      case "subjects":      return <SubjectsPanel subjects={apiSubjects.length ? apiSubjects.map(s => ({ id: s.id, code: s.code, name: s.name, units: s.units, enrolled: s.enrolled_count, max: s.max_capacity })) : undefined} />;
       case "schedule":      return <SchedulePanel />;
-      case "students":      return <StudentsPanel />;
+      case "students":      return <StudentsPanel students={apiStudents.length ? apiStudents.map(s => ({ id: s.student_id, name: s.full_name, pathway: "Academic", grade: 0, status: "Active" })) : undefined} />;
       case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "attendance":    return <AttendancePanel />;
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;
       case "timelog":       return <TimeLogPanel />;
-      default:              return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
+      default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} />;
     }
   }
 
@@ -1199,11 +1436,19 @@ export default function TeacherDashboardPage() {
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <div className="fw-bold text-dark d-none d-md-block" style={{ fontSize: "clamp(14px, 3vw, 16px)" }}>
-            {navItems.find(n => n.id === panel)?.label ?? "Overview"}
+          
+          {/* Left side - Logo */}
+          <div className="d-flex align-items-center gap-3">
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 36, height: 36, objectFit: "cover", border: "2px solid #dc2626" }} />
+            <div className="d-none d-sm-block">
+              <div className="fw-bold" style={{ color: "#dc2626", fontSize: 14 }}>CFEI Portal</div>
+              <div className="text-muted" style={{ fontSize: 11 }}>Teacher Dashboard</div>
+            </div>
           </div>
-          <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
+
+          {/* Right side - Status badges & Notification */}
+          <div className="d-flex align-items-center gap-3 ms-auto">
+            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-sm-flex align-items-center gap-1">
               <span className="rounded-circle bg-success d-inline-block" style={{ width: 7, height: 7 }} />Online
             </span>
             {isGradeLocked && (
@@ -1211,13 +1456,10 @@ export default function TeacherDashboardPage() {
                 🔒 Grades Locked
               </span>
             )}
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)} aria-label="Notifications">
-              <span style={{ fontSize: 20 }}>🔔</span>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 16, height: 16, fontSize: 9, fontWeight: "bold" }}>{unreadCount}</span>}
+            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)}>
+              <span style={{ fontSize: 22 }}>🔔</span>
+              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 18, height: 18, fontSize: 10, fontWeight: "bold" }}>{unreadCount}</span>}
             </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width: 32, height: 32, fontSize: 12, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-              {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-            </div>
           </div>
         </header>
 
