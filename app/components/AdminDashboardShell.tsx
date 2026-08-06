@@ -260,7 +260,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin </h2>
         <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
-          Administrator · Full Access · SY 20252026
+          Administrator ï¿½ Full Access ï¿½ SY 20252026
         </p>
         <div className="d-flex gap-2 flex-wrap">
           <span className="fw-semibold px-3 py-2 rounded-3" style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", fontSize:12 }}>
@@ -284,8 +284,8 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
         {[
           { label:"Active Students",     value: activeStudents,                            cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
           { label:"Class Avg. GWA",      value: avgGwa,                                    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
-          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",          cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
-          { label:"Pending Payments",    value: pendingStats?.payments ?? "—",             cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
+          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "ï¿½",          cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
+          { label:"Pending Payments",    value: pendingStats?.payments ?? "ï¿½",             cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
@@ -332,7 +332,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
               </div>
 
               <div className="mb-3">
-                <label className="small fw-semibold" style={{ color: "#0f172a" }}>Filter (Track · Grade · Gender)</label>
+                <label className="small fw-semibold" style={{ color: "#0f172a" }}>Filter (Track ï¿½ Grade ï¿½ Gender)</label>
 
                 <div className="d-flex gap-2 mt-2" style={{ flexWrap: "wrap" }}>
                   <div style={{ minWidth: 160 }}>
@@ -413,7 +413,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div>
                         <div className="fw-bold" style={{ color: "#0f172a", fontSize: 13 }}>Enrolled Students by Track</div>
-                        <div className="small" style={{ color: "#94a3b8", marginTop: 2 }}>Academic Year 2025–2026</div>
+                        <div className="small" style={{ color: "#94a3b8", marginTop: 2 }}>Academic Year 2025ï¿½2026</div>
                       </div>
                       <div className="d-flex align-items-center gap-2">
                         <span className="rounded-2 d-inline-block" style={{ width: 10, height: 10, background: "linear-gradient(135deg, #1d4ed8, #60a5fa)" }} />
@@ -526,7 +526,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                     
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
+                      <div className="text-muted" style={{ fontSize:11 }}>{a.target} ï¿½ {a.date}</div>
                     </div>
                   </div>
                 ))}
@@ -694,7 +694,7 @@ function GradesPanel() {
         </div>
         <div className="flex-grow-1 rounded-3 p-3 d-flex align-items-center gap-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
           <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:44, height:44, fontSize:16 }}>{initials(student.name)}</div>
-          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} · {student.track} Grade {student.grade}</div></div>
+          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} ï¿½ {student.track} Grade {student.grade}</div></div>
           <div className="text-end"><div className="fw-black fs-3 text-primary">{avg}%</div><div className="text-muted small">General Average</div></div>
         </div>
       </div>
@@ -777,7 +777,7 @@ function EnrollmentPanel() {
   const token = localStorage.getItem("inform_token");
 
   if (!token) return;
-  // Find the enrollment db id from the list — for now we match by student_id
+  // Find the enrollment db id from the list ï¿½ for now we match by student_id
   fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
@@ -809,7 +809,7 @@ function EnrollmentPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year 20252026 · Deadline: June 15, 2026</p></div>
+        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year 20252026 ï¿½ Deadline: June 15, 2026</p></div>
         <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2"> Enrollment period is open</span>
       </div>
 
@@ -964,7 +964,7 @@ function TuitionPanel() {
 
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Term 1 · Academic Year 20252026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Term 1 ï¿½ Academic Year 20252026</p></div>
 
       {/* Stats */}
       <div className="row g-3">
@@ -1226,7 +1226,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
         </div>
       </div>
 
-      {/* Deadline status bar — admin only */}
+      {/* Deadline status bar ï¿½ admin only */}
       {!registrarView && (
       <div className="rounded-3 p-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3"
         style={{
@@ -1238,7 +1238,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
           <div className="fw-semibold small" style={{ color: isPastDeadline ? "#b91c1c" : daysLeft <= 7 ? "#92400e" : "#1e40af" }}>
             {isPastDeadline
               ? `${currentTerm} deadline passed ${Math.abs(daysLeft)} day(s) ago`
-              : `${currentTerm} deadline: ${deadline.deadline.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })} — ${daysLeft} day(s) left`}
+              : `${currentTerm} deadline: ${deadline.deadline.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })} ï¿½ ${daysLeft} day(s) left`}
           </div>
           <div className="text-muted small mt-1">
             {totalPending > 0
@@ -1292,7 +1292,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
             <div key={t.id} className={`card border-0 shadow-sm rounded-3 overflow-hidden ${isLocked || autoLocked ? "border border-danger-subtle" : ""}`}
               style={{ opacity: isLocked ? 0.85 : 1 }}>
 
-              {/* Locked banner — admin only */}
+              {/* Locked banner ï¿½ admin only */}
               {!registrarView && (isLocked || autoLocked) && (
                 <div className="px-4 py-2 d-flex align-items-center gap-2"
                   style={{ background: "#fef2f2", borderBottom: "1px solid #fecaca" }}>
@@ -1325,7 +1325,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                   <div className="fw-bold text-dark small">{t.name}</div>
                   <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
                     <span className="text-muted" style={{ fontSize: 11 }}>{t.id}</span>
-                    <span className="text-muted" style={{ fontSize: 11 }}>·</span>
+                    <span className="text-muted" style={{ fontSize: 11 }}>ï¿½</span>
                     <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: 11 }}> {t.section}</span>
                     <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: 11 }}>Room {t.room}</span>
                     {!registrarView && pending > 0 && (
@@ -1352,10 +1352,10 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
               {expanded === t.id && (
                 <div className="border-top px-4 py-3" style={{ background: "#f8f9ff" }}>
 
-                  {/* Reminder & Lock actions — admin only */}
+                  {/* Reminder & Lock actions ï¿½ admin only */}
                   {!registrarView && (
                   <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <p className="text-muted text-uppercase fw-semibold mb-0" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Grade Submission — {currentTerm}</p>
+                    <p className="text-muted text-uppercase fw-semibold mb-0" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Grade Submission ï¿½ {currentTerm}</p>
                     <div className="d-flex gap-2 align-items-center">
                       {reminderInfo?.sent && (
                         <span className="text-muted" style={{ fontSize: 11 }}>Reminder sent at {reminderInfo.sentAt}</span>
@@ -1382,7 +1382,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                   </div>
                   )}
 
-                  {/* Pending requests — admin only */}
+                  {/* Pending requests ï¿½ admin only */}
                   {!registrarView && pending > 0 && (
                     <div className="mb-3">
                       <div className="small fw-semibold text-danger mb-2"> Pending student grade requests:</div>
@@ -1393,7 +1393,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                             <div key={r.id} className="d-flex align-items-center gap-2 p-2 rounded-2 bg-white border" style={{ fontSize: 12 }}>
                               <span></span>
                               <span className="fw-semibold text-dark">{r.student}</span>
-                              <span className="text-muted">·</span>
+                              <span className="text-muted">ï¿½</span>
                               <span className="text-muted">{r.subject}</span>
                               <span className="ms-auto text-muted" style={{ fontSize: 11 }}>{r.requestedAt}</span>
                             </div>
@@ -1582,7 +1582,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
         <button onClick={reload} className="btn btn-outline-secondary btn-sm">Refresh</button>
       </div>
 
-      {/* Term controls — principal only */}
+      {/* Term controls ï¿½ principal only */}
       {role === "principal" && (
         <div>
           <h3 className="fw-bold small text-dark mb-3">?? Grade Request Window</h3>
@@ -1644,7 +1644,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                   <div className="row g-3 align-items-start mb-3">
                     <div className="col-12 col-sm-6">
                       <div className="fw-bold text-dark mb-1">{req.student_name || req.student}</div>
-                      <div className="text-muted small">{req.subject_name || req.subject} · {req.term}</div>
+                      <div className="text-muted small">{req.subject_name || req.subject} ï¿½ {req.term}</div>
                       <div className="text-muted small">Teacher: {req.teacher_name || req.teacher}</div>
                       {req.registrar_note && <div className="text-muted small fst-italic">Note: {req.registrar_note}</div>}
                     </div>
@@ -1652,7 +1652,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                       <div className="rounded-3 p-3 bg-success-subtle border border-success-subtle text-center">
                         <div className="text-muted small mb-1">Submitted Grade</div>
                         <div className="fw-black text-success" style={{ fontSize: 40 }}>
-                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "—"}
+                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "ï¿½"}
                         </div>
                         <div className="fw-semibold text-success small">{req.score != null ? `${req.score}%` : ""}</div>
                         {req.remarks && <div className="text-muted mt-1 fst-italic" style={{ fontSize: 11 }}>&ldquo;{req.remarks}&rdquo;</div>}
@@ -1673,17 +1673,17 @@ function AdminRequestsPanel({ role }: { role?: string }) {
         </div>
       )}
 
-      {/* Principal approved — registrar releases to teacher */}
+      {/* Principal approved ï¿½ registrar releases to teacher */}
       {role === "registrar" && approved.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Principal Approved — Release to Teacher</h3>
+          <h3 className="fw-bold small text-dark mb-3">? Principal Approved ï¿½ Release to Teacher</h3>
           <div className="d-flex flex-column gap-2">
             {approved.map((req: any) => (
               <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
                 <div className="card-body p-4 d-flex align-items-center gap-3">
                   <div className="flex-grow-1">
-                    <div className="fw-bold text-dark small">{req.student_name || req.student} — {req.subject_name || req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} · Approved by Principal</div>
+                    <div className="fw-bold text-dark small">{req.student_name || req.student} ï¿½ {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} ï¿½ Approved by Principal</div>
                   </div>
                   <button onClick={() => releaseToTeacher(req.id)} className="btn btn-success btn-sm">?? Release to Teacher</button>
                 </div>
@@ -1693,10 +1693,10 @@ function AdminRequestsPanel({ role }: { role?: string }) {
         </div>
       )}
 
-      {/* Released — waiting on teacher final release */}
+      {/* Released ï¿½ waiting on teacher final release */}
       {released.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Released — Awaiting Teacher Final Release</h3>
+          <h3 className="fw-bold small text-dark mb-3">?? Released ï¿½ Awaiting Teacher Final Release</h3>
           <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
@@ -2087,7 +2087,7 @@ function AnnouncementsPanel() {
               <div className="rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}></div>
               <div className="flex-grow-1 overflow-hidden">
                 <div className="fw-bold small text-dark">{a.title}</div>
-                <div className="text-muted" style={{ fontSize:11 }}>Target: {a.target} · {a.date}</div>
+                <div className="text-muted" style={{ fontSize:11 }}>Target: {a.target} ï¿½ {a.date}</div>
               </div>
               <div className="d-flex align-items-center gap-2 flex-shrink-0">
                 <span className={`badge ${a.status==="Active"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{a.status}</span>
@@ -2119,7 +2119,7 @@ function LibraryPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Library Management</h2><p className="text-muted small mb-0">{libBooks.length} titles · {totalCopies} total copies</p></div>
+        <div><h2 className="fw-black fs-4 text-dark mb-0">Library Management</h2><p className="text-muted small mb-0">{libBooks.length} titles ï¿½ {totalCopies} total copies</p></div>
         <button className="btn btn-primary btn-sm fw-bold shadow-sm">+ Add Book</button>
       </div>
       <div className="row g-3">
@@ -2374,9 +2374,9 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
-  // Route protection — only runs when used as standalone page (not wrapped)
+  // Route protection ï¿½ only runs when used as standalone page (not wrapped)
   useEffect(() => {
-    if (hideBanner) return; // wrapped by principal/registrar — they handle auth
+    if (hideBanner) return; // wrapped by principal/registrar ï¿½ they handle auth
     const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
     const role  = localStorage.getItem("inform_role");
     const adminRoles = ["registrar", "principal", "accounting"];
@@ -2447,7 +2447,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     // Persist to DB for grade_request type notifications
     if (["registrar", "principal"].includes(role ?? "")) {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-      // The ID is offset by 100000 for grade_request notifs — get the real DB id
+      // The ID is offset by 100000 for grade_request notifs ï¿½ get the real DB id
       const realId = id > 100000 ? id - 100000 : null;
       if (token && realId) {
         fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications/${realId}/read`, {
@@ -2501,7 +2501,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
       {/* Main content - responsive for all screen sizes */}
       <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
-        {/* Topbar — hidden when parent supplies its own banner (e.g. Principal portal) */}
+        {/* Topbar ï¿½ hidden when parent supplies its own banner (e.g. Principal portal) */}
         {!hideTopbarControls && (
         <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
           <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">

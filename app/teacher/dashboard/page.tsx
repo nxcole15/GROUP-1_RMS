@@ -39,12 +39,12 @@ const subjects = [
 ];
 
 const teacherSchedule = [
-  { day: "Monday",    time: "07:30–08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Monday",    time: "08:30–09:30", subject: "Geometry",   room: "Room 205", enter: "08:25", leave: "09:35" },
-  { day: "Tuesday",   time: "07:30–09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Wednesday", time: "07:30–08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Thursday",  time: "07:30–09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Friday",    time: "07:30–08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Monday",    time: "07:30ï¿½08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Monday",    time: "08:30ï¿½09:30", subject: "Geometry",   room: "Room 205", enter: "08:25", leave: "09:35" },
+  { day: "Tuesday",   time: "07:30ï¿½09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
+  { day: "Wednesday", time: "07:30ï¿½08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Thursday",  time: "07:30ï¿½09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
+  { day: "Friday",    time: "07:30ï¿½08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
 ];
 
 const students = [
@@ -221,7 +221,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background: "linear-gradient(135deg,#059669,#10b981)", boxShadow: "0 8px 32px rgba(5,150,105,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {displayTeacher.full_name} ??</h2>
-        <p className="text-white-50 small mb-0">Department: {displayTeacher.department} · {displayTeacher.teacher_id}</p>
+        <p className="text-white-50 small mb-0">Department: {displayTeacher.department} ï¿½ {displayTeacher.teacher_id}</p>
       </div>
 
       {/* Lock banner */}
@@ -229,7 +229,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <span style={{ fontSize: 22 }}>??</span>
           <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked — {activeTerm} Deadline Passed</div>
+            <div className="fw-bold small text-danger">Grade Submission Locked ï¿½ {activeTerm} Deadline Passed</div>
             <div className="text-muted small">You have unresolved grade requests. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -267,7 +267,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
               <div key={q.id} className="col-6 col-sm-4 col-lg-2">
                 <button onClick={() => !locked && setActive(q.id)}
                   disabled={locked}
-                  title={locked ? "Locked — visit Registrar's Office" : undefined}
+                  title={locked ? "Locked ï¿½ visit Registrar's Office" : undefined}
                   className="btn w-100 py-3 d-flex flex-column align-items-center gap-2 rounded-3 text-white border-0 shadow-sm"
                   style={{ background: q.bg, transition: "transform 0.15s", opacity: locked ? 0.5 : 1, cursor: locked ? "not-allowed" : "pointer" }}
                   onMouseEnter={e => { if (!locked) e.currentTarget.style.transform = "scale(1.04)"; }}
@@ -312,7 +312,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
                     <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 18 }}>??</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{s.code} · {s.units} units</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{s.code} ï¿½ {s.units} units</div>
                     </div>
                     <span className="badge bg-success-subtle text-success border border-success-subtle">{s.enrolled}/{s.max}</span>
                   </div>
@@ -334,7 +334,7 @@ function SchedulePanel() {
   const daySchedule = teacherSchedule.filter(s => s.day === day);
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2><p className="text-muted small mb-0">Term 1 · 2025–2026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2><p className="text-muted small mb-0">Term 1 ï¿½ 2025ï¿½2026</p></div>
       <div className="d-flex gap-2 overflow-auto pb-1">
         {days.map(d => (
           <button key={d} onClick={() => setDay(d)}
@@ -495,7 +495,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <span style={{ fontSize: 22 }}>??</span>
           <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked — {activeTerm} deadline passed</div>
+            <div className="fw-bold small text-danger">Grade Submission Locked ï¿½ {activeTerm} deadline passed</div>
             <div className="text-muted small">This panel is read-only. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -591,7 +591,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
   function acceptRequest(id: number) {
     if (isGradeLocked) return;
-    showToast("?? Request accepted — enter the calculated grade below");
+    showToast("?? Request accepted ï¿½ enter the calculated grade below");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "teacher_calculating" } : r));
   }
 
@@ -692,7 +692,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <span style={{ fontSize: 22 }}>??</span>
           <div>
-            <div className="fw-bold small text-danger">Actions Locked — {activeTerm} deadline passed</div>
+            <div className="fw-bold small text-danger">Actions Locked ï¿½ {activeTerm} deadline passed</div>
             <div className="text-muted small">Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -723,10 +723,10 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       </div>
 
-      {/* STEP 1 — New student requests */}
+      {/* STEP 1 ï¿½ New student requests */}
       {newRequests.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? New Student Requests — Action Required</h3>
+          <h3 className="fw-bold small text-dark mb-3">?? New Student Requests ï¿½ Action Required</h3>
           <div className="d-flex flex-column gap-2">
             {newRequests.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3">
@@ -734,12 +734,12 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                     <div>
                       <div className="fw-bold text-dark small">{req.student}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} · {req.term} · {req.requestedAt}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} ï¿½ {req.term} ï¿½ {req.requestedAt}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked — visit Registrar&apos;s Office</div>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked ï¿½ visit Registrar&apos;s Office</div>
                     : <div className="d-flex gap-2">
                         <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">?? Accept &amp; Calculate</button>
                         <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">? Reject</button>
@@ -752,7 +752,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      {/* STEP 2 — Teacher calculating, enter grade form */}
+      {/* STEP 2 ï¿½ Teacher calculating, enter grade form */}
       {inProgress.length > 0 && (
         <div>
           <h3 className="fw-bold small text-dark mb-3">?? Enter &amp; Submit Grades to Admin</h3>
@@ -763,13 +763,13 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                     <div>
                       <div className="fw-bold text-dark small">{req.student}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} · {req.term}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} ï¿½ {req.term}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   <div className="row g-2 mb-3">
                     <div className="col-4">
-                      <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 10 }}>Score (0–100)</label>
+                      <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 10 }}>Score (0ï¿½100)</label>
                       <input type="number" min={0} max={100}
                         value={grading[req.id]?.score ?? ""}
                         onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], score: e.target.value, remarks: prev[req.id]?.remarks ?? "" } }))}
@@ -793,7 +793,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     </div>
                   )}
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked — visit Registrar&apos;s Office</div>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked ï¿½ visit Registrar&apos;s Office</div>
                     : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">?? Submit to Admin for Verification</button>
                   }
                 </div>
@@ -803,7 +803,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      {/* STEP 3 — Waiting for admin */}
+      {/* STEP 3 ï¿½ Waiting for admin */}
       {pendingAdmin.length > 0 && (
         <div>
           <h3 className="fw-bold small text-dark mb-3">? Awaiting Admin Verification</h3>
@@ -813,8 +813,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>??</div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student} — {req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Submitted: {req.submittedToAdminAt}</div>
+                    <div className="fw-bold small text-dark">{req.student} ï¿½ {req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) ï¿½ Submitted: {req.submittedToAdminAt}</div>
                   </div>
                   <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                 </div>
@@ -824,24 +824,24 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      {/* STEP 4 — Admin verified, teacher must release */}
+      {/* STEP 4 ï¿½ Admin verified, teacher must release */}
       {verifiedByAdmin.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Admin Verified — Release to Student</h3>
+          <h3 className="fw-bold small text-dark mb-3">? Admin Verified ï¿½ Release to Student</h3>
           <div className="d-flex flex-column gap-2">
             {verifiedByAdmin.map(req => (
               <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                     <div>
-                      <div className="fw-bold text-dark small">{req.student} — {req.subject}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}</div>
+                      <div className="fw-bold text-dark small">{req.student} ï¿½ {req.subject}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) ï¿½ Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}</div>
                       {req.adminNote && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Admin note: {req.adminNote}</div>}
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked — visit Registrar&apos;s Office</div>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked ï¿½ visit Registrar&apos;s Office</div>
                     : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">?? Release Grade to Student</button>
                   }
                 </div>
@@ -851,7 +851,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      {/* STEP 5 — Released */}
+      {/* STEP 5 ï¿½ Released */}
       {released.length > 0 && (
         <div>
           <h3 className="fw-bold small text-dark mb-3">?? Released to Students</h3>
@@ -861,8 +861,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>??</div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student} — {req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) · Released: {req.releasedAt}</div>
+                    <div className="fw-bold small text-dark">{req.student} ï¿½ {req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) ï¿½ Released: {req.releasedAt}</div>
                   </div>
                   <span className="badge bg-success text-white" style={{ fontSize: 10 }}>?? Released</span>
                 </div>
@@ -880,7 +880,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
             {rejected.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{req.student} — {req.subject}</div><div className="text-muted" style={{ fontSize: 11 }}>Rejected by {req.rejectedBy}</div></div>
+                  <div><div className="fw-bold small text-dark">{req.student} ï¿½ {req.subject}</div><div className="text-muted" style={{ fontSize: 11 }}>Rejected by {req.rejectedBy}</div></div>
                   <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 10 }}>? Rejected</span>
                 </div>
               </div>
@@ -917,7 +917,7 @@ function DocumentApprovalsPanel() {
               <div key={doc.id} className="card border-0 shadow-sm rounded-3">
                 <div className="card-body p-3">
                   <div className="d-flex align-items-center justify-content-between mb-2">
-                    <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} · {doc.requestedAt}</div></div>
+                    <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} ï¿½ {doc.requestedAt}</div></div>
                     <span className="badge bg-warning-subtle text-warning border border-warning-subtle">Pending</span>
                   </div>
                   <div className="d-flex gap-2">
@@ -937,7 +937,7 @@ function DocumentApprovalsPanel() {
             {approved.map(doc => (
               <div key={doc.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} · Approved {doc.approvedAt}</div></div>
+                  <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} ï¿½ Approved {doc.approvedAt}</div></div>
                   <span className="badge bg-success-subtle text-success border border-success-subtle">? Approved</span>
                 </div>
               </div>
@@ -1265,7 +1265,7 @@ function TimeLogPanel() {
                   <tr key={l.id}>
                     <td className="ps-4 small fw-medium text-dark">{l.date}</td>
                     <td className="small text-success fw-semibold">{l.timeIn}</td>
-                    <td className="small text-danger fw-semibold">{l.timeOut ?? <span className="text-muted fst-italic">—</span>}</td>
+                    <td className="small text-danger fw-semibold">{l.timeOut ?? <span className="text-muted fst-italic">ï¿½</span>}</td>
                     <td className="pe-4">
                       <span className={`badge ${l.status === "in" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
                         {l.status === "in" ? "?? On Campus" : "? Completed"}

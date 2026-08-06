@@ -117,30 +117,30 @@ const gradeRequests = [
 
 const timetable: Record<string, { time:string; subject:string; icon:string; room:string; teacher:string; enter:string; leave:string }[]> = {
   Monday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",       enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",     enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez",   enter:"09:55", leave:"11:05" },
-    { time:"13:00–14:00", subject:"Physical Education", icon:"", room:"Gym",      teacher:"Coach Maria",            enter:"12:55", leave:"14:05" },
+    { time:"07:30ï¿½08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",       enter:"07:25", leave:"08:35" },
+    { time:"08:30ï¿½09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",     enter:"08:25", leave:"09:35" },
+    { time:"10:00ï¿½11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez",   enter:"09:55", leave:"11:05" },
+    { time:"13:00ï¿½14:00", subject:"Physical Education", icon:"", room:"Gym",      teacher:"Coach Maria",            enter:"12:55", leave:"14:05" },
   ],
   Tuesday:[
-    { time:"07:30–09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",        enter:"07:20", leave:"09:05" },
-    { time:"09:00–10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",   enter:"08:55", leave:"10:35" },
-    { time:"13:00–14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",   enter:"12:55", leave:"14:35" },
+    { time:"07:30ï¿½09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",        enter:"07:20", leave:"09:05" },
+    { time:"09:00ï¿½10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",   enter:"08:55", leave:"10:35" },
+    { time:"13:00ï¿½14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",   enter:"12:55", leave:"14:35" },
   ],
   Wednesday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"09:55", leave:"11:05" },
+    { time:"07:30ï¿½08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
+    { time:"08:30ï¿½09:30", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"08:25", leave:"09:35" },
+    { time:"10:00ï¿½11:00", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"09:55", leave:"11:05" },
   ],
   Thursday:[
-    { time:"07:30–09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",       enter:"07:20", leave:"09:05" },
-    { time:"09:00–10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",  enter:"08:55", leave:"10:35" },
-    { time:"13:00–14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",  enter:"12:55", leave:"14:35" },
+    { time:"07:30ï¿½09:00", subject:"Physics",   icon:"", room:"Sci. Lab", teacher:"Ms. Ana Reyes",       enter:"07:20", leave:"09:05" },
+    { time:"09:00ï¿½10:30", subject:"Chemistry", icon:"", room:"Chem Lab", teacher:"Dr. Luis Fernandez",  enter:"08:55", leave:"10:35" },
+    { time:"13:00ï¿½14:30", subject:"History",   icon:"", room:"Room 108", teacher:"Mr. Juan Dela Cruz",  enter:"12:55", leave:"14:35" },
   ],
   Friday:[
-    { time:"07:30–08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30–09:30", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"08:25", leave:"09:35" },
-    { time:"10:00–11:00", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"09:55", leave:"11:05" },
+    { time:"07:30ï¿½08:30", subject:"Mathematics",        icon:"", room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
+    { time:"08:30ï¿½09:30", subject:"Computer Science",   icon:"", room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"08:25", leave:"09:35" },
+    { time:"10:00ï¿½11:00", subject:"English Literature", icon:"", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"09:55", leave:"11:05" },
   ],
 };
 
@@ -275,7 +275,7 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Jamie Santos </h2>
-        <p className="text-white-50 small mb-0">STU-2024-001 · STEM Grade 11 · Term 1 SY 2025–2026</p>
+        <p className="text-white-50 small mb-0">STU-2024-001 ï¿½ STEM Grade 11 ï¿½ Term 1 SY 2025ï¿½2026</p>
         <div className="d-flex gap-2 mt-3 flex-wrap">
           <span className="badge bg-white bg-opacity-20 text-black border border-white border-opacity-25">?? Active Student</span>
           <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25">?? Enrollment Open</span>
@@ -356,7 +356,7 @@ function GradeColorLegend() {
       <div className="d-flex flex-column gap-1">
         {[
           { dot:"#16a34a", color:"#16a34a", label:"80+",      status:"Passed"             },
-          { dot:"#d97706", color:"#d97706", label:"75–79",    status:"Lacking Activities" },
+          { dot:"#d97706", color:"#d97706", label:"75ï¿½79",    status:"Lacking Activities" },
           { dot:"#dc2626", color:"#dc2626", label:"Below 75", status:"Failed"             },
         ].map(item => (
           <div key={item.status} className="d-flex align-items-center gap-2">
@@ -418,7 +418,7 @@ function WorkflowTracker({ subject, currentStep }: { subject: string; currentSte
   return (
     <div className="mt-3 pt-3" style={{ borderTop:"1px solid #f1f5f9" }}>
       <div className="text-muted mb-2" style={{ fontSize:11, fontWeight:600, letterSpacing:"0.03em" }}>
-        ?? Request Progress — {subject}
+        ?? Request Progress ï¿½ {subject}
       </div>
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {WORKFLOW_STEPS.map((step, i) => {
@@ -485,7 +485,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
             subject_name: s.subject_name,
             teacher_name: s.teacher_name,
           })));
-          // Init request map — check existing requests for this term
+          // Init request map ï¿½ check existing requests for this term
           const map: Record<number, SubjectRequestStatus> = {};
           unique.forEach((s: any) => {
             const existing = existingRequests.find(r => Number(r.subject_id) === s.subject_id);
@@ -586,7 +586,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
         style={{ background:"rgba(99,102,241,0.06)", border:"1.5px solid rgba(99,102,241,0.25)" }}>
         <span style={{ fontSize:20, flexShrink:0 }}>??</span>
         <div>
-          <div className="fw-bold small text-dark mb-1">Grade Request Window is Open — {term}</div>
+          <div className="fw-bold small text-dark mb-1">Grade Request Window is Open ï¿½ {term}</div>
           <p className="text-muted small mb-0" style={{ lineHeight:1.6 }}>
             You can now request your grades for this term. Click <strong>Request Grade</strong> on each subject.
             Your teacher will be notified to prepare and release your grades.
@@ -600,12 +600,12 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
           style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.25)" }}>
           <span style={{ fontSize:16 }}>?</span>
           <span className="small text-dark">
-            <strong>{pendingCount}</strong> of <strong>{enrolledSubjects.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent — waiting for your teachers.
+            <strong>{pendingCount}</strong> of <strong>{enrolledSubjects.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent ï¿½ waiting for your teachers.
           </span>
         </div>
       )}
 
-      {/* All requested — simple confirmation banner */}
+      {/* All requested ï¿½ simple confirmation banner */}
       {allRequested && (
         <div className="d-flex align-items-center gap-3 px-4 py-3 rounded-3"
           style={{ background:"rgba(16,185,129,0.07)", border:"1.5px solid rgba(16,185,129,0.3)" }}>
@@ -616,7 +616,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
         </div>
       )}
 
-      {/* Subject cards — always visible */}
+      {/* Subject cards ï¿½ always visible */}
       {enrolledSubjects.length === 0 && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4 text-center text-muted small">
@@ -639,14 +639,14 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
                       style={{ width:40, height:40, fontSize:20 }}>??</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="fw-bold small text-dark text-truncate">{subj.subject_name}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>{subj.teacher_name} · {subj.code}</div>
+                      <div className="text-muted" style={{ fontSize:11 }}>{subj.teacher_name} ï¿½ {subj.code}</div>
                     </div>
                   </div>
 
                   {/* Action / status area */}
                   {(() => {
                     const existing = existingRequests.find(r => Number(r.subject_id) === subj.id);
-                    // Grade fully released — show it, no re-request allowed
+                    // Grade fully released ï¿½ show it, no re-request allowed
                     if (existing?.status === "released_to_student") {
                       const score = Number(existing.score);
                       const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
@@ -671,7 +671,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
                                 const s = existing.status;
                                 if (s === "registrar_review") return "Registrar is reviewing";
                                 if (s === "principal_review") return "Principal is reviewing";
-                                if (s === "principal_approved") return "Approved — awaiting release";
+                                if (s === "principal_approved") return "Approved ï¿½ awaiting release";
                                 if (s === "registrar_released") return "Sent back to teacher";
                                 return "Waiting for your teacher";
                               })() : "Waiting for your teacher."}
@@ -691,7 +691,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
                         </button>
                       );
                     }
-                    // Rejected — allow re-request
+                    // Rejected ï¿½ allow re-request
                     if (status === "rejected") {
                       return (
                         <div className="d-flex flex-column gap-2">
@@ -730,7 +730,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
   const configEntry = requestConfig.find(c => c.term === termLabel);
   const isRequestOpen = !!configEntry?.is_open;
 
-  // Fetch term config (no auth needed) — poll every 15s so it auto-updates when principal opens/closes
+  // Fetch term config (no auth needed) ï¿½ poll every 15s so it auto-updates when principal opens/closes
   useEffect(() => {
     function fetchConfig() {
       fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
@@ -743,7 +743,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch student's own grade requests — poll every 15s for live status updates
+  // Fetch student's own grade requests ï¿½ poll every 15s for live status updates
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
@@ -770,7 +770,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 
   function statusLabel(status: string): string {
     const map: Record<string, string> = {
-      student_requested:  "?? Requested — waiting for teacher",
+      student_requested:  "?? Requested ï¿½ waiting for teacher",
       teacher_calculating:"?? Teacher is calculating",
       registrar_review:   "?? Sent to Registrar",
       principal_review:   "?? Principal Review",
@@ -794,7 +794,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div>
           <h2 className="fw-black fs-4 text-dark mb-1">My Grades</h2>
-          <p className="text-muted small mb-0">School Year 2025–2026</p>
+          <p className="text-muted small mb-0">School Year 2025ï¿½2026</p>
         </div>
         <GradeColorLegend />
       </div>
@@ -811,11 +811,11 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 
       {loading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
 
-      {/* Released grades — only shown after full workflow completion */}
+      {/* Released grades ï¿½ only shown after full workflow completion */}
       {!loading && releasedGrades.length > 0 && (
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
           <div className="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-            <span className="fw-bold small text-dark">Released Grades — {termLabel}</span>
+            <span className="fw-bold small text-dark">Released Grades ï¿½ {termLabel}</span>
             <span className="badge bg-success text-white ms-auto" style={{ fontSize: 10 }}>? Official</span>
           </div>
           <div className="table-responsive">
@@ -859,16 +859,16 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
         </div>
       )}
 
-      {/* Pending requests — show status tracker */}
+      {/* Pending requests ï¿½ show status tracker */}
       {!loading && pendingRequests.length > 0 && (
         <div className="d-flex flex-column gap-2">
-          <h3 className="fw-bold small text-dark mb-1">?? Request Status — {termLabel}</h3>
+          <h3 className="fw-bold small text-dark mb-1">?? Request Status ï¿½ {termLabel}</h3>
           {pendingRequests.map((r, i) => (
             <div key={i} className="card border-0 shadow-sm rounded-3">
               <div className="card-body p-3 d-flex align-items-center gap-3">
                 <div className="flex-grow-1">
                   <div className="fw-bold small text-dark">{r.subject_name}</div>
-                  <div className="text-muted" style={{ fontSize: 11 }}>{r.subject_code} · {r.teacher_name}</div>
+                  <div className="text-muted" style={{ fontSize: 11 }}>{r.subject_code} ï¿½ {r.teacher_name}</div>
                 </div>
                 <span className={`badge ${statusColor(r.status)}`} style={{ fontSize: 10 }}>
                   {statusLabel(r.status)}
@@ -884,12 +884,12 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
         <GradesNotAvailable term={termLabel} />
       )}
 
-      {/* Grade request section — only when window is open */}
+      {/* Grade request section ï¿½ only when window is open */}
       {!loading && isRequestOpen && (
         <div>
           <div className="d-flex align-items-center gap-2 mb-3">
             <span className="rounded-circle bg-success d-inline-block" style={{ width:8, height:8 }} />
-            <h3 className="fw-bold small text-dark mb-0">Grade Request Window Open — {termLabel}</h3>
+            <h3 className="fw-bold small text-dark mb-0">Grade Request Window Open ï¿½ {termLabel}</h3>
           </div>
           <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} />
         </div>
@@ -922,7 +922,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
     const displaySchedule = apiSchedule.length > 0
     ? apiSchedule.filter(s => s.day === day).map(s => ({
-        time: `${s.time_start.slice(0,5)}–${s.time_end.slice(0,5)}`,
+        time: `${s.time_start.slice(0,5)}ï¿½${s.time_end.slice(0,5)}`,
         subject: s.subject_name,
         icon: "??",
         room: s.room,
@@ -936,7 +936,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-        <div><h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2><p className="text-muted small mb-0">Term 1 · 2025–2026</p></div>
+        <div><h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2><p className="text-muted small mb-0">Term 1 ï¿½ 2025ï¿½2026</p></div>
         <button onClick={() => onAskJobert(`Today is ${day}. My classes are: ${displaySchedule.map((c: {subject: string}) => c.subject).join(", ")}. Give me study tips.`)}
           className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}> Study tips for today</button>
       </div>
@@ -1003,7 +1003,7 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const balance= useApi ? (summary?.remaining_balance ?? total - paid) : total - paid;
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Tuition Fee</h2><p className="text-muted small mb-0">Term 1 · 2025–2026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-1">Tuition Fee</h2><p className="text-muted small mb-0">Term 1 ï¿½ 2025ï¿½2026</p></div>
       <div className="row g-3">
         {[
           { label:"Total Fees",  value:`?${total.toLocaleString()}`,   cls:"bg-light border",                                        val:"text-dark"    },
@@ -1212,7 +1212,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                   <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}>??</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{r.type}</div>
-                    <div className="text-muted" style={{ fontSize:11 }}>Approved by {r.approvedBy} · {r.approvedAt} · Ready: {r.releaseDate}</div>
+                    <div className="text-muted" style={{ fontSize:11 }}>Approved by {r.approvedBy} ï¿½ {r.approvedAt} ï¿½ Ready: {r.releaseDate}</div>
                   </div>
                   <a href={r.downloadUrl||"#"} className="btn btn-success btn-sm" style={{ fontSize:11 }}> Download</a>
                 </div>
@@ -1551,7 +1551,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // -- Fetch real notifications from API — poll every 20s ---------
+  // -- Fetch real notifications from API ï¿½ poll every 20s ---------
   useEffect(() => {
     if (!authChecked) return;
     const token = localStorage.getItem("inform_token");
