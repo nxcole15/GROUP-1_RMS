@@ -13,7 +13,7 @@ function RegistrarGradeRequestsPanel() {
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("http://localhost:4000/api/grade-requests/registrar", {
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -31,7 +31,7 @@ function RegistrarGradeRequestsPanel() {
   function sendToPrincipal(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/send-to-principal`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/send-to-principal`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -45,7 +45,7 @@ function RegistrarGradeRequestsPanel() {
   function releaseToTeacher(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/release`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -317,3 +317,4 @@ export default function RegistrarDashboardPage() {
     </div>
   );
 }
+
