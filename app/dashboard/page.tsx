@@ -265,7 +265,7 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
         <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Jamie Santos 👋</h2>
         <p className="text-white-50 small mb-0">STU-2024-001 · STEM Grade 11 · Term 1 SY 2025–2026</p>
         <div className="d-flex gap-2 mt-3 flex-wrap">
-          <span className="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25">🎓 Active Student</span>
+          <span className="badge bg-white bg-opacity-20 text-black border border-white border-opacity-25">🎓 Active Student</span>
           <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25">🔔 Enrollment Open</span>
         </div>
       </div>
