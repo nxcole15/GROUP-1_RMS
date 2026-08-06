@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { AdminDashboardPage } from "../../dashboard/page";
+import { AdminDashboardPage } from "../../../components/AdminDashboardShell";
 
 /* ── Profile Panel ── */
 function PrincipalProfile({ onClose }: { onClose: () => void }) {
