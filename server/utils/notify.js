@@ -3,7 +3,7 @@
  * Non-blocking notification helper.
  * Failures are logged but never bubble up to the caller.
  */
-const NotificationModel = require("../models/notificationModel");
+const NotificationModel = require("../modules/notifications/notificationModel");
 
 function sendNotification({ student_id, message, type }) {
   NotificationModel.create({ student_id, message, type }).catch((err) => {
