@@ -179,3 +179,134 @@ CREATE TABLE IF NOT EXISTS schedule (
   FOREIGN KEY (subject_id) REFERENCES subjects(id)
 );
 
+-- ── Grade Requests ───────────────────────────────────────────
+-- Tracks the full grade request lifecycle:
+-- student_requested → teacher_calculating → registrar_review
+--   → principal_review → principal_approved → registrar_released
+--   → released_to_student  (or back to teacher_calculating on rejection)
+CREATE TABLE IF NOT EXISTS grade_requests (
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  student_id       VARCHAR(12)  NOT NULL,
+  subject_id       INT UNSIGNED NOT NULL,
+  teacher_id       INT UNSIGNED NOT NULL,
+  term             ENUM('Term 1','Term 2','Term 3') NOT NULL,
+  status           ENUM(
+                     'student_requested',
+                     'teacher_calculating',
+                     'teacher_submitted',
+                     'registrar_review',
+                     'principal_review',
+                     'principal_approved',
+                     'registrar_released',
+                     'teacher_released',
+                     'released_to_student',
+                     'rejected'
+                   ) NOT NULL DEFAULT 'student_requested',
+  score            DECIMAL(5,2)  NULL,
+  letter_grade     VARCHAR(10)   NULL,
+  remarks          TEXT          NULL,
+  registrar_note   TEXT          NULL,
+  principal_note   TEXT          NULL,
+  rejection_reason TEXT          NULL,
+  rejected_by      VARCHAR(20)   NULL,
+  created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES students(student_id),
+  FOREIGN KEY (subject_id) REFERENCES subjects(id),
+  FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+);
+
+-- ── Staff Notifications ──────────────────────────────────────
+-- In-app notifications for teachers, registrars, and principals
+-- used by the grade request workflow.
+CREATE TABLE IF NOT EXISTS staff_notifications (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  recipient   VARCHAR(20)  NOT NULL,              -- teacher_id or admin_id
+  role        VARCHAR(20)  NOT NULL,              -- 'teacher', 'registrar', 'principal'
+  title       VARCHAR(150) NOT NULL,
+  message     TEXT         NOT NULL,
+  type        VARCHAR(50)  NOT NULL DEFAULT 'grade_request',
+  is_read     TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ── Grade Request Config ─────────────────────────────────────
+-- Controls which terms have grade requests open/closed.
+-- Seed one row per term; principals toggle is_open via the dashboard.
+CREATE TABLE IF NOT EXISTS grade_request_config (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  term        ENUM('Term 1','Term 2','Term 3') NOT NULL UNIQUE,
+  is_open     TINYINT(1)   NOT NULL DEFAULT 0,
+  opened_by   VARCHAR(20)  NULL,
+  opened_at   DATETIME     NULL,
+  closed_by   VARCHAR(20)  NULL,
+  closed_at   DATETIME     NULL
+);
+
+-- Seed the three term rows so the config table is never empty
+INSERT IGNORE INTO grade_request_config (term, is_open)
+VALUES ('Term 1', 0), ('Term 2', 0), ('Term 3', 0);
+
+-- ── Enrollment Applications ──────────────────────────────────
+-- Stores public enrollment form submissions BEFORE a student
+-- account is created. Flow:
+--   submitted → registrar_review → principal_review
+--   → approved (account + email sent) | rejected
+CREATE TABLE IF NOT EXISTS enrollment_applications (
+  id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  -- Student personal info
+  first_name              VARCHAR(60)  NOT NULL,
+  last_name               VARCHAR(60)  NOT NULL,
+  middle_name             VARCHAR(60)  NULL,
+  extension_name          VARCHAR(10)  NULL,
+  email                   VARCHAR(100) NOT NULL,
+  phone                   VARCHAR(30)  NOT NULL,
+  date_of_birth           DATE         NOT NULL,
+  gender                  VARCHAR(20)  NOT NULL,
+  civil_status            VARCHAR(20)  NULL,
+  nationality             VARCHAR(50)  NOT NULL,
+  religion                VARCHAR(50)  NULL,
+  address                 TEXT         NOT NULL,
+
+  -- Academic info
+  student_status          ENUM('new','returning') NOT NULL DEFAULT 'new',
+  existing_student_id     VARCHAR(20)  NULL,   -- filled only for returning students
+  pathway                 VARCHAR(60)  NOT NULL,
+  grade_level             TINYINT UNSIGNED NOT NULL,
+  learning_modality       VARCHAR(40)  NOT NULL,
+
+  -- Family info (optional)
+  father_name             VARCHAR(100) NULL,
+  father_occupation       VARCHAR(100) NULL,
+  mother_name             VARCHAR(100) NULL,
+  mother_occupation       VARCHAR(100) NULL,
+  guardian_name           VARCHAR(100) NULL,
+  guardian_relation       VARCHAR(60)  NULL,
+  guardian_phone          VARCHAR(30)  NULL,
+
+  -- Previous school (optional)
+  previous_school         VARCHAR(150) NULL,
+  previous_school_address TEXT         NULL,
+  years_attended          VARCHAR(30)  NULL,
+
+  -- Workflow
+  status                  ENUM('submitted','registrar_review','principal_review','approved','rejected')
+                          NOT NULL DEFAULT 'submitted',
+  registrar_note          TEXT         NULL,
+  principal_note          TEXT         NULL,
+  rejection_reason        TEXT         NULL,
+  reviewed_by_registrar   VARCHAR(20)  NULL,
+  reviewed_by_principal   VARCHAR(20)  NULL,
+  registrar_reviewed_at   DATETIME     NULL,
+  principal_reviewed_at   DATETIME     NULL,
+
+  -- Generated on approval
+  generated_student_id    VARCHAR(20)  NULL,
+  temp_password           VARCHAR(20)  NULL,
+  credentials_sent_at     DATETIME     NULL,
+
+  created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+

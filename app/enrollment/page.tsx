@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 // ── Step types ─────────────────────────────────────────────
 // Step 1: Terms & Conditions
 // Step 2: Enrollment Form
@@ -57,8 +59,8 @@ export default function EnrollmentPage() {
   const [step, setStep] = useState<Step>(1);
   const [hasScrolledTerms, setHasScrolledTerms] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [generatedStudentId, setGeneratedStudentId] = useState("");
-  const [generatedLRN, setGeneratedLRN] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", middleName: "", extensionName: "",
@@ -117,16 +119,61 @@ export default function EnrollmentPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleFinalEnroll() {
-    const now = new Date();
-    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,"0"), d = String(now.getDate()).padStart(2,"0");
-    const rand = () => String(Math.floor(Math.random()*10000)).padStart(4,"0");
-    const lrn = `${y}${m}${d}${rand()}`;
-    const sid = formData.studentStatus === "new" ? `STU-${y}${m}${d}${rand()}` : formData.studentId;
-    setGeneratedStudentId(sid);
-    setGeneratedLRN(lrn);
-    setStep(5);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  async function handleFinalEnroll() {
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const payload = {
+        first_name:              formData.firstName,
+        last_name:               formData.lastName,
+        middle_name:             formData.middleName || null,
+        extension_name:          formData.extensionName || null,
+        email:                   formData.email,
+        phone:                   formData.phone,
+        date_of_birth:           formData.dateOfBirth,
+        gender:                  formData.gender,
+        civil_status:            formData.civilStatus || null,
+        nationality:             formData.nationality,
+        religion:                formData.religion || null,
+        address:                 formData.address,
+        student_status:          formData.studentStatus || "new",
+        existing_student_id:     formData.studentId || null,
+        pathway:                 formData.course,
+        grade_level:             formData.year,
+        learning_modality:       formData.learningModality,
+        father_name:             formData.fatherName || null,
+        father_occupation:       formData.fatherOccupation || null,
+        mother_name:             formData.motherName || null,
+        mother_occupation:       formData.motherOccupation || null,
+        guardian_name:           formData.guardianName || null,
+        guardian_relation:       formData.guardianRelation || null,
+        guardian_phone:          formData.guardianPhone || null,
+        previous_school:         formData.previousSchool || null,
+        previous_school_address: formData.previousSchoolAddress || null,
+        years_attended:          formData.yearsAttended || null,
+      };
+
+      const res = await fetch(`${API_BASE}/api/applications`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data.error || "Submission failed. Please try again.");
+        return;
+      }
+
+      // Success — move to confirmation screen
+      setStep(5);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   // ── Wrapper layout ─────────────────────────────────────────
@@ -146,34 +193,41 @@ export default function EnrollmentPage() {
         <div className="card border-0 shadow-lg rounded-3 overflow-hidden" style={{ maxWidth: 560, width: "100%" }}>
           <div className="card-body p-5 text-center">
             <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-            <h2 className="fw-black text-success mb-2">Enrollment Successful!</h2>
-            <p className="text-muted mb-4">Your enrollment has been submitted. Save the credentials below — you will need them to log in.</p>
+            <h2 className="fw-black text-success mb-2">Application Submitted!</h2>
+            <p className="text-muted mb-4">Your enrollment application has been received. The Registrar will review it and forward it to the Principal for approval.</p>
+
             <div className="alert alert-info text-start mb-4">
               <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
+              <div className="mb-2"><strong>Email:</strong> {formData.email}</div>
               <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
               <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
-              <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year} · Term 1 (June–September 2026)</div>
+              <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
               <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
             </div>
+
             <div className="card border-2 border-primary rounded-3 mb-4">
               <div className="card-body p-4">
-                <h5 className="fw-bold text-primary mb-3">📋 Your Login Credentials</h5>
-                <div className="mb-3 p-3 rounded-2" style={{ background:"#f0f4ff", border:"1px solid #bfdbfe" }}>
-                  <div className="text-muted small mb-1">Learner Reference Number (LRN)</div>
-                  <div className="fw-black fs-5 text-primary">{generatedLRN}</div>
+                <h5 className="fw-bold text-primary mb-3">📧 What Happens Next?</h5>
+                <div className="d-flex flex-column gap-3 text-start">
+                  {[
+                    { n:"1", label:"Registrar Review", desc:"The Registrar will verify your submitted details." },
+                    { n:"2", label:"Principal Approval", desc:"The Principal will make the final enrollment decision." },
+                    { n:"3", label:"Credentials Email", desc:`Once approved, your Student ID and temporary password will be sent to ${formData.email}.` },
+                  ].map(s => (
+                    <div key={s.n} className="d-flex align-items-start gap-3">
+                      <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                        style={{ width:28,height:28,fontSize:12,background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>{s.n}</div>
+                      <div>
+                        <div className="fw-semibold small text-dark">{s.label}</div>
+                        <div className="text-muted" style={{ fontSize:12 }}>{s.desc}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="mb-3 p-3 rounded-2" style={{ background:"#fef2f2", border:"1px solid #fecaca" }}>
-                  <div className="text-muted small mb-1">Student ID</div>
-                  <div className="fw-black fs-5 text-danger">{generatedStudentId}</div>
-                </div>
-                <div className="p-3 rounded-2" style={{ background:"#fffbeb", border:"1px solid #fde68a" }}>
-                  <div className="text-muted small mb-1">Temporary Password</div>
-                  <div className="fw-black fs-5 text-warning">CFEI@2026</div>
-                </div>
-                <small className="text-muted d-block mt-3">⚠️ Change your password on first login. Do not share your credentials.</small>
+                <small className="text-muted d-block mt-3">⚠️ Please check your inbox (and spam folder) for the credentials email. You will need it to log in.</small>
               </div>
             </div>
-            <Link href="/login" className="btn btn-primary btn-lg rounded-2 fw-bold">Go to Login →</Link>
+            <Link href="/" className="btn btn-primary btn-lg rounded-2 fw-bold">← Back to Home</Link>
           </div>
         </div>
       </div>
@@ -644,11 +698,20 @@ export default function EnrollmentPage() {
                 <button
                   type="button"
                   onClick={handleFinalEnroll}
+                  disabled={submitting}
                   className="btn flex-grow-1 rounded-2 fw-black fs-6 text-white"
-                  style={{ background:"linear-gradient(135deg,#059669,#1e40af)", border:"none", boxShadow:"0 4px 16px rgba(5,150,105,0.35)" }}>
-                  💾 Save and Enroll
+                  style={{ background:"linear-gradient(135deg,#059669,#1e40af)", border:"none", boxShadow:"0 4px 16px rgba(5,150,105,0.35)", opacity: submitting ? 0.75 : 1 }}>
+                  {submitting
+                    ? <><span className="spinner-border spinner-border-sm me-2" role="status" /><span>Submitting...</span></>
+                    : "💾 Save and Enroll"
+                  }
                 </button>
               </div>
+              {submitError && (
+                <div className="alert alert-danger mt-3 py-2 small rounded-3" role="alert">
+                  ⚠️ {submitError}
+                </div>
+              )}
             </div>
           </div>
         )}
