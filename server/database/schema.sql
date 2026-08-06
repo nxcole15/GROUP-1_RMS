@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS students (
   grade_level     TINYINT UNSIGNED NOT NULL DEFAULT 11,
   term            VARCHAR(50)  NOT NULL,
   email           VARCHAR(100) NOT NULL,
-  device_token    TEXT         NULL,
+  device_token    TEXT         NULL,                                                                                                                                           
   failed_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
   locked_until    DATETIME     NULL,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
