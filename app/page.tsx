@@ -248,7 +248,8 @@ export default function LandingPage() {
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                   display: "inline-block",
-                  color: "#dc2626"
+                  color: "#dc2626",
+                  paddingBottom: "0.15em",
                 }}>
                   Management System
                 </span>
