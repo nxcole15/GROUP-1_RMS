@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminDashboardPage from "../../dashboard/page";
+import { AdminDashboardPage } from "../../dashboard/page";
 
 /* ── Grade Requests Panel for Registrar ── */
 function RegistrarGradeRequestsPanel() {
