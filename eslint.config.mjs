@@ -1,58 +1,36 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import next from "eslint-config-next";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
 
-const eslintConfig = defineConfig([
-  ...next,
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-  // Keep eslint focused on the Next.js app.
-  // Your Express backend under `server/` is CommonJS (require()),
-  // so it conflicts with TS/React lint rules right now.
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [
       "server/**",
-      "**/*.config.js",
-      "**/*.test.js",
-      "**/migrate.js",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
     ],
   },
-
-  // Project uses many UI effects + client-only localStorage logic.
-  // Avoid failing CI on React-hooks heuristics that flag "setState in effect"
-  // and some legacy patterns. Keep lint focused on correctness & type-safety.
   {
     rules: {
       "react-hooks/exhaustive-deps": "off",
-      "react-hooks/set-state-in-effect": "off",
       "react/no-unescaped-entities": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
-    },
-  },
-
-
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-
-  // Keep lint strict about errors, but ignore most warning-level UI noise so
-  // `npm run lint -- --max-warnings=0` does not fail on non-blocking issues.
-  {
-    rules: {
-      "@next/next/no-img-element": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      "@next/next/no-img-element": "off",
     },
   },
-]);
-
-
-
+];
 
 export default eslintConfig;
-
