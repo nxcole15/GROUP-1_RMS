@@ -1,8 +1,35 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+type UserRole = "Student" | "Teacher" | "Registrar" | "Principal" | "Dean" | "Accounting";
+
+type Account = {
+  id: string;
+  password: string;
+  role: UserRole;
+  name: string;
+  subtitle: string;
+  redirect: string;
+  altIds?: string[];
+};
+
+const USER_ACCOUNTS: Account[] = [
+  { id: "202400001", password: "jamie",      role: "Student",    name: "Jamie Santos",      subtitle: "STEM Grade 11",        redirect: "/dashboard" },
+  { id: "202400002", password: "maria",      role: "Student",    name: "Maria Reyes",       subtitle: "HUMSS Grade 11",       redirect: "/dashboard" },
+  { id: "202400003", password: "carlo",      role: "Student",    name: "Carlo Dela Cruz",   subtitle: "ABM Grade 12",         redirect: "/dashboard" },
+  { id: "202400004", password: "ana",        role: "Student",    name: "Ana Villanueva",    subtitle: "TVL-TechPro Grade 11", redirect: "/dashboard" },
+  { id: "T001",      password: "maria",      role: "Teacher",    name: "Maria Santos",      subtitle: "Mathematics",          redirect: "/teacher/dashboard" },
+  { id: "T002",      password: "juan",       role: "Teacher",    name: "Juan Dela Cruz",    subtitle: "English",              redirect: "/teacher/dashboard" },
+  { id: "T003",      password: "ana",        role: "Teacher",    name: "Ana Reyes",         subtitle: "Science",              redirect: "/teacher/dashboard" },
+  { id: "T004",      password: "carlos",     role: "Teacher",    name: "Carlos Fernandez",  subtitle: "History",              redirect: "/teacher/dashboard" },
+  { id: "P001",      password: "principal",  role: "Principal",  name: "Principal",         subtitle: "School Principal",     redirect: "/admin/principal/dashboard", altIds: ["PRINCIPAL@INFORM.EDU"] },
+  { id: "R001",      password: "Reg@2026",   role: "Registrar",  name: "Registrar Office",  subtitle: "Registrar",            redirect: "/admin/dashboard", altIds: ["REGISTRAR@INFORM.EDU"] },
+  { id: "D001",      password: "Dean@2026",  role: "Dean",       name: "Dean of Students",  subtitle: "Dean",                 redirect: "/admin/dashboard", altIds: ["DEAN@INFORM.EDU"] },
+  { id: "A001",      password: "accounting", role: "Accounting", name: "Accounting Office", subtitle: "Accounting",           redirect: "/accounting/dashboard" },
+];
 
 function normalizeId(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -12,11 +39,14 @@ function detectRole(id: string): string {
   const value = normalizeId(id);
   if (!value) return "";
   if (/^[0-9]{8,12}$/.test(value)) return "Student";
-  if (/^T\d+/i.test(value)) return "Teacher";
-  if (value === "ADMIN001") return "Principal";
-  if (value === "ADMIN002") return "Registrar";
-  if (value === "ADMIN003") return "Accounting";
-  if (/^ADMIN/i.test(value)) return "Admin";
+  if (/^T/i.test(value)) return "Teacher";
+  if (/^R/i.test(value)) return "Registrar";
+  if (/^P/i.test(value)) return "Principal";
+  if (/^D/i.test(value)) return "Dean";
+  if (/^A/i.test(value)) return "Accounting";
+  if (value.includes("REGISTRAR@")) return "Registrar";
+  if (value.includes("PRINCIPAL@")) return "Principal";
+  if (value.includes("DEAN@")) return "Dean";
   return "";
 }
 
@@ -25,6 +55,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showHint, setShowHint] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<"email" | "code" | "reset" | "success">("email");
@@ -32,19 +63,6 @@ export default function LoginPage() {
   const [generatedCode, setGeneratedCode] = useState("");
   const [forgotPasswordError, setForgotPasswordError] = useState("");
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("landing-theme");
-      if (saved === "dark") {
-        document.documentElement.setAttribute("data-landing", "dark");
-      } else {
-        document.documentElement.removeAttribute("data-landing");
-      }
-    } catch {
-      // ignore (e.g., SSR or blocked storage)
-    }
-  }, []);
 
   const detectedRole = detectRole(form.identifier);
   const normalizedId = normalizeId(form.identifier);
@@ -55,58 +73,28 @@ export default function LoginPage() {
     setError("");
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.identifier || !form.password) {
-      setError("Please enter your ID and password.");
+      setError("Please enter your User ID and password.");
+      return;
+    }
+
+    const match = USER_ACCOUNTS.find((account) => {
+      const matchesId = account.id === normalizedId || account.altIds?.map((a) => a.toUpperCase()).includes(normalizedId);
+      return matchesId && account.password === form.password;
+    });
+
+    if (!match) {
+      setError("Invalid User ID or password. Please try again.");
       return;
     }
 
     setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/auth/universal-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: form.identifier.trim(), password: form.password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Invalid credentials. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("inform_token", data.token);
-      localStorage.setItem("inform_role", data.role);
-      localStorage.setItem("inform_user", JSON.stringify(
-        data.student || data.teacher || data.admin || {}
-      ));
-
-      // Also save role-specific token to prevent tab collisions
-      const adminRoles = ["principal", "registrar", "accounting", "admin"];
-      if (adminRoles.includes(data.role)) {
-        localStorage.setItem("inform_admin_token", data.token);
-      } else if (data.role === "teacher") {
-        localStorage.setItem("inform_teacher_token", data.token);
-      }
-
-
-      // Redirect based on role returned from backend
-      if (data.role === "principal") router.push("/admin/principal/dashboard");
-      else if (data.role === "registrar") router.push("/admin/registrar/dashboard");
-      else if (data.role === "accounting") router.push("/accounting/dashboard");
-      else if (data.role === "admin") router.push("/admin/dashboard");
-      else if (data.role === "teacher") router.push("/teacher/dashboard");
-      else router.push("/dashboard");
-
-    } catch {
-      setError("Could not connect to server. Please try again.");
+    setTimeout(() => {
       setLoading(false);
-    }
+      router.push(match.redirect);
+    }, 800);
   }
 
   function handleForgotPasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -120,8 +108,11 @@ export default function LoginPage() {
         return;
       }
       const normalizedUserId = normalizeId(forgotPasswordForm.userId);
-      if (!normalizedUserId) {
-        setForgotPasswordError("Please enter a valid User ID.");
+      const account = USER_ACCOUNTS.find((acc) =>
+        acc.id === normalizedUserId || acc.altIds?.map((a) => a.toUpperCase()).includes(normalizedUserId)
+      );
+      if (!account) {
+        setForgotPasswordError("User ID not found. Please check and try again.");
         return;
       }
       const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -233,12 +224,15 @@ export default function LoginPage() {
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
                     />
-                    <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, or accounting ID.</div>
+                    <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, dean, or accounting ID.</div>
                   </div>
 
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <label className="form-label fw-semibold mb-0" style={{ color: "#dc2626" }}>Password</label>
+                      <button type="button" onClick={() => setShowHint(!showHint)} className="btn btn-link btn-sm p-0 fw-medium text-decoration-none" style={{ color: "#f97316" }}>
+                        {showHint ? "Hide hint" : "Need a hint?"}
+                      </button>
                     </div>
                     <div className="position-relative">
                       <input
@@ -267,6 +261,28 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
+
+                  {showHint && (
+                    <div className="mb-4 rounded-3 overflow-hidden" style={{ background: "#fef3c7", border: "1px solid #fbbf24" }}>
+                      <div className="px-4 py-2 border-bottom" style={{ borderColor: "#fbbf24", background: "#fff7ed" }}>
+                        <p className="mb-0 fw-semibold text-uppercase small" style={{ color: "#dc2626" }}>Demo login accounts</p>
+                      </div>
+                      <div className="px-4 py-3">
+                        {USER_ACCOUNTS.map((account) => (
+                          <div key={account.id} className="py-2 border-bottom border-dashed border-secondary-subtle">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="font-monospace" style={{ color: "#dc2626" }}>{account.id}</span>
+                              <span className="text-muted small">{account.subtitle}</span>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center">
+                              <span className="font-monospace" style={{ color: "#f97316" }}>{account.password}</span>
+                              <span className="badge rounded-pill" style={{ background: "#fef2f2", color: "#991b1b", fontSize: 12 }}>{account.role}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {error && (
                     <div className="alert py-3 px-4 rounded-3 mb-4" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
