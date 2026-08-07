@@ -16,15 +16,39 @@ const documentsRoutes     = require("./modules/documents/documentsRoutes");
 const notificationsRoutes = require("./modules/notifications/notificationsRoutes");
 const teacherRoutes       = require("./modules/teacher/teacherRoutes");
 const gradeRequestRoutes = require("./modules/gradeRequests/gradeRequestRoutes");
+const applicationRoutes  = require("./modules/student/applicationRoutes");
 
 
 const app = express();
 
-/* ── Global middleware ── */
-app.use(cors({
-  origin:      process.env.CLIENT_ORIGIN || "http://localhost:3000",
-  credentials: true,
-}));
+/* ── CORS ───────────────────────────────────────────────────────────────────
+ * Allowed origins are read from CLIENT_ORIGIN in .env.
+ * Multiple origins can be listed comma-separated, e.g.:
+ *   CLIENT_ORIGIN=https://cfei-inform.vercel.app,https://www.cfei-inform.com
+ * Falls back to localhost:3000 for local development.
+ * ────────────────────────────────────────────────────────────────────────── */
+const rawOrigins = process.env.CLIENT_ORIGIN || "http://localhost:3000";
+const allowedOrigins = rawOrigins.split(",").map((o) => o.trim());
+
+app.use(
+  cors({
+    origin(requestOrigin, callback) {
+      // Allow server-to-server requests (no Origin header) and listed origins
+      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${requestOrigin} is not allowed.`));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Respond 200 to all OPTIONS preflight requests immediately
+app.options("*", cors());
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -53,6 +77,7 @@ app.use("/api/admin",   adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 
 app.use("/api/grade-requests", gradeRequestRoutes);
+app.use("/api/applications",  applicationRoutes);
 
 /* ── 404 handler ── */
 app.use((req, res) => res.status(404).json({ error: "Route not found." }));

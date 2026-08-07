@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import AdminDashboardPage from "../../dashboard/page";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 /* ── Grade Requests Panel for Registrar ── */
 function RegistrarGradeRequestsPanel() {
@@ -13,7 +15,7 @@ function RegistrarGradeRequestsPanel() {
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("http://localhost:4000/api/grade-requests/registrar", {
+    fetch(`${API_BASE}/api/grade-requests/registrar`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -31,7 +33,7 @@ function RegistrarGradeRequestsPanel() {
   function sendToPrincipal(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/send-to-principal`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/send-to-principal`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -45,7 +47,7 @@ function RegistrarGradeRequestsPanel() {
   function releaseToTeacher(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`http://localhost:4000/api/grade-requests/registrar/${id}/release`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
