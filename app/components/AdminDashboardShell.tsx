@@ -90,9 +90,20 @@ const adminNotifications = [
   { id: 4, type: "payment", title: "Payment Received", message: "Carlo Dela Cruz paid tuition fee", time: "2d ago", read: true, },
 ];
 
-const NavIcon = ({ id }: { id: string }) => {
-  const props = { width: 18, height: 18, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  switch (id) {
+type IconName =
+  | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
+  | "enrollment" | "tuition" | "announcements" | "timelog"
+  | "check" | "checkCircle" | "x" | "close" | "calendar" | "clock" | "bell"
+  | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user"
+  | "shield" | "activity" | "lock" | "unlock" | "arrowRight";
+
+function Icon({ name, size = 18, className }: { name: IconName; size?: number; className?: string }) {
+  const props = {
+    width: size, height: size, fill: "none", viewBox: "0 0 24 24",
+    stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const, className, "aria-hidden": true as const,
+  };
+  switch (name) {
     case "overview":      return <svg {...props}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
     case "students":      return <svg {...props}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
     case "teachers":      return <svg {...props}><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M12 8h5M7 12h10"/></svg>;
@@ -103,9 +114,30 @@ const NavIcon = ({ id }: { id: string }) => {
     case "tuition":       return <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>;
     case "announcements": return <svg {...props}><path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/><path d="M12 14v-6"/><path d="M9 11l3-3 3 3"/></svg>;
     case "timelog":       return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    case "check":         return <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>;
+    case "checkCircle":   return <svg {...props}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+    case "x":
+    case "close":         return <svg {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    case "calendar":      return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+    case "clock":         return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    case "bell":          return <svg {...props}><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>;
+    case "file":          return <svg {...props}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
+    case "chart":         return <svg {...props}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+    case "send":          return <svg {...props}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
+    case "refresh":       return <svg {...props}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>;
+    case "alert":         return <svg {...props}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+    case "book":          return <svg {...props}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>;
+    case "user":          return <svg {...props}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    case "shield":        return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+    case "activity":      return <svg {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+    case "lock":          return <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+    case "unlock":        return <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>;
+    case "arrowRight":    return <svg {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
     default:              return <svg {...props}><circle cx="12" cy="12" r="10"/></svg>;
   }
-};
+}
+
+const NavIcon = ({ id }: { id: string }) => <Icon name={id as IconName} />;
 
 const navItems = [
   { id:"overview",      label:"Overview"          },
@@ -258,16 +290,16 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       {!hideBanner && (
       <div className="rounded-3 p-4"
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin </h2>
+        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin</h2>
         <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
-          Administrator � Full Access � SY 20252026
+          Administrator · Full Access · SY 2025-2026
         </p>
         <div className="d-flex gap-2 flex-wrap">
-          <span className="fw-semibold px-3 py-2 rounded-3" style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", fontSize:12 }}>
-             Admin
+          <span className="fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", fontSize:12 }}>
+            <Icon name="shield" size={12} /> Admin
           </span>
-          <span className="fw-semibold px-3 py-2 rounded-3" style={{ background:"#f59e0b", color:"#fff", fontSize:12 }}>
-             System Online
+          <span className="fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style={{ background:"#f59e0b", color:"#fff", fontSize:12 }}>
+            <Icon name="activity" size={12} /> System Online
           </span>
           {pendingStats && pendingStats.total > 0 && (
             <span className="fw-semibold px-3 py-2 rounded-3" style={{ background: "#dc2626", color: "#fff", fontSize: 12 }}>
@@ -282,16 +314,17 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       {!hideBanner && (
       <div className="row g-3">
         {[
-          { label:"Active Students",     value: activeStudents,                            cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
-          { label:"Class Avg. GWA",      value: avgGwa,                                    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
-          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "�",          cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
-          { label:"Pending Payments",    value: pendingStats?.payments ?? "�",             cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
+          { label:"Active Students",     value: activeStudents,                            icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
+          { label:"Class Avg. GWA",      value: avgGwa,                                    icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
+          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? 0,            icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
+          { label:"Pending Payments",    value: pendingStats?.payments ?? 0,               icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
               <div className="card-body p-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span className="text-muted small">{s.label}</span>
+                  <span className={s.val}><Icon name={s.icon} size={18} /></span>
                 </div>
                 <div className={`fw-black fs-3 ${s.val}`}>{s.value}</div>
               </div>
@@ -306,7 +339,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
         <div className="col-12 col-lg-6">
           <div className="card border-0 shadow-sm rounded-3 h-100">
             <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3">Recent Activity</h3>
+              <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="activity" size={14} /> Recent Activity</h3>
               <div className="d-flex flex-column gap-3">
                 {recentActivity.map((a, i) => (
                   <div key={i} className="d-flex align-items-center gap-3">
@@ -328,11 +361,11 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3 className="fw-bold small text-dark mb-0">Enrollment Insights</h3>
-                <button onClick={() => setActive("enrollment")} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>Open </button>
+                <button onClick={() => setActive("enrollment")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>Open <Icon name="arrowRight" size={12} /></button>
               </div>
 
               <div className="mb-3">
-                <label className="small fw-semibold" style={{ color: "#0f172a" }}>Filter (Track � Grade � Gender)</label>
+                <label className="small fw-semibold" style={{ color: "#0f172a" }}>Filter (Track · Grade · Gender)</label>
 
                 <div className="d-flex gap-2 mt-2" style={{ flexWrap: "wrap" }}>
                   <div style={{ minWidth: 160 }}>
@@ -518,15 +551,15 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3 className="fw-bold small text-dark mb-0">Active Announcements</h3>
-                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>View all </button>
+                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>View all <Icon name="arrowRight" size={12} /></button>
               </div>
               <div className="d-flex flex-column gap-2">
                 {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
                   <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3 bg-light border border-transparent" style={{ cursor:"pointer" }}>
-                    
+                    <span className="text-primary flex-shrink-0 mt-1"><Icon name="announcements" size={16} /></span>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>{a.target} � {a.date}</div>
+                      <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
                     </div>
                   </div>
                 ))}
@@ -869,7 +902,7 @@ function EnrollmentPanel() {
                         <div>
                           <div className="small fw-medium text-dark">{e.name}</div>
                           {isLate && (
-                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}> Late Enrollee</span>
+                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
                           )}
                         </div>
                       </div>
@@ -1052,10 +1085,10 @@ function TuitionPanel() {
                                 .then(res => res.ok ? setApiPayments(prev => prev.map(p => p.id === (r as typeof r & { paymentId?: number }).paymentId ? { ...p, status: "verified" } : p)) : null)
                                 .catch(() => {});
                             }}
-                            className="btn btn-success btn-sm"
+                            className="btn btn-success btn-sm d-inline-flex align-items-center gap-1"
                             style={{ fontSize: 11 }}
                           >
-                            ? Verify
+                            <Icon name="check" size={11} /> Verify
                           </button>
                         ) : null}
                       </div>
@@ -1325,16 +1358,16 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                   <div className="fw-bold text-dark small">{t.name}</div>
                   <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
                     <span className="text-muted" style={{ fontSize: 11 }}>{t.id}</span>
-                    <span className="text-muted" style={{ fontSize: 11 }}>�</span>
-                    <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: 11 }}> {t.section}</span>
+                    <span className="text-muted" style={{ fontSize: 11 }}>·</span>
+                    <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: 11 }}>{t.section}</span>
                     <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: 11 }}>Room {t.room}</span>
                     {!registrarView && pending > 0 && (
                       <span className="badge bg-danger text-white" style={{ fontSize: 11 }}>
-                         {pending} pending request{pending !== 1 ? "s" : ""}
+                        {pending} pending request{pending !== 1 ? "s" : ""}
                       </span>
                     )}
                     {!registrarView && pending === 0 && (
-                      <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}> All resolved</span>
+                      <span className="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="check" size={10} /> All resolved</span>
                     )}
                     {registrarView && (
                       <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}>Active</span>
@@ -1343,7 +1376,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                 </div>
 
                 <span className={`badge px-3 py-2 flex-shrink-0 ${t.employmentStatus === "Full Time" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
-                  {t.employmentStatus === "Full Time" ? " Full Time" : " Part Time"}
+                  {t.employmentStatus === "Full Time" ? "Full Time" : "Part Time"}
                 </span>
                 <span className="text-muted ms-2" style={{ fontSize: 12, transition: "transform 0.2s", display: "inline-block", transform: expanded === t.id ? "rotate(180deg)" : "rotate(0deg)" }}></span>
               </div>
@@ -1467,7 +1500,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   // -- Term controls (principal only) --------------------------
   function toggleTerm(term: string, open: boolean) {
     const token = localStorage.getItem("inform_admin_token");
-    if (!token) { showToast("?? Session expired. Please log in again."); return; }
+    if (!token) { showToast("Session expired. Please log in again."); return; }
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
     fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
@@ -1476,10 +1509,10 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       body: JSON.stringify({ term }),
     })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(() => { showToast(open ? `?? ${term} opened.` : `?? ${term} closed.`); reload(); })
+      .then(() => { showToast(open ? `${term} opened.` : `${term} closed.`); reload(); })
       .catch(() => {
         setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 0 : 1 } : c));
-        showToast("?? Failed to update term.");
+        showToast("Failed to update term.");
       });
   }
 
@@ -1493,8 +1526,8 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       credentials: "include", body: JSON.stringify({}),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(() => { reload(); showToast("?? Sent to Principal for approval."); })
-      .catch(() => showToast("?? Failed."));
+      .then(() => { reload(); showToast("Sent to Principal for approval."); })
+      .catch(() => showToast("Failed."));
   }
 
   function releaseToTeacher(id: number) {
@@ -1506,8 +1539,8 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       credentials: "include", body: JSON.stringify({}),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(() => { reload(); showToast("?? Released back to Teacher."); })
-      .catch(() => showToast("?? Failed."));
+      .then(() => { reload(); showToast("Released back to Teacher."); })
+      .catch(() => showToast("Failed."));
   }
 
   // -- Principal actions ----------------------------------------
@@ -1520,15 +1553,15 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       credentials: "include", body: JSON.stringify({}),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(() => { reload(); showToast("? Grade approved."); })
-      .catch(() => showToast("?? Failed to approve."));
+      .then(() => { reload(); showToast("Grade approved."); })
+      .catch(() => showToast("Failed to approve."));
   }
 
   function rejectRequest(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
     const reason = prompt("Reason for rejection (required):") || "";
-    if (!reason.trim()) { showToast("?? Rejection reason is required."); return; }
+    if (!reason.trim()) { showToast("Rejection reason is required."); return; }
     fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/reject`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -1536,8 +1569,8 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       body: JSON.stringify({ rejection_reason: reason }),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(() => { reload(); showToast("? Grade request rejected."); })
-      .catch(() => showToast("?? Failed."));
+      .then(() => { reload(); showToast("Grade request rejected."); })
+      .catch(() => showToast("Failed."));
   }
 
   function badgeClass(status: string) {
@@ -1550,9 +1583,9 @@ function AdminRequestsPanel({ role }: { role?: string }) {
 
   function statusText(status: string) {
     const map: Record<string, string> = {
-      student_requested: "?? Requested", registrar_review: "?? Registrar Review",
-      principal_review: "?? Principal Review", principal_approved: "? Approved",
-      registrar_released: "?? Registrar Released", released_to_student: "?? Released", rejected: "? Rejected",
+      student_requested: "Requested", registrar_review: "Registrar Review",
+      principal_review: "Principal Review", principal_approved: "Approved",
+      registrar_released: "Registrar Released", released_to_student: "Released", rejected: "Rejected",
     };
     return map[status] || status;
   }
@@ -1579,13 +1612,13 @@ function AdminRequestsPanel({ role }: { role?: string }) {
             {role === "registrar" ? "Review teacher-submitted grades and forward to Principal" : "Approve or reject grade requests forwarded by the Registrar"}
           </p>
         </div>
-        <button onClick={reload} className="btn btn-outline-secondary btn-sm">Refresh</button>
+        <button onClick={reload} className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"><Icon name="refresh" size={14} /> Refresh</button>
       </div>
 
       {/* Term controls � principal only */}
       {role === "principal" && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Grade Request Window</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="calendar" size={14} /> Grade Request Window</h3>
           <div className="row g-3">
             {["Term 1", "Term 2", "Term 3"].map(term => {
               const cfg = termConfig.find(c => c.term === term);
@@ -1596,8 +1629,8 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                     <div className="card-body p-3 d-flex align-items-center justify-content-between gap-3">
                       <div>
                         <div className="fw-bold text-dark small">{term}</div>
-                        <span className={`badge mt-1 ${isOpen ? "bg-success text-white" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
-                          {isOpen ? "?? Open" : "?? Closed"}
+                        <span className={`badge mt-1 d-inline-flex align-items-center gap-1 ${isOpen ? "bg-success text-white" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
+                          {isOpen ? <><Icon name="unlock" size={10} /> Open</> : <><Icon name="lock" size={10} /> Closed</>}
                         </span>
                       </div>
                       <button onClick={() => toggleTerm(term, !isOpen)} className={`btn btn-sm ${isOpen ? "btn-outline-danger" : "btn-success"}`}>
@@ -1634,8 +1667,9 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       {/* Grades awaiting action */}
       {forReview.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">
-            {role === "registrar" ? "?? Grades Awaiting Your Review" : "?? Grades Awaiting Your Approval"}
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2">
+            <Icon name="grades" size={14} />
+            {role === "registrar" ? "Grades Awaiting Your Review" : "Grades Awaiting Your Approval"}
           </h3>
           <div className="d-flex flex-column gap-3">
             {forReview.map((req: any) => (
@@ -1644,7 +1678,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                   <div className="row g-3 align-items-start mb-3">
                     <div className="col-12 col-sm-6">
                       <div className="fw-bold text-dark mb-1">{req.student_name || req.student}</div>
-                      <div className="text-muted small">{req.subject_name || req.subject} � {req.term}</div>
+                      <div className="text-muted small">{req.subject_name || req.subject} - {req.term}</div>
                       <div className="text-muted small">Teacher: {req.teacher_name || req.teacher}</div>
                       {req.registrar_note && <div className="text-muted small fst-italic">Note: {req.registrar_note}</div>}
                     </div>
@@ -1652,7 +1686,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                       <div className="rounded-3 p-3 bg-success-subtle border border-success-subtle text-center">
                         <div className="text-muted small mb-1">Submitted Grade</div>
                         <div className="fw-black text-success" style={{ fontSize: 40 }}>
-                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "�"}
+                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "-"}
                         </div>
                         <div className="fw-semibold text-success small">{req.score != null ? `${req.score}%` : ""}</div>
                         {req.remarks && <div className="text-muted mt-1 fst-italic" style={{ fontSize: 11 }}>&ldquo;{req.remarks}&rdquo;</div>}
@@ -1661,8 +1695,8 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                   </div>
                   <div className="d-flex gap-2">
                     {role === "registrar"
-                      ? <button onClick={() => sendToPrincipal(req.id)} className="btn btn-success flex-grow-1">?? Send to Principal</button>
-                      : <button onClick={() => approveRequest(req.id)} className="btn btn-success flex-grow-1">? Verify &amp; Approve</button>
+                      ? <button onClick={() => sendToPrincipal(req.id)} className="btn btn-success flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1"><Icon name="send" size={14} /> Send to Principal</button>
+                      : <button onClick={() => approveRequest(req.id)} className="btn btn-success flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1"><Icon name="check" size={14} /> Verify &amp; Approve</button>
                     }
                     <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger">Reject</button>
                   </div>
@@ -1676,16 +1710,16 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       {/* Principal approved � registrar releases to teacher */}
       {role === "registrar" && approved.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Principal Approved � Release to Teacher</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="checkCircle" size={14} /> Principal Approved - Release to Teacher</h3>
           <div className="d-flex flex-column gap-2">
             {approved.map((req: any) => (
               <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
                 <div className="card-body p-4 d-flex align-items-center gap-3">
                   <div className="flex-grow-1">
-                    <div className="fw-bold text-dark small">{req.student_name || req.student} � {req.subject_name || req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} � Approved by Principal</div>
+                    <div className="fw-bold text-dark small">{req.student_name || req.student} - {req.subject_name || req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score} - Approved by Principal</div>
                   </div>
-                  <button onClick={() => releaseToTeacher(req.id)} className="btn btn-success btn-sm">?? Release to Teacher</button>
+                  <button onClick={() => releaseToTeacher(req.id)} className="btn btn-success btn-sm d-inline-flex align-items-center gap-1"><Icon name="send" size={12} /> Release to Teacher</button>
                 </div>
               </div>
             ))}
@@ -1693,10 +1727,10 @@ function AdminRequestsPanel({ role }: { role?: string }) {
         </div>
       )}
 
-      {/* Released � waiting on teacher final release */}
+      {/* Released - waiting on teacher final release */}
       {released.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Released � Awaiting Teacher Final Release</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="clock" size={14} /> Released - Awaiting Teacher Final Release</h3>
           <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
@@ -1728,7 +1762,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
 
       {/* All requests log */}
       <div>
-        <h3 className="fw-bold small text-dark mb-3">?? All Requests Log</h3>
+        <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="file" size={14} /> All Requests Log</h3>
         {requests.length === 0
           ? <div className="card border-0 shadow-sm rounded-3"><div className="card-body p-4 text-center text-muted small">No grade requests yet.</div></div>
           : (
@@ -1917,7 +1951,7 @@ function AdminDocumentsPanel() {
                 <div className="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2">
                   <button onClick={confirmReject}
                     disabled={!rejectReason || (rejectReason==="Other (specify below)" && !rejectReasonOther.trim())}
-                    className="btn btn-danger flex-grow-1 fw-bold"> Confirm Rejection</button>
+                    className="btn btn-danger flex-grow-1 fw-bold d-inline-flex align-items-center justify-content-center gap-1"><Icon name="x" size={14} /> Confirm Rejection</button>
                   <button onClick={() => { setRejecting(null); setRejectReason(""); setRejectReasonOther(""); }} className="btn btn-outline-secondary flex-grow-1">Cancel</button>
                 </div>
               </div>
@@ -1977,7 +2011,7 @@ function AdminDocumentsPanel() {
                         doc.status === "approved" ? "bg-success-subtle text-success border border-success-subtle" :
                         "bg-danger-subtle text-danger border border-danger-subtle"
                       }`}>
-                        {doc.status === "pending" ? " Pending" : doc.status === "approved" ? " Approved" : " Rejected"}
+                        {doc.status === "pending" ? "Pending" : doc.status === "approved" ? "Approved" : "Rejected"}
                       </span>
                       {doc.status === "rejected" && (doc as typeof doc & { rejectionReason?: string }).rejectionReason && (
                         <div className="text-danger mt-1" style={{ fontSize: 10 }}>
@@ -1994,8 +2028,8 @@ function AdminDocumentsPanel() {
                     <td className="text-end pe-4">
                       {doc.status === "pending" && (
                         <div className="d-flex gap-1 justify-content-end">
-                          <button onClick={() => { setApproving(doc.id); setReleaseDate(""); }} className="btn btn-success btn-sm" style={{ fontSize: 11 }}> Approve</button>
-                          <button onClick={() => { setRejecting(doc.id); setRejectReason(""); setRejectReasonOther(""); }} className="btn btn-danger btn-sm" style={{ fontSize: 11 }}> Reject</button>
+                          <button onClick={() => { setApproving(doc.id); setReleaseDate(""); }} className="btn btn-success btn-sm d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="check" size={11} /> Approve</button>
+                          <button onClick={() => { setRejecting(doc.id); setRejectReason(""); setRejectReasonOther(""); }} className="btn btn-danger btn-sm d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="x" size={11} /> Reject</button>
                         </div>
                       )}
                     </td>
@@ -2539,23 +2573,25 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
                 {unreadCount > 0 && <button onClick={markAllAsRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
-                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close">?</button>
+                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close"><Icon name="close" size={16} /></button>
               </div>
             </div>
             {notifs.length === 0 ? (
-              <div className="px-4 py-5 text-center text-muted"><div style={{ fontSize:32, marginBottom:8 }}></div><small>No notifications</small></div>
+              <div className="px-4 py-5 text-center text-muted"><div className="mb-2 text-muted"><Icon name="bell" size={32} /></div><small>No notifications</small></div>
             ) : (
               notifs.map(n => (
                 <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div style={{ fontSize:20, minWidth:24 }}></div>
+                  <div className="text-primary" style={{ minWidth:24 }}>
+                    <Icon name={n.type === "grade" ? "grades" : n.type === "document" ? "documents" : n.type === "enrollment" ? "enrollment" : n.type === "payment" ? "tuition" : "bell"} size={18} />
+                  </div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{n.title}</div>
                     <div className="text-muted" style={{ fontSize:12, lineHeight:1.4 }}>{n.message}</div>
                     <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read">?</button>}
-                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete">?</button>
+                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read"><Icon name="check" size={14} /></button>}
+                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete"><Icon name="x" size={14} /></button>
                   </div>
                 </div>
               ))
