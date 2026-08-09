@@ -112,9 +112,14 @@ Other dashboard data may be:
 ### Web
 1. Install dependencies:
    - `npm install`
-2. Start the dev server:
+2. Create a backend environment file:
+   - Copy `server/.env.example` to `server/.env`
+   - Update `DB_USER`, `DB_PASSWORD`, and other values as needed
+3. Start the frontend dev server:
    - `npm run dev`
-3. Open in browser:
+4. Start the backend server separately:
+   - `cd server && npm install && npm run dev`
+5. Open in browser:
    - `http://localhost:3000`
 
 ### Lint

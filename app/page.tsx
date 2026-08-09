@@ -6,7 +6,15 @@ import LoadingScreen from "./components/LoadingScreen";
 
 const FEATURES = [
   {
-    icon: "📚",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-full w-full">
+        <path d="M6 4h12v16H6V4Z" fill="currentColor" opacity="0.08" />
+        <path d="M6 4h12v3H6z" fill="currentColor" />
+        <path d="M8.5 10.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8.5 13.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8.5 16.5h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
     title: "Modern Learning",
     short: "F2F and Modular and Blended learning", 
     color: "#dc2626",
@@ -18,10 +26,16 @@ const FEATURES = [
       { icon: "🏆", label: "Achievement Tracking", desc: "Monitor milestones and celebrate your academic accomplishments." },
     ],
     bg: "linear-gradient(135deg, rgba(220,38,38,0.06), rgba(249,115,22,0.06))",
-    border: "rgba(220,38,38,0.25)",
   },
   {
-    icon: "📊",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-8 w-8">
+        <path d="M5 18h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8 14v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M12 10v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M16 6v12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
     title: "Real-time Grades",
     short: "Instant grade updates",
     color: "#f97316",
@@ -34,10 +48,16 @@ const FEATURES = [
       { icon: "🔔", label: "Status & Alerts", desc: "Track the request status (requested → teacher calculating → sent to admin → released) and receive alerts if approved or rejected." },
     ],
     bg: "linear-gradient(135deg, rgba(249,115,22,0.06), rgba(251,191,36,0.06))",
-    border: "rgba(249,115,22,0.25)",
   },
   {
-    icon: "📅",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-8 w-8">
+        <rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 3v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M16 3v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
     title: "Smart Scheduling",
     short: "Optimized timetables",
     color: "#d97706",
@@ -49,10 +69,16 @@ const FEATURES = [
       { icon: "📍", label: "Room Mapping", desc: "Know exactly which room and building your next class is in." },
     ],
     bg: "linear-gradient(135deg, rgba(217,119,6,0.06), rgba(251,191,36,0.06))",
-    border: "rgba(217,119,6,0.25)",
   },
   {
-    icon: "💬",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-8 w-8">
+        <path d="M4 5.5h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M4 12h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M4 18.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M5 21l4-3H20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
     title: "Easy Communication",
     short: "Connect with teachers",
     color: "#b91c1c",
@@ -64,7 +90,6 @@ const FEATURES = [
       { icon: "🤖", label: "JOBERT AI", desc: "Ask JOBERT anything — from your GWA to enrollment deadlines, 24/7." },
     ],
     bg: "linear-gradient(135deg, rgba(185,28,28,0.06), rgba(220,38,38,0.06))",
-    border: "rgba(185,28,28,0.25)",
   },
 ];
 
@@ -168,19 +193,19 @@ export default function LandingPage() {
         transition: transitioning ? "opacity 0.15s ease-in" : "opacity 0.4s ease-out",
       }} />
       {/* Navigation */}
-      <header className="sticky-top bg-white bg-opacity-90 backdrop-blur border-bottom border-light shadow-sm z-3">
-        <div className="container py-3">
-          <div className="d-flex align-items-center justify-content-between">
-            <Link href="/" className="d-flex align-items-center gap-3 text-decoration-none text-dark">
-              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid #dc2626" }} />
+      <header className="sticky-top top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
+        <div className="container py-4">
+          <div className="d-flex align-items-center justify-content-between gap-3">
+            <Link href="/" className="d-flex align-items-center gap-3 text-decoration-none">
+              <div className="rounded-pill bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] p-2" style={{ width: 54, height: 54, display: "grid", placeItems: "center" }}>
+                <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 42, height: 42, objectFit: "cover" }} />
+              </div>
               <div>
-                <h5 className="mb-0 fw-bold" style={{ color: "#dc2626" }}>Cebu Far East Institute</h5>
-                <p className="mb-0 text-muted small">Student Information System</p>
+                <h5 className="mb-0 fw-bold text-orange-600">Cebu Far East Institute</h5>
+                <p className="mb-0 small text-slate-500">Student Information System</p>
               </div>
             </Link>
             <div className="d-flex align-items-center gap-3">
-              {/* Dark / Light toggle */}
-
               <button
                 onClick={() => {
                   setTransitioning(true);
@@ -190,40 +215,10 @@ export default function LandingPage() {
                   }, 150);
                 }}
                 aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-                style={{
-                  width: 44, height: 26,
-                  borderRadius: 13,
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  position: "relative",
-                  background: dark
-                    ? "linear-gradient(135deg, #1e293b, #334155)"
-                    : "linear-gradient(135deg, #fef3c7, #fde68a)",
-                  boxShadow: dark
-                    ? "inset 0 0 0 1.5px #475569"
-                    : "inset 0 0 0 1.5px #fbbf24",
-                  transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
-                  flexShrink: 0,
-                }}
+                className="relative inline-flex h-11 w-20 items-center rounded-full bg-gradient-to-br from-amber-100 to-orange-100 p-1 shadow-[0_10px_20px_rgba(251,191,36,0.18)] transition-all duration-300 hover:-translate-y-0.5"
               >
-                {/* Thumb */}
-                <span style={{
-                  position: "absolute",
-                  top: 3, left: dark ? 21 : 3,
-                  width: 20, height: 20,
-                  borderRadius: "50%",
-                  background: dark
-                    ? "linear-gradient(135deg, #f1f5f9, #cbd5e1)"
-                    : "linear-gradient(135deg, #f97316, #dc2626)",
-                  boxShadow: dark
-                    ? "0 1px 4px rgba(0,0,0,0.4)"
-                    : "0 1px 4px rgba(220,38,38,0.4)",
-                  transition: "left 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11,
-                }}>
-                  {dark ? "🌙" : "☀️"}
+                <span className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-sm transition-all duration-300 ${dark ? "translate-x-9 bg-orange-500 text-white" : "translate-x-0 bg-white text-orange-600"}`}>
+                  <span className="flex h-full w-full items-center justify-center text-xs leading-none">{dark ? "🌙" : "☀️"}</span>
                 </span>
               </button>
             </div>
@@ -232,38 +227,50 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-5 py-md-6 py-lg-7 landing-hero" style={{ background: "linear-gradient(135deg, #fff7ed, #fef3c7)" }}>
+      <section className="py-6 sm:py-8 lg:py-10" style={{ background: "radial-gradient(circle at top, rgba(254,245,228,0.9), rgba(255,255,255,0.96) 45%, rgba(254,247,237,0.95) 100%)" }}>
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-10 col-xl-8 text-center">
-              <div className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium mb-4" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white", padding: "8px 20px" }}>
-                <span className="w-2 h-2 bg-warning rounded-circle animate-pulse"></span>
-                Official Student Portal
-              </div>
-              <h1 className="display-4 display-md-3 display-lg-2 fw-extrabold mb-4">
-                <span style={{ color: "#dc2626" }}>Student Information</span><br />
-                <span style={{
-                  background: "linear-gradient(135deg, #dc2626, #f97316, #fbbf24)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  display: "inline-block",
-                  color: "#dc2626",
-                  paddingBottom: "0.15em",
-                }}>
-                  Management System
-                </span>
-              </h1>
-              <p className="lead mb-5 text-muted" style={{ maxWidth: "600px", marginLeft: "auto", marginRight: "auto" }}>
-                Streamlined academic management for Cebu Far East Institute. Access your records, enrollment, and academic information in one unified platform.
-              </p>
-              <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-                <Link href="/login" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>
-                  Log In
-                </Link>
-                <Link href="/enrollment" className="btn btn-lg px-5 py-3 fw-semibold rounded-xl shadow hover:shadow-lg transition-all btn-shimmer " style={{ background: "linear-gradient(135deg, #f97316, #ffcc00)", color: "white" }}>
-                  Enroll Now
-                </Link>
+            <div className="col-xl-10">
+              <div className="rounded-[36px] bg-white/90 p-5 p-lg-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_20px_40px_rgba(234,88,12,0.12)]">
+                <div className="d-flex flex-column flex-lg-row align-items-start gap-4">
+                  <div className="flex-1">
+                    <div className="mb-4 inline-flex rounded-full bg-orange-100/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+                      Official Student Portal
+                    </div>
+                    <h1 className="display-5 fw-bold mb-4 text-slate-900 tracking-tight" style={{ lineHeight: 1.05 }}>
+                      Student Information <span style={{ display: "block", background: "linear-gradient(135deg, #dc2626, #f97316, #fbbf24)", backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}>Management System</span>
+                    </h1>
+                    <p className="lead text-slate-600 mb-5" style={{ maxWidth: 680 }}>
+                      Streamlined academic management for Cebu Far East Institute. Access your records, enrollment, and academic information in one unified platform.
+                    </p>
+                    <div className="d-flex flex-column flex-sm-row gap-3">
+                      <Link href="/login" className="inline-flex items-center justify-center rounded-xl" style={{
+                        background: "linear-gradient(135deg, #dc2626, #f97316)",
+                        color: "#ffffff",
+                        padding: "1rem 1.75rem",
+                        borderRadius: "1rem",
+                        fontWeight: 600,
+                        boxShadow: "0 20px 40px rgba(220,38,38,0.18)",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}>
+                        Log In <span className="ms-2" style={{ marginLeft: "0.5rem" }}>→</span>
+                      </Link>
+                      <Link href="/enrollment" className="inline-flex items-center justify-center rounded-xl" style={{
+                        background: "linear-gradient(135deg, #f97316, #ffcc00)",
+                        color: "#ffffff",
+                        padding: "1rem 1.75rem",
+                        borderRadius: "1rem",
+                        fontWeight: 600,
+                        boxShadow: "0 20px 40px rgba(220,38,38,0.18)",
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}>
+                        Enroll Now <span className="ms-2" style={{ marginLeft: "0.5rem" }}>→</span>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -272,13 +279,11 @@ export default function LandingPage() {
 
       {/* Features Section — aim parallax + click expand */}
       <section
-        className="py-5 py-md-6 py-lg-7 bg-white position-relative landing-features"
+        className="position-relative overflow-hidden py-6 sm:py-8 lg:py-10"
         ref={featureSectionRef}
         onMouseMove={handleFeatureSectionMouseMove}
         onMouseLeave={() => setAimPos({ x: 50, y: 50 })}
-        style={{ cursor: "crosshair" }}
       >
-        {/* Aim parallax spotlight — follows cursor */}
         <div
           style={{
             position: "absolute",
@@ -289,233 +294,146 @@ export default function LandingPage() {
             transition: "background 0.08s linear",
           }}
         />
-        {/* Crosshair lines — clipped to section bounds */}
         <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden", borderRadius: 0,
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
         }}>
           <div style={{
             position: "absolute",
-            left: `${aimPos.x}%`, top: 0, bottom: 0,
-            width: 1,
-            background: "linear-gradient(180deg, transparent, rgba(220,38,38,0.12), transparent)",
-            transform: "translateX(-50%)",
-            transition: "left 0.08s linear",
-          }} />
-          <div style={{
-            position: "absolute",
-            top: `${aimPos.y}%`, left: 0, right: 0,
-            height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(220,38,38,0.12), transparent)",
-            transform: "translateY(-50%)",
-            transition: "top 0.08s linear",
-          }} />
-          {/* Aim dot */}
-          <div style={{
-            position: "absolute",
             left: `${aimPos.x}%`, top: `${aimPos.y}%`,
-            width: 10, height: 10,
+            width: 12, height: 12,
             borderRadius: "50%",
-            border: "2px solid rgba(220,38,38,0.4)",
+            background: "rgba(220,38,38,0.9)",
             transform: "translate(-50%, -50%)",
             transition: "left 0.08s linear, top 0.08s linear",
-            boxShadow: "0 0 8px rgba(220,38,38,0.3)",
+            boxShadow: "0 0 18px rgba(220,38,38,0.18)",
           }} />
         </div>
 
         <div className="container position-relative" style={{ zIndex: 1 }}>
           <div className="text-center mb-5 scroll-reveal">
-            <h6 className="fw-semibold mb-2" style={{ color: "#f97316" }}>Why Choose Us</h6>
-            <h2 className="h1 fw-bold" style={{ color: "#dc2626" }}>Everything You Need in One Place</h2>
-            <p className="text-muted small mt-2">Click any card to explore</p>
+            <div className="d-inline-flex rounded-full bg-orange-100/90 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-orange-700 mb-3">
+              Why Choose Us
+            </div>
+            <h2 className="h1 fw-bold text-slate-900">Everything You Need in One Place</h2>
+            <p className="text-slate-600 small mt-3">Click any card to explore</p>
           </div>
 
-          <div className="row g-4 position-relative">
+          <div className="row g-4">
             {FEATURES.map((feature, idx) => {
               const isActive = activeFeature === idx;
               return (
-                <div
-                  key={idx}
-                  className="col-12 col-md-6 col-lg-3"
-                  ref={(el) => { featuresRef.current[idx] = el; }}
-                >
+                <div key={idx} className="col-12 col-md-6 col-xl-3">
                   <div
-                    className={`scroll-reveal-scale ${idx === 0 ? 'float-slow' : idx === 1 ? 'float-slow-delay-1' : idx === 2 ? 'float-slow-delay-2' : 'float-slow-delay-3'} landing-feature-tile`}
+                    className={`group relative overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(234,88,12,0.12)] ${isActive ? "scale-[1.01] shadow-[0_20px_50px_rgba(234,88,12,0.14)]" : ""}`}
                     onClick={(e) => handleFeatureClick(idx, e)}
-                    style={{
-                      cursor: "pointer",
-                      borderRadius: "1rem",
-                      border: `2px solid ${isActive ? feature.color : "rgba(251,191,36,0.4)"}`,
-                      background: isActive ? feature.bg : "linear-gradient(135deg, #fff7ed, #fef3c7)",
-                      padding: "2rem",
-                      transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
-                      transform: isActive ? "translateY(-8px) scale(1.03)" : "translateY(0) scale(1)",
-                      boxShadow: isActive
-                        ? `0 20px 50px rgba(0,0,0,0.12), 0 0 0 3px ${feature.color}22`
-                        : "0 2px 8px rgba(0,0,0,0.06)",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
+                    style={{ cursor: "pointer" }}
                   >
-                    {/* Shimmer on active */}
-                    {isActive && (
-                      <div style={{
-                        position: "absolute", inset: 0, pointerEvents: "none",
-                        background: "linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%)",
-                        animation: "featureShimmer 1.2s ease-in-out",
-                      }} />
-                    )}
-
-                    {/* Icon with spin-in on activate */}
-                    <div style={{
-                      fontSize: "2.2rem", marginBottom: "0.75rem",
-                      display: "inline-block",
-                      transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1)",
-                      transform: isActive ? "scale(1.25) rotate(-8deg)" : "scale(1) rotate(0deg)",
-                      filter: isActive ? "drop-shadow(0 4px 8px rgba(0,0,0,0.15))" : "none",
-                    }}>{feature.icon}</div>
-
-                    <h5 className="fw-bold mb-1" style={{ color: feature.color, transition: "color 0.3s" }}>
-                      {feature.title}
-                    </h5>
-                    <p className="text-muted mb-0 small">{feature.short}</p>
-
-                    {/* Active indicator */}
-                    <div style={{
-                      position: "absolute", bottom: 0, left: 0, right: 0,
-                      height: 3,
-                      background: feature.gradient,
-                      transform: isActive ? "scaleX(1)" : "scaleX(0)",
-                      transformOrigin: "left",
-                      transition: "transform 0.4s cubic-bezier(0.4,0,0.2,1)",
-                      borderRadius: "0 0 1rem 1rem",
-                    }} />
-
-                    {/* Click hint chevron */}
-                    <div style={{
-                      position: "absolute", top: 12, right: 14,
-                      fontSize: 13, color: feature.color,
-                      opacity: isActive ? 1 : 0.35,
-                      transition: "all 0.3s",
-                      transform: isActive ? "rotate(180deg)" : "rotate(0deg)",
-                    }}>▼</div>
+                    <div className="p-5 position-relative">
+                      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white">
+                        {feature.icon}
+                      </div>
+                      <h5 className="fw-bold mb-2 text-slate-900" style={{ color: feature.color }}>{feature.title}</h5>
+                      <p className="text-slate-600 small mb-4">{feature.short}</p>
+                      <div className="mt-auto inline-flex items-center gap-2 text-sm fw-semibold text-orange-600">
+                        Learn more <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                      </div>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 opacity-70" style={{ transform: isActive ? "scaleX(1)" : "scaleX(0)", transformOrigin: "left", transition: "transform 0.4s ease" }} />
                   </div>
                 </div>
               );
             })}
+          </div>
 
-            {/* Expanded detail panel — appears below the clicked tile */}
-            {activeFeature !== null && (() => {
-              const f = FEATURES[activeFeature];
-              return (
-                <div className="col-12" style={{ order: Math.floor(activeFeature / 1) + 1 }}>
-                  <div
-                    ref={panelRef}
-                    style={{
-                      borderRadius: "1.25rem",
-                      border: `1.5px solid ${f.border}`,
-                      background: f.bg,
-                      padding: "2rem 2.5rem",
-                      animation: "featurePanelIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
-                      position: "relative",
-                      overflow: "hidden",
-                      backdropFilter: "blur(8px)",
-                    }}
-                    className="landing-feature-panel"
-                  >
-                    {/* Parallax inner glow that shifts with aim */}
-                    <div style={{
-                      position: "absolute", inset: 0, pointerEvents: "none",
-                      background: `radial-gradient(ellipse 600px 300px at ${aimPos.x}% ${aimPos.y}%, ${f.color}14 0%, transparent 65%)`,
-                      transition: "background 0.1s linear",
-                      zIndex: 0,
-                    }} />
-
-                    <div className="position-relative" style={{ zIndex: 1 }}>
+          {activeFeature !== null && (() => {
+            const f = FEATURES[activeFeature];
+            return (
+              <div className="mt-5 scroll-reveal">
+                <div className="rounded-[32px] bg-white/90 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(234,88,12,0.12)]" ref={panelRef}>
+                  <div className="d-flex flex-column flex-xl-row align-items-start justify-content-between gap-4">
+                    <div className="flex-1">
                       <div className="d-flex align-items-center gap-3 mb-4">
-                        <div style={{
-                          fontSize: "2rem",
-                          background: f.gradient,
-                          borderRadius: "0.75rem",
-                          width: 52, height: 52,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: `0 8px 20px ${f.color}33`,
-                        }}>{f.icon}</div>
-                        <div>
-                          <h4 className="fw-black mb-0" style={{ color: f.color }}>{f.title}</h4>
-                          <p className="text-muted small mb-0">{f.short}</p>
+                        <div className="grid h-14 w-14 place-items-center rounded-[22px] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-[0_15px_35px_rgba(234,88,12,0.24)]">
+                          {f.icon}
                         </div>
-                        <button
-                          onClick={() => setActiveFeature(null)}
-                          style={{
-                            marginLeft: "auto",
-                            background: "none", border: "none", cursor: "pointer",
-                            color: "#64748b", fontSize: 20, lineHeight: 1,
-                            padding: "4px 8px", borderRadius: 6,
-                          }}
-                        >✕</button>
+                        <div>
+                          <h4 className="fw-black mb-1" style={{ color: f.color }}>{f.title}</h4>
+                          <p className="text-slate-600 small mb-0">{f.short}</p>
+                        </div>
                       </div>
-
                       <div className="row g-3">
                         {f.details.map((d, di) => (
-                          <div key={di} className="col-12 col-sm-6 col-lg-3">
-                            <div style={{
-                              background: "rgba(255,255,255,0.75)",
-                              borderRadius: "0.875rem",
-                              padding: "1.25rem",
-                              border: `1px solid ${f.border}`,
-                              height: "100%",
-                              animation: `featureDetailIn 0.35s cubic-bezier(0.4,0,0.2,1) ${di * 0.07}s both`,
-                              transition: "transform 0.2s, box-shadow 0.2s",
-                            }}
-                              className="detail-card"
-                              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 28px ${f.color}22`; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}
-                            >
-                              <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{d.icon}</div>
-                              <div className="fw-bold small mb-1" style={{ color: f.color }}>{d.label}</div>
-                              <div className="text-muted" style={{ fontSize: "0.8rem", lineHeight: 1.5 }}>{d.desc}</div>
+                          <div key={di} className="col-12 col-sm-6 col-xl-3">
+                            <div className="h-100 rounded-[24px] bg-amber-50 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(234,88,12,0.12)]" style={{ minHeight: 200 }}>
+                              <div className="mb-3 text-2xl">{d.icon}</div>
+                              <div className="fw-semibold mb-2 text-slate-900">{d.label}</div>
+                              <div className="text-slate-600 small leading-6">{d.desc}</div>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
+                    <button
+                      onClick={() => setActiveFeature(null)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-slate-700 transition hover:bg-orange-50"
+                      aria-label="Close expanded feature"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 
       {/* Services Section (with 3D hover effects) */}
-      <section className="py-5 py-md-6 py-lg-7 landing-services" style={{ background: "#fff7ed" }}>
+      <section className="py-6 sm:py-8 lg:py-10" style={{ background: "linear-gradient(180deg, #fffaf0 0%, #fff1d6 45%, #fff7e4 100%)" }}>
         <div className="container">
           <div className="text-center mb-5 scroll-reveal">
-            <h6 className="fw-semibold mb-2" style={{ color: "#f97316" }}>Quick Access</h6>
-            <h2 className="h1 fw-bold" style={{ color: "#dc2626" }}>Our Services</h2>
+            <div className="d-inline-flex rounded-full bg-orange-100/90 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-orange-700 mb-3">
+              Quick Access
+            </div>
+            <h2 className="h1 fw-bold text-slate-900">Our Services</h2>
           </div>
           <div className="row g-4">
             {[
-              { icon: "📋", title: "Enrollment", desc: "Register for classes", href: "/enrollment" },
-              { icon: "📊", title: "Grades", desc: "View your results", href: "/login" },
-              { icon: "🕐", title: "Schedule", desc: "Class timetable", href: "/login" },
-              { icon: "💳", title: "Fees & Payments", desc: "Pay tuition & fees", href: "/login" }
+              { icon: (
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-full w-full">
+                  <path d="M5 6h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M7 8v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              ), title: "Enrollment", desc: "Register for classes", href: "/enrollment" },
+              { icon: (
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-full w-full">
+                  <path d="M5 19h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M8 15l3-4 2 3 3-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ), title: "Grades", desc: "View your results", href: "/login" },
+              { icon: (
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-full w-full">
+                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              ), title: "Schedule", desc: "Class timetable", href: "/login" },
+              { icon: (
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-full w-full">
+                  <rect x="4" y="7" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M4 11h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              ), title: "Fees & Payments", desc: "Pay tuition & fees", href: "/login" }
             ].map((service, idx) => (
-              <div
-                key={idx}
-                className="col-12 col-md-6 col-lg-3"
-                ref={(el) => { servicesRef.current[idx] = el; }}
-              >
-                <Link href={service.href} className="text-decoration-none text-dark">
-                  <div className="card-3d-tilt h-100 scroll-reveal" onMouseMove={(e) => handleTiltMouseMove(e, idx)} onMouseLeave={handleTiltMouseLeave}>
-                    <div className="card-glow-border h-100">
-                      <div className="card-glow-inner h-100 text-center">
-                        <div className="mb-3 rounded-xl" style={{ width: "48px", height: "48px", background: "linear-gradient(135deg, #dc2626, #f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", margin: "0 auto" }}>
-                          {service.icon}
-                        </div>
-                        <h5 className="fw-bold mb-1" style={{ color: "#dc2626" }}>{service.title}</h5>
-                        <p className="text-muted small mb-0">{service.desc}</p>
+              <div key={idx} className="col-12 col-md-6 col-xl-3">
+                <Link href={service.href} className="text-decoration-none">
+                  <div className="group h-100 overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(234,88,12,0.12)]" onMouseMove={(e) => handleTiltMouseMove(e, idx)} onMouseLeave={handleTiltMouseLeave}>
+                    <div className="h-100 p-5 d-flex flex-column align-items-center text-center gap-3">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-[24px] bg-orange-50 text-orange-600 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white" style={{ fontSize: 24 }}>
+                        {service.icon}
                       </div>
+                      <h5 className="fw-bold text-slate-900 mb-1">{service.title}</h5>
+                      <p className="text-slate-600 small mb-0">{service.desc}</p>
                     </div>
                   </div>
                 </Link>
@@ -526,67 +444,68 @@ export default function LandingPage() {
       </section>
 
       {/* Visit Us CTA Section */}
-      <section className="py-5 py-md-6 py-lg-7" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)" }}>
+      <section className="py-6 sm:py-8 lg:py-10" style={{ background: "linear-gradient(180deg, #fff1d6 0%, #fdc49a 35%, #f97316 100%)" }}>
         <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-8 text-center text-white">
-              <div className="mb-4">
-                <h2 className="h1 fw-extrabold mb-3" style={{ color: "white" }}>
-                  Experience the Vibrant Campus Life
-                </h2>
-                <p className="lead mb-3" style={{ color: "#fef3c7" }}>
+          <div className="row align-items-center justify-content-between gap-4">
+            <div className="col-lg-7">
+              <div className="rounded-[32px] bg-white/15 p-5 p-lg-6 shadow-[0_20px_50px_rgba(220,38,38,0.18)] backdrop-blur-xl">
+                <p className="text-uppercase fw-semibold mb-3 text-amber-900/80 tracking-[0.24em]">Visit Us Today</p>
+                <h2 className="fw-extrabold mb-4 text-white">Experience the Vibrant Campus Life</h2>
+                <p className="lead text-amber-100 mb-4">
                   Come visit Cebu Far East Institute and discover our state-of-the-art facilities, welcoming community, and dynamic learning environment. Our dedicated faculty and modern infrastructure are ready to inspire your academic journey.
                 </p>
-                <div className="mb-4">
-                  <p className="fw-semibold mb-2" style={{ color: "#fef3c7", fontSize: "1.05rem" }}>
-                    📍 Located at:
-                  </p>
-                    <div style={{ background: "rgba(255,255,255,0.15)", padding: "12px 20px", borderRadius: "8px", backdropFilter: "blur(8px)" }}>
-                      <p className="mb-0"><strong>Basak Lapu-Lapu Campus</strong></p>
-                      <p className="small mb-0" style={{ color: "#fef3c7" }}>Basak, Lapu-Lapu City</p>
-                    </div>
+                <div className="rounded-[24px] bg-white/10 p-4 mb-4">
+                  <p className="mb-1 fw-semibold text-white">📍 Located at:</p>
+                  <p className="mb-0 text-amber-100 small">Basak, Lapu-Lapu City, Cebu</p>
+                </div>
+                <Link href="/visit-us" className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-orange-600 font-semibold shadow-md shadow-orange-500/20 transition-all duration-300 hover:bg-orange-50 hover:scale-[0.99]">
+                  🌟 VISIT US TODAY
+                </Link>
+              </div>
+            </div>
+            <div className="col-lg-4">
+              <div className="rounded-[32px] bg-white/15 p-4 shadow-[0_20px_45px_rgba(220,38,38,0.16)] backdrop-blur-xl">
+                <h5 className="fw-semibold text-white mb-3">Campus Snapshot</h5>
+                <p className="text-amber-100 small mb-4">Discover excellence in infrastructure, learning, and community support all in one place.</p>
+                <div className="rounded-[28px] overflow-hidden bg-orange-50/30">
+                  <img src="/campus-landscape.jpg" alt="Campus landscape" className="w-100 h-auto" />
                 </div>
               </div>
-              <Link href="/visit-us" className="btn btn-lg px-6 py-3 fw-semibold rounded-xl btn-shimmer" style={{ background: "white", color: "#dc2626" }}>
-                🌟 VISIT US TODAY
-              </Link>
-              <p className="text-white-50 small mt-3 mb-0">Discover why hundreds of students choose CFEI for their education</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-5" style={{ background: "#dc2626", color: "white" }}>
+      <footer className="py-5" style={{ background: "#dc2626" }}>
         <div className="container">
-          <div className="d-flex flex-column flex-md-row align-items-start justify-content-between gap-4 mb-4">
-            <div className="d-flex align-items-center gap-3">
-              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid white" }} />
+          <div className="row gy-4 justify-content-between">
+            <div className="col-md-5 d-flex align-items-start gap-3">
+              <div className="rounded-3xl bg-white/10 p-3 shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+                <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 56, height: 56, objectFit: "cover" }} />
+              </div>
               <div>
-                <h5 className="mb-0 fw-bold">Cebu Far East Institute</h5>
-                <p className="mb-0 small" style={{ color: "#fef3c7" }}>Student Information System</p>
+                <h5 className="fw-bold text-white mb-1">Cebu Far East Institute</h5>
+                <p className="mb-0 small text-amber-100/85">Student Information System</p>
               </div>
             </div>
-
-            <div style={{ color: "#fef3c7" }}>
-              <h6 className="fw-semibold mb-2">Contact Us</h6>
-              <p className="mb-1 small">Basak, Lapu-Lapu City, Cebu</p>
-              <p className="mb-1 small">Phone: (032) 273 1081</p>
-              <p className="mb-0 small">Email: <a href="mailto:cfeiinc@gmail.com" className="text-decoration-none" style={{ color: "#fef3c7" }}>cfeiinc@gmail.com</a></p>
+            <div className="col-md-3">
+              <h6 className="fw-semibold text-white mb-3">Contact Us</h6>
+              <p className="mb-1 small text-amber-100">Basak, Lapu-Lapu City, Cebu</p>
+              <p className="mb-1 small text-amber-100">Phone: (032) 273 1081</p>
+              <p className="mb-0 small text-amber-100">Email: <a href="mailto:cfeiinc@gmail.com" className="text-white text-decoration-none">cfeiinc@gmail.com</a></p>
             </div>
-
-            <div className="text-center">
-              <h6 className="fw-semibold mb-2">Get in Touch</h6>
-              <a href="https://www.facebook.com/CFEI2021" target="_blank" rel="noopener noreferrer" className="d-inline-flex align-items-center gap-2 text-decoration-none" style={{ color: "#fef3c7" }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <div className="col-md-3 text-md-end">
+              <h6 className="fw-semibold text-white mb-3">Follow</h6>
+              <a href="https://www.facebook.com/CFEI2021" target="_blank" rel="noreferrer" className="inline-flex h-11 w-11 items-center justify-center rounded-3xl bg-white/10 text-white transition hover:bg-white/20">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M22 12C22 6.477 17.523 2 12 2S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.99H7.898v-2.888h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.888h-2.33v6.99C18.343 21.128 22 16.991 22 12z" fill="currentColor" />
                 </svg>
               </a>
             </div>
           </div>
-
-          <div className="border-top pt-4 text-center small" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fef3c7" }}>
-            <p className="mb-0">© 2026 Cebu Far East Institute. All rights reserved.</p>
+          <div className="mt-5 pt-4 text-center text-amber-100/90 small">
+            © 2026 Cebu Far East Institute. All rights reserved.
           </div>
         </div>
       </footer>

@@ -1,3 +1,4 @@
+import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -22,6 +23,8 @@ const nextConfig: NextConfig = {
   // Usage: fetch('/proxy/api/auth/login', ...) from client components.
   // The Next.js API routes already call BACKEND_URL directly, so they don't
   // need these rewrites.
+  outputFileTracingRoot: path.join(__dirname),
+
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
     return [
