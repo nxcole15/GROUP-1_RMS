@@ -37,6 +37,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Server config with credentials — keep locally, never commit
+server/config/env.js
+
 # vercel
 .vercel
 
