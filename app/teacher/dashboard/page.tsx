@@ -192,8 +192,8 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
             <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
-              onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
-              <span style={{ fontSize: 16 }}>?</span>
+              onClick={async (e) => { e.preventDefault(); localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; }}>
+              <span style={{ fontSize: 16 }}>🚪</span>
               <span>Log Out</span>
             </Link>
           </div>
@@ -229,7 +229,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
       {/* Lock banner */}
       {isGradeLocked && (
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <span style={{ fontSize: 22 }}>??</span>
+          <span style={{ fontSize: 22 }}>🔒</span>
           <div>
             <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} Deadline Passed</div>
             <div className="text-muted small">You have unresolved grade requests. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
@@ -311,7 +311,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
               <div className="d-flex flex-column gap-3">
                 {subjects.map(s => (
                   <div key={s.id} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 18 }}>??</div>
+                    <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 18 }}>📚</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
                       <div className="text-muted" style={{ fontSize: 11 }}>{s.code} – {s.units} units</div>
@@ -495,7 +495,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
       <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2><p className="text-muted small mb-0">Submit and manage student grades</p></div>
       {isGradeLocked && (
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <span style={{ fontSize: 22 }}>??</span>
+          <span style={{ fontSize: 22 }}>🔒</span>
           <div>
             <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} deadline passed</div>
             <div className="text-muted small">This panel is read-only. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
@@ -511,7 +511,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         </div>
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
-            <span style={{ fontSize: 24 }}>??</span>
+            <span style={{ fontSize: 24 }}>📊</span>
             <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
             <div className="fw-black fs-3 text-success">{avg}%</div>
           </div>
@@ -621,7 +621,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     }
     setGrading(prev => { const n = { ...prev }; delete n[id]; return n; });
     reload();
-    showToast(`?? Grade submitted to Registrar for review`);
+    showToast(`✅ Grade submitted to Registrar for review`);
   }
 
   function releaseToStudent(id: number) {
@@ -692,7 +692,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* Lock banner */}
       {isGradeLocked && (
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <span style={{ fontSize: 22 }}>??</span>
+          <span style={{ fontSize: 22 }}>🔒</span>
           <div>
             <div className="fw-bold small text-danger">Actions Locked – {activeTerm} deadline passed</div>
             <div className="text-muted small">Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
@@ -703,7 +703,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* Pipeline workflow diagram */}
       <div className="card border-0 shadow-sm rounded-3">
         <div className="card-body p-3">
-          <div className="fw-bold small text-dark mb-3">?? Grade Request Pipeline</div>
+          <div className="fw-bold small text-dark mb-3">📋 Grade Request Pipeline</div>
           <div className="d-flex align-items-center justify-content-between gap-1 overflow-auto pb-1">
             {[
               { label: "Student\nRequested",    count: newRequests.length,     color: "#f59e0b" },
@@ -728,7 +728,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 1 – New student requests */}
       {newRequests.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? New Student Requests – Action Required</h3>
+          <h3 className="fw-bold small text-dark mb-3">📨 New Student Requests – Action Required</h3>
           <div className="d-flex flex-column gap-2">
             {newRequests.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3">
@@ -741,10 +741,10 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked – visit Registrar&apos;s Office</div>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>🔒 Locked – visit Registrar&apos;s Office</div>
                     : <div className="d-flex gap-2">
-                        <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">?? Accept &amp; Calculate</button>
-                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">? Reject</button>
+                        <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">✅ Accept &amp; Calculate</button>
+                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">✕ Reject</button>
                       </div>
                   }
                 </div>
@@ -757,7 +757,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 2 – Teacher calculating, enter grade form */}
       {inProgress.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Enter &amp; Submit Grades to Admin</h3>
+          <h3 className="fw-bold small text-dark mb-3">📝 Enter &amp; Submit Grades to Admin</h3>
           <div className="d-flex flex-column gap-2">
             {inProgress.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
@@ -795,8 +795,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     </div>
                   )}
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked – visit Registrar&apos;s Office</div>
-                    : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">?? Submit to Admin for Verification</button>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>🔒 Locked – visit Registrar&apos;s Office</div>
+                    : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">📤 Submit to Admin for Verification</button>
                   }
                 </div>
               </div>
@@ -813,7 +813,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
             {pendingAdmin.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-85">
                 <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>??</div>
+                  <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>⏳</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{req.student} – {req.subject}</div>
                     <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) – Submitted: {req.submittedToAdminAt}</div>
@@ -843,8 +843,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked – visit Registrar&apos;s Office</div>
-                    : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">?? Release Grade to Student</button>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>🔒 Locked – visit Registrar&apos;s Office</div>
+                    : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">🎓 Release Grade to Student</button>
                   }
                 </div>
               </div>
@@ -856,17 +856,17 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 5 – Released */}
       {released.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Released to Students</h3>
+          <h3 className="fw-bold small text-dark mb-3">🎓 Released to Students</h3>
           <div className="d-flex flex-column gap-2">
             {released.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>??</div>
+                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40, fontSize: 18 }}>✅</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{req.student} – {req.subject}</div>
                     <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}</div>
                   </div>
-                  <span className="badge bg-success text-white" style={{ fontSize: 10 }}>?? Released</span>
+                  <span className="badge bg-success text-white" style={{ fontSize: 10 }}>🎓 Released</span>
                 </div>
               </div>
             ))}
@@ -1008,7 +1008,7 @@ function NotificationsPanel() {
       </div>
       {unread.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Unread</h3>
+          <h3 className="fw-bold small text-dark mb-3">🔔 Unread</h3>
           <div className="d-flex flex-column gap-2">
             {unread.map(n => (
               <div key={n.id} className="card border-0 shadow-sm rounded-3" style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.12)" }}>
@@ -1251,7 +1251,7 @@ function TimeLogPanel() {
       {/* Today's log */}
       {todayLogs.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Today&apos;s Log</h3>
+          <h3 className="fw-bold small text-dark mb-3">📅 Today&apos;s Log</h3>
           <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
             <table className="table table-hover mb-0">
               <thead className="table-light">
@@ -1284,7 +1284,7 @@ function TimeLogPanel() {
       {/* Full history */}
       {logs.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? Full History</h3>
+          <h3 className="fw-bold small text-dark mb-3">📋 Full History</h3>
           <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
@@ -1455,11 +1455,11 @@ export default function TeacherDashboardPage() {
             </span>
             {isGradeLocked && (
               <span className="badge bg-danger-subtle text-danger border border-danger-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
-                ?? Grades Locked
+                🔒 Grades Locked
               </span>
             )}
             <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotif(!showNotif)}>
-              <span style={{ fontSize: 22 }}>??</span>
+              <span style={{ fontSize: 22 }}>🔔</span>
               {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width: 18, height: 18, fontSize: 10, fontWeight: "bold" }}>{unreadCount}</span>}
             </button>
           </div>

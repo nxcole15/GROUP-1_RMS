@@ -196,7 +196,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
                 </div>
               </div>
               {/* Logout button below */}
-              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
+              <button onClick={async () => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); await fetch("/api/auth/logout", { method:"POST" }); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
                 Logout
               </button>
             </div>

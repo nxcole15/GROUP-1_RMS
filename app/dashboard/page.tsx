@@ -71,8 +71,8 @@ function JobertChat({ initialPrompt }: { initialPrompt?: string }) {
                   <div className={`rounded-3 px-3 py-2 small lh-base ${m.role==="ai"?"bg-white border shadow-sm":"bg-primary text-white"}`} style={{ whiteSpace:"pre-line", color:m.role==="ai"?"#1e293b":undefined }}>{m.text}</div>
                   {m.role==="ai" && i>0 && (
                     <div className="d-flex gap-1 ms-1">
-                      <button onClick={() => setFeedback(i,"up")}   className={`btn btn-sm py-0 px-1 border-0 ${m.feedback==="up"?"text-success":"text-secondary"}`} style={{ fontSize:13 }}>??</button>
-                      <button onClick={() => setFeedback(i,"down")} className={`btn btn-sm py-0 px-1 border-0 ${m.feedback==="down"?"text-danger":"text-secondary"}`} style={{ fontSize:13 }}>??</button>
+                      <button onClick={() => setFeedback(i,"up")}   className={`btn btn-sm py-0 px-1 border-0 ${m.feedback==="up"?"text-success":"text-secondary"}`} style={{ fontSize:13 }}>👍</button>
+                      <button onClick={() => setFeedback(i,"down")} className={`btn btn-sm py-0 px-1 border-0 ${m.feedback==="down"?"text-danger":"text-secondary"}`} style={{ fontSize:13 }}>👎</button>
                     </div>
                   )}
                 </div>
@@ -215,7 +215,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
         {/* Student badge */}
         {expanded && (
           <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-            <span>??</span>
+            <span>🎓</span>
             <div>
               <div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Student</div>
               <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${student.pathway} Grade ${student.grade_level}` : ""}</div>
@@ -247,7 +247,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
                   <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{student?.student_id}</div>
                 </div>
               </div>
-              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize:12, borderRadius:8 }}>
+              <button onClick={async () => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); await fetch("/api/auth/logout", { method:"POST" }); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize:12, borderRadius:8 }}>
                 Logout
               </button>
             </div>
@@ -332,11 +332,11 @@ function HomePanel({ setPanel, onAskJobert, student }: { setPanel:(p:Panel)=>voi
         <div className="col-12 col-lg-6">
           <div className="card border-0 shadow-sm rounded-3 h-100">
             <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3">?? Ask JOBERT</h3>
+              <h3 className="fw-bold small text-dark mb-3">🤖 Ask JOBERT</h3>
               <p className="text-muted small mb-3">Get instant answers about your grades, schedule, tuition, and more.</p>
               <div className="d-flex flex-column gap-2">
                 {["Explain my GWA","How do I pay tuition?","How to request a TOR?"].map(s => (
-                  <button key={s} onClick={() => onAskJobert(s)} className="btn btn-light btn-sm text-start border rounded-3" style={{ fontSize:12 }}>?? {s}</button>
+                  <button key={s} onClick={() => onAskJobert(s)} className="btn btn-light btn-sm text-start border rounded-3" style={{ fontSize:12 }}>💬 {s}</button>
                 ))}
               </div>
             </div>
@@ -354,7 +354,7 @@ type TermStatus = "not_available" | "request_open" | "released";
 function GradeColorLegend() {
   return (
     <div className="rounded-3 px-3 py-2 flex-shrink-0" style={{ background:"#f8fafc", border:"1.5px solid #e2e8f0" }}>
-      <div className="fw-semibold text-dark mb-2" style={{ fontSize:11, letterSpacing:"0.03em" }}>?? Color Guide</div>
+      <div className="fw-semibold text-dark mb-2" style={{ fontSize:11, letterSpacing:"0.03em" }}>📊 Color Guide</div>
       <div className="d-flex flex-column gap-1">
         {[
           { dot:"#16a34a", color:"#16a34a", label:"80+",      status:"Passed"             },
@@ -378,7 +378,7 @@ function GradesNotAvailable({ term }: { term: string }) {
       {/* Main empty state card */}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="card-body p-5 text-center">
-          <div style={{ fontSize:56, marginBottom:16 }}>??</div>
+          <div style={{ fontSize:56, marginBottom:16 }}>📋</div>
           <h3 className="fw-black text-dark mb-2">Grades are not yet available</h3>
           <p className="text-muted small mb-0">
             {term} grades will be available once your teacher submits them and the grade request window opens.
@@ -389,7 +389,7 @@ function GradesNotAvailable({ term }: { term: string }) {
       {/* Reminder note */}
       <div className="rounded-3 p-4" style={{ background:"rgba(245,158,11,0.06)", border:"1.5px solid rgba(245,158,11,0.3)" }}>
         <div className="d-flex align-items-start gap-3">
-          <span style={{ fontSize:22, flexShrink:0 }}>??</span>
+          <span style={{ fontSize:22, flexShrink:0 }}>💡</span>
           <div>
             <div className="fw-bold small text-dark mb-1">Reminder / Note</div>
             <p className="text-muted small mb-0" style={{ lineHeight:1.7 }}>
@@ -420,7 +420,7 @@ function WorkflowTracker({ subject, currentStep }: { subject: string; currentSte
   return (
     <div className="mt-3 pt-3" style={{ borderTop:"1px solid #f1f5f9" }}>
       <div className="text-muted mb-2" style={{ fontSize:11, fontWeight:600, letterSpacing:"0.03em" }}>
-        ?? Request Progress – {subject}
+        📋 Request Progress – {subject}
       </div>
       <div className="d-flex align-items-center gap-1 flex-wrap">
         {WORKFLOW_STEPS.map((step, i) => {
@@ -525,15 +525,15 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
         .then(r => r.json())
         .then(data => {
           if (data.error) {
-            showToast(`?? ${data.error}`);
+            showToast(`❌ ${data.error}`);
           } else {
             setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
-            showToast(`?? Grade request for ${subjectName} sent to your teacher.`);
+            showToast(`✅ Grade request for ${subjectName} sent to your teacher.`);
           }
         })
         .catch(() => {
           setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
-          showToast(`?? Grade request for ${subjectName} sent.`);
+          showToast(`📨 Grade request for ${subjectName} sent.`);
         });
     } else {
       setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
@@ -561,7 +561,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
           <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
             <div className="modal-content rounded-3 border-0 shadow-lg">
               <div className="modal-body p-4">
-                <div style={{ fontSize:36, marginBottom:12 }}>??</div>
+                <div style={{ fontSize:36, marginBottom:12 }}>📝</div>
                 <h5 className="fw-black text-dark mb-1">Request Grade?</h5>
                 <p className="text-muted small mb-4">
                   You are about to request your <strong>{term}</strong> grade for <strong>{confirmSubject.subject_name}</strong>.
@@ -586,7 +586,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
       {/* Request window notice */}
       <div className="rounded-3 p-3 d-flex align-items-start gap-3"
         style={{ background:"rgba(99,102,241,0.06)", border:"1.5px solid rgba(99,102,241,0.25)" }}>
-        <span style={{ fontSize:20, flexShrink:0 }}>??</span>
+        <span style={{ fontSize:20, flexShrink:0 }}>📢</span>
         <div>
           <div className="fw-bold small text-dark mb-1">Grade Request Window is Open – {term}</div>
           <p className="text-muted small mb-0" style={{ lineHeight:1.6 }}>
@@ -638,7 +638,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
                   {/* Subject header */}
                   <div className="d-flex align-items-center gap-3 mb-3">
                     <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{ width:40, height:40, fontSize:20 }}>??</div>
+                      style={{ width:40, height:40, fontSize:20 }}>📚</div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="fw-bold small text-dark text-truncate">{subj.subject_name}</div>
                       <div className="text-muted" style={{ fontSize:11 }}>{subj.teacher_name} – {subj.code}</div>
@@ -658,7 +658,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
                             {score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-" : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-" : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-" : score >= 65 ? "D" : "F"}
                           </div>
                           <div className="fw-semibold small" style={{ color }}>Score: {existing.score}</div>
-                          <div className="text-muted mt-1" style={{ fontSize: 11 }}>?? Grade Released</div>
+                          <div className="text-muted mt-1" style={{ fontSize: 11 }}>🎓 Grade Released</div>
                         </div>
                       );
                     }
@@ -772,13 +772,13 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 
   function statusLabel(status: string): string {
     const map: Record<string, string> = {
-      student_requested:  "?? Requested – waiting for teacher",
-      teacher_calculating:"?? Teacher is calculating",
-      registrar_review:   "?? Sent to Registrar",
-      principal_review:   "?? Principal Review",
-      principal_approved: "? Principal Approved",
-      registrar_released: "?? Released by Registrar",
-      rejected:           "? Rejected",
+      student_requested:  "📨 Requested – waiting for teacher",
+      teacher_calculating:"📝 Teacher is calculating",
+      registrar_review:   "📤 Sent to Registrar",
+      principal_review:   "🔍 Principal Review",
+      principal_approved: "✅ Principal Approved",
+      registrar_released: "🎓 Released by Registrar",
+      rejected:           "✕ Rejected",
     };
     return map[status] || status;
   }
@@ -850,7 +850,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
                         </div>
                       </td>
                       <td className="text-end pe-4">
-                        <span className="badge bg-success text-white" style={{ fontSize: 10 }}>?? Released</span>
+                        <span className="badge bg-success text-white" style={{ fontSize: 10 }}>🎓 Released</span>
                       </td>
                     </tr>
                   );
@@ -864,7 +864,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
       {/* Pending requests – show status tracker */}
       {!loading && pendingRequests.length > 0 && (
         <div className="d-flex flex-column gap-2">
-          <h3 className="fw-bold small text-dark mb-1">?? Request Status – {termLabel}</h3>
+          <h3 className="fw-bold small text-dark mb-1">📋 Request Status – {termLabel}</h3>
           {pendingRequests.map((r, i) => (
             <div key={i} className="card border-0 shadow-sm rounded-3">
               <div className="card-body p-3 d-flex align-items-center gap-3">
@@ -1008,9 +1008,9 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       <div><h2 className="fw-black fs-4 text-dark mb-1">Tuition Fee</h2><p className="text-muted small mb-0">Term 1 – 2025–2026</p></div>
       <div className="row g-3">
         {[
-          { label:"Total Fees",  value:`?${total.toLocaleString()}`,   cls:"bg-light border",                                        val:"text-dark"    },
-          { label:"Amount Paid", value:`?${paid.toLocaleString()}`,    cls:"bg-success-subtle border-success-subtle",                val:"text-success" },
-          { label:"Balance Due", value:`?${balance.toLocaleString()}`, cls:balance>0?"bg-danger-subtle border-danger-subtle":"bg-success-subtle border-success-subtle", val:balance>0?"text-danger":"text-success" },
+          { label:"Total Fees",  value:`₱${total.toLocaleString()}`,   cls:"bg-light border",                                        val:"text-dark"    },
+          { label:"Amount Paid", value:`₱${paid.toLocaleString()}`,    cls:"bg-success-subtle border-success-subtle",                val:"text-success" },
+          { label:"Balance Due", value:`₱${balance.toLocaleString()}`, cls:balance>0?"bg-danger-subtle border-danger-subtle":"bg-success-subtle border-success-subtle", val:balance>0?"text-danger":"text-success" },
         ].map(s => (
           <div key={s.label} className="col-4">
             <div className={`card border rounded-3 ${s.cls}`}><div className="card-body p-3 text-center"><div className="text-muted small mb-1">{s.label}</div><div className={`fw-black fs-5 ${s.val}`}>{s.value}</div></div></div>
@@ -1034,16 +1034,16 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                 apiPayments.map((f,i) => (
                   <tr key={i}>
                     <td className="ps-4 small fw-medium text-dark">{f.fee_item}</td>
-                    <td className="text-end small text-dark">?{Number(f.amount).toLocaleString()}</td>
-                    <td className="text-end pe-4"><span className={`badge ${f.status==="paid"?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.status==="paid"?"? Paid":"Unpaid"}</span></td>
+                    <td className="text-end small text-dark">₱{Number(f.amount).toLocaleString()}</td>
+                    <td className="text-end pe-4"><span className={`badge ${f.status==="paid"?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.status==="paid"?"✅ Paid":"Unpaid"}</span></td>
                   </tr>
                 ))
               ) : (
                 fees.map((f,i) => (
                   <tr key={i}>
                     <td className="ps-4 small fw-medium text-dark">{f.label}</td>
-                    <td className="text-end small text-dark">?{f.amount.toLocaleString()}</td>
-                    <td className="text-end pe-4"><span className={`badge ${f.paid?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.paid?"? Paid":"Unpaid"}</span></td>
+                    <td className="text-end small text-dark">₱{f.amount.toLocaleString()}</td>
+                    <td className="text-end pe-4"><span className={`badge ${f.paid?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.paid?"✅ Paid":"Unpaid"}</span></td>
                   </tr>
                 ))
               )}
@@ -1055,10 +1055,10 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       {balance>0 && (
         <div className="alert alert-warning d-flex align-items-start gap-2">
           
-          <div className="small">You have an outstanding balance of <strong>?{balance.toLocaleString()}</strong>. Please settle at the Finance Office or visit the Student Portal for online payment options.</div>
+          <div className="small">You have an outstanding balance of <strong>₱{balance.toLocaleString()}</strong>. Please settle at the Finance Office or visit the Student Portal for online payment options.</div>
         </div>
       )}
-      <button onClick={() => onAskJobert(`My tuition balance is ?${balance.toLocaleString()}. How do I pay it?`)} className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}>?? Ask JOBERT about payment</button>
+      <button onClick={() => onAskJobert(`My tuition balance is ₱${balance.toLocaleString()}. How do I pay it?`)} className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}>💬 Ask JOBERT about payment</button>
     </div>
   );
 }
@@ -1211,7 +1211,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
             {approved.map(r => (
               <div key={r.id} className="card border-0 shadow-sm rounded-3">
                 <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}>??</div>
+                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}>📄</div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{r.type}</div>
                     <div className="text-muted" style={{ fontSize:11 }}>Approved by {r.approvedBy} – {r.approvedAt} – Ready: {r.releaseDate}</div>
@@ -1223,7 +1223,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
           </div>
         </div>
       )}
-      <button onClick={() => onAskJobert("How do I request a Transcript of Records?")} className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}>?? Ask JOBERT about documents</button>
+      <button onClick={() => onAskJobert("How do I request a Transcript of Records?")} className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}>💬 Ask JOBERT about documents</button>
     </div>
   );
 }
@@ -1339,7 +1339,7 @@ function ProfilePanel() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setToast("?? File size must be less than 5MB");
+        setToast("⚠️ File size must be less than 5MB");
         setTimeout(() => setToast(null), 3000);
         return;
       }
@@ -1388,7 +1388,7 @@ function ProfilePanel() {
                           style={{ width: 36, height: 36, padding: 0 }}
                           title="Change photo"
                         >
-                          ??
+                          ✏️
                         </button>
                         <input
                           ref={fileInputRef}
