@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { API_BASE } from "../../lib/auth";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
 
@@ -126,50 +127,45 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
 
 /* -- Sidebar -- */
 function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active: string; setActive: (s: Panel) => void; show: boolean; setShow: (b: boolean) => void; onExpandChange?: (expanded: boolean) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const handleMouseEnter = () => { setExpanded(true); onExpandChange?.(true); };
-  const handleMouseLeave = () => { setExpanded(false); onExpandChange?.(false); };
+  const expanded = true;
+  useEffect(() => {
+    onExpandChange?.(true);
+  }, [onExpandChange]);
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: show ? 256 : expanded ? 256 : 80, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
-            {expanded && (
-              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-                <div className="sidebar-brand-title">Teacher Portal</div>
-              </div>
-            )}
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+              <div className="sidebar-brand-title">Teacher Portal</div>
+            </div>
           </div>
-          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
+          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
 
         {/* Profile - Right after Teacher Portal */}
-        {expanded && (
-          <div className="px-3 mt-3 mb-2">
-            <Link href="/teacher/profile" className="text-decoration-none">
-              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                  {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-                </div>
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
-                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
-                </div>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>??</span>
+        <div className="px-3 mt-3 mb-2">
+          <Link href="/teacher/profile" className="text-decoration-none">
+            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
+                {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
               </div>
-            </Link>
-          </div>
-        )}
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
+                <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
+              </div>
+              <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>??</span>
+            </div>
+          </Link>
+        </div>
 
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -185,17 +181,15 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         </nav>
 
         {/* Logout button - More visible at bottom */}
-        {expanded && (
-          <div className="px-3 py-3 border-top border-white border-opacity-10">
-            <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
-              onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
-              <span style={{ fontSize: 16 }}>?</span>
-              <span>Log Out</span>
-            </Link>
-          </div>
-        )}
+        <div className="px-3 py-3 border-top border-white border-opacity-10">
+          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+            onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
+            <span style={{ fontSize: 16 }}>?</span>
+            <span>Log Out</span>
+          </Link>
+        </div>
       </div>
     </>
   );
@@ -470,7 +464,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
     if (!token || token.startsWith("demo_")) return;
     setGradesLoading(true);
     setGradesError(false);
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/teacher/grades/${selectedSubject}`, {
+    fetch(`${API_BASE}/api/teacher/grades/${selectedSubject}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -564,7 +558,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher", {
+    fetch(`${API_BASE}/api/grade-requests/teacher`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -578,7 +572,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher", {
+    fetch(`${API_BASE}/api/grade-requests/teacher`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -607,7 +601,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       
     const token = localStorage.getItem("inform_token");
       if (token) {
-        fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher/${id}/submit`, {
+        fetch(`${API_BASE}/api/grade-requests/teacher/${id}/submit`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           credentials: "include",
@@ -626,7 +620,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     if (isGradeLocked) return;
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher/${id}/release`, {
+    fetch(`${API_BASE}/api/grade-requests/teacher/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -956,7 +950,7 @@ function NotificationsPanel() {
   function fetchNotifs() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications", {
+    fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -988,7 +982,7 @@ function NotificationsPanel() {
   function markAllRead() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications/read", {
+    fetch(`${API_BASE}/api/grade-requests/staff-notifications/read`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -1021,7 +1015,7 @@ function NotificationsPanel() {
                     <div className="d-flex gap-1">
                       <button onClick={() => {
                         const token = localStorage.getItem("inform_token");
-                        if (token) fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        if (token) fetch(`${API_BASE}/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
                         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
                       }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>?</button>
                       <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
@@ -1068,7 +1062,7 @@ function AttendancePanel() {
     if (!token || token.startsWith("demo_")) return;
     setAttLoading(true);
     setAttError(false);
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/teacher/attendance/${selectedSubject}`, {
+    fetch(`${API_BASE}/api/teacher/attendance/${selectedSubject}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1094,7 +1088,7 @@ function AttendancePanel() {
     showAttToast(present ? "? Marked Present" : "? Marked Absent");
 
     if (!token || token.startsWith("demo_")) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/teacher/attendance", {
+    fetch(`${API_BASE}/api/teacher/attendance`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1336,7 +1330,7 @@ export default function TeacherDashboardPage() {
     function fetchNotifs() {
       const token = localStorage.getItem("inform_token");
       if (!token) return;
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications", {
+      fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -1388,7 +1382,7 @@ export default function TeacherDashboardPage() {
     if (!authChecked) return;
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/teacher/dashboard", {
+    fetch(`${API_BASE}/api/teacher/dashboard`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1426,7 +1420,7 @@ export default function TeacherDashboardPage() {
     <div className="teacher-dashboard-layout" style={{ minHeight: "100vh", background: "#f0f4ff" }} suppressHydrationWarning>
       <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
 
-      <div className="teacher-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div className="teacher-dashboard-main" style={{ marginLeft: 256 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm">
           <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">

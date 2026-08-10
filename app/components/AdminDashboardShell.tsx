@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { API_BASE } from "../lib/auth";
 
 /*  Data  */
 const students = [
@@ -156,17 +157,11 @@ function initials(name: string) { return name.split(" ").map(n => n[0]).join("")
 
 /*  Sidebar  */
 function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+  const expanded = true; // Always expanded
 
-  const handleMouseEnter = () => {
-    setExpanded(true);
+  useEffect(() => {
     onExpandChange?.(true);
-  };
-
-  const handleMouseLeave = () => {
-    setExpanded(false);
-    onExpandChange?.(false);
-  };
+  }, [onExpandChange]);
 
   return (
     <>
@@ -174,26 +169,21 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
       <div 
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
         style={{ 
-          width: show ? 256 : expanded ? 256 : 80, 
+          width: 256,
           zIndex: 1045, 
           background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
           overflowY: "auto",
-          transition: "width 0.3s ease",
           overflowX: "hidden"
         }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
-            {expanded && (
-              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-                <div className="sidebar-brand-title">Admin Panel</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
-            )}
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+              <div className="sidebar-brand-title">Admin Panel</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
           </div>
-          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
+          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -203,35 +193,33 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
               style={{ 
                 color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", 
                 background: active === item.id ? "#4f46e5" : "transparent",
-                justifyContent: expanded ? "flex-start" : "center",
+                justifyContent: "flex-start",
                 whiteSpace: "nowrap"
               }}
               title={item.label}>
               <NavIcon id={item.id} />
-              {expanded && <span>{item.label}</span>}
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-              {/* Admin info row */}
-              <div className="d-flex align-items-center gap-3">
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="text-white small fw-semibold text-truncate">Admin User</div>
-                  <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@cfei.edu</div>
-                </div>
+        <div className="px-3 py-4 border-top border-white border-opacity-10">
+          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+            {/* Admin info row */}
+            <div className="d-flex align-items-center gap-3">
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="text-white small fw-semibold text-truncate">Admin User</div>
+                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@cfei.edu</div>
               </div>
-              {/* Logout button below */}
-              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
-                Logout
-              </button>
             </div>
+            {/* Logout button below */}
+            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
+              Logout
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
@@ -249,7 +237,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/dashboard", {
+    fetch(`${API_BASE}/api/admin/dashboard`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -595,7 +583,7 @@ function StudentsPanel() {
     }
     setSearchLoading(true);
     const timer = setTimeout(() => {
-      fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/students/search?q=${encodeURIComponent(search.trim())}`, {
+      fetch(`${API_BASE}/api/admin/students/search?q=${encodeURIComponent(search.trim())}`, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
       })
@@ -780,7 +768,7 @@ function EnrollmentPanel() {
   useEffect(() => {
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments", {
+  fetch(`${API_BASE}/api/admin/enrollments`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
@@ -811,7 +799,7 @@ function EnrollmentPanel() {
 
   if (!token) return;
   // Find the enrollment db id from the list � for now we match by student_id
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments`, {
+  fetch(`${API_BASE}/api/admin/enrollments`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
@@ -820,7 +808,7 @@ function EnrollmentPanel() {
       const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
      
       if (!match) return;
-      return fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments/${match.id}/approve`, {
+      return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/approve`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
@@ -956,7 +944,7 @@ function TuitionPanel() {
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
+    fetch(`${API_BASE}/api/admin/payments`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1076,7 +1064,7 @@ function TuitionPanel() {
                             onClick={() => {
                               const token = localStorage.getItem("inform_token");
                               if (!token) return;
-                              fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/payments/${(r as typeof r & { paymentId?: number }).paymentId}/verify`, {
+                              fetch(`${API_BASE}/api/admin/payments/${(r as typeof r & { paymentId?: number }).paymentId}/verify`, {
                                 method: "PATCH",
                                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                                 credentials: "include",
@@ -1133,7 +1121,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/teachers", {
+    fetch(`${API_BASE}/api/admin/teachers`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1478,13 +1466,13 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
     const endpoint = role === "registrar"
-      ? "https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar"
-      : "https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal";
+      ? `${API_BASE}/api/grade-requests/registrar`
+      : `${API_BASE}/api/grade-requests/principal`;
     fetch(endpoint, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.requests) setRequests(data.requests); })
       .catch(() => {});
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
+    fetch(`${API_BASE}/api/grade-requests/config`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.config) setTermConfig(data.config); })
       .catch(() => {});
@@ -1502,7 +1490,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) { showToast("Session expired. Please log in again."); return; }
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${open ? "open" : "close"}`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1520,7 +1508,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function sendToPrincipal(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/send-to-principal`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/send-to-principal`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1533,7 +1521,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function releaseToTeacher(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/release`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1547,7 +1535,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function approveRequest(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/approve`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${id}/approve`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1562,7 +1550,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     if (!token) return;
     const reason = prompt("Reason for rejection (required):") || "";
     if (!reason.trim()) { showToast("Rejection reason is required."); return; }
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/reject`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${id}/reject`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1809,7 +1797,7 @@ function AdminDocumentsPanel() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
     setLoading(true);
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/documents", {
+    fetch(`${API_BASE}/api/admin/documents`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1865,7 +1853,7 @@ function AdminDocumentsPanel() {
   // Real API call
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/documents/${id}/approve`, {
+  fetch(`${API_BASE}/api/admin/documents/${id}/approve`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
@@ -1895,7 +1883,7 @@ function AdminDocumentsPanel() {
   const token = localStorage.getItem("inform_token");
 
   if (!token) return;
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/documents/${id}/reject`, {
+  fetch(`${API_BASE}/api/admin/documents/${id}/reject`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
@@ -2443,7 +2431,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     function fetchStaffNotifs() {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (!token) return;
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications", {
+      fetch(`${API_BASE}/api/grade-requests/admin-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -2484,7 +2472,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       // The ID is offset by 100000 for grade_request notifs � get the real DB id
       const realId = id > 100000 ? id - 100000 : null;
       if (token && realId) {
-        fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications/${realId}/read`, {
+        fetch(`${API_BASE}/api/grade-requests/admin-notifications/${realId}/read`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
@@ -2499,7 +2487,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     if (["registrar", "principal"].includes(role ?? "")) {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (token) {
-        fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications/read", {
+        fetch(`${API_BASE}/api/grade-requests/admin-notifications/read`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
@@ -2534,7 +2522,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} />
 
       {/* Main content - responsive for all screen sizes */}
-      <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div className="admin-dashboard-main" style={{ marginLeft: 256, minHeight: "100vh", transition: "margin-left 0.3s ease" }}>
         {/* Topbar � hidden when parent supplies its own banner (e.g. Principal portal) */}
         {!hideTopbarControls && (
         <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">

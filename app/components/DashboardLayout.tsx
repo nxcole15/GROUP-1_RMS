@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode } from "react";
 
 type DashboardLayoutProps = {
   sidebar: ReactNode;
@@ -9,11 +9,14 @@ type DashboardLayoutProps = {
   sidebarExpanded: boolean;
 };
 
-export function DashboardLayout({ sidebar, topbar, children, sidebarExpanded }: DashboardLayoutProps) {
+export function DashboardLayout({ sidebar, topbar, children }: DashboardLayoutProps) {
   return (
     <div className="dashboard-layout">
       {sidebar}
-      <div className="dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div
+        className="dashboard-main"
+        style={{ marginLeft: 256 }}
+      >
         {topbar}
         <main className="dashboard-content">{children}</main>
       </div>
