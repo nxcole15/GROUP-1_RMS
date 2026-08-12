@@ -61,7 +61,6 @@ export default function EnrollmentPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [successData, setSuccessData] = useState<{ student_id: string; login_url: string; email: string } | null>(null);
 
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", middleName: "", extensionName: "",
@@ -167,12 +166,7 @@ export default function EnrollmentPage() {
         return;
       }
 
-      // Success — capture credentials and move to confirmation screen
-      setSuccessData({
-        student_id: data.student_id,
-        login_url: data.login_url,
-        email: data.email,
-      });
+      // Success — move to confirmation screen
       setStep(5);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -199,59 +193,26 @@ export default function EnrollmentPage() {
         <div className="card border-0 shadow-lg rounded-3 overflow-hidden" style={{ maxWidth: 560, width: "100%" }}>
           <div className="card-body p-5 text-center">
             <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-            <h2 className="fw-black text-success mb-2">Enrollment Approved!</h2>
-            <p className="text-muted mb-4">Your enrollment has been approved and your login credentials have been sent to your email.</p>
+            <h2 className="fw-black text-success mb-2">Application Submitted!</h2>
+            <p className="text-muted mb-4">Your enrollment application has been received. The Registrar will review it and forward it to the Principal for approval.</p>
 
-            {successData && (
-              <>
-                <div className="alert alert-info text-start mb-4">
-                  <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
-                  <div className="mb-2"><strong>Email:</strong> {formData.email}</div>
-                  <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
-                  <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
-                  <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
-                  <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
-                </div>
-
-                {/* Credentials Display */}
-                <div className="card border-2 border-success rounded-3 mb-4" style={{ background: "#f0fdf4" }}>
-                  <div className="card-body p-4">
-                    <h5 className="fw-bold text-success mb-3">🔐 Your Login Credentials</h5>
-                    <div className="d-flex flex-column gap-3">
-                      <div className="p-3 rounded-2" style={{ background: "#fff", border: "1px solid #86efac" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "4px" }}>Student ID</div>
-                        <div style={{ fontSize: "20px", fontWeight: "900", color: "#16a34a", letterSpacing: "0.04em", fontFamily: "monospace" }}>{successData.student_id}</div>
-                      </div>
-                      <div className="p-3 rounded-2" style={{ background: "#fff", border: "1px solid #86efac" }}>
-                        <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "4px" }}>Temporary Password</div>
-                        <div style={{ fontSize: "20px", fontWeight: "900", color: "#dc2626", letterSpacing: "0.04em", fontFamily: "monospace" }}>••••••••</div>
-                        <small className="text-muted" style={{ fontSize: "11px" }}>(check your email for the full password)</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "12px 16px", marginBottom: "24px", fontSize: "13px", color: "#92400e" }}>
-                  ⚠️ <strong>Important:</strong> A credentials email has been sent to <strong>{successData.email}</strong>. Please check your inbox (and spam folder) for your temporary password.
-                </div>
-
-                <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                  <a href={successData.login_url} className="btn btn-success btn-lg rounded-2 fw-bold" style={{ background: "#16a34a", border: "none" }}>
-                    📱 Open Login Portal →
-                  </a>
-                </div>
-              </>
-            )}
+            <div className="alert alert-info text-start mb-4">
+              <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
+              <div className="mb-2"><strong>Email:</strong> {formData.email}</div>
+              <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
+              <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
+              <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
+              <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
+            </div>
 
             <div className="card border-2 border-primary rounded-3 mb-4">
               <div className="card-body p-4">
-                <h5 className="fw-bold text-primary mb-3">📧 Next Steps</h5>
+                <h5 className="fw-bold text-primary mb-3">📧 What Happens Next?</h5>
                 <div className="d-flex flex-column gap-3 text-start">
                   {[
-                    { n:"1", label:"Check Email", desc:"Open your email and find the credentials message from CFEI INFORM." },
-                    { n:"2", label:"Copy Your Password", desc:"Copy your temporary password from the email (not shown on this page for security)." },
-                    { n:"3", label:"Login to Portal", desc:"Click the button above or visit the login page with your Student ID and password." },
-                    { n:"4", label:"Change Password", desc:"Upon first login, you'll be prompted to change your temporary password to a secure one." },
+                    { n:"1", label:"Registrar Review", desc:"The Registrar will verify your submitted details." },
+                    { n:"2", label:"Principal Approval", desc:"The Principal will make the final enrollment decision." },
+                    { n:"3", label:"Credentials Email", desc:`Once approved, your Student ID and temporary password will be sent to ${formData.email}.` },
                   ].map(s => (
                     <div key={s.n} className="d-flex align-items-start gap-3">
                       <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
@@ -263,10 +224,10 @@ export default function EnrollmentPage() {
                     </div>
                   ))}
                 </div>
-                <small className="text-muted d-block mt-3">💡 <strong>Tip:</strong> Bookmark the login page for easy access next time.</small>
+                <small className="text-muted d-block mt-3">⚠️ Please check your inbox (and spam folder) for the credentials email. You will need it to log in.</small>
               </div>
             </div>
-            <Link href="/" className="btn btn-outline-primary btn-lg rounded-2 fw-bold">← Back to Home</Link>
+            <Link href="/" className="btn btn-primary btn-lg rounded-2 fw-bold">← Back to Home</Link>
           </div>
         </div>
       </div>
