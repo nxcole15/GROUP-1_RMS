@@ -232,7 +232,7 @@ export default function RegistrarDashboardPage() {
       {/* Welcome banner */}
       <div
         style={{
-          marginLeft: sidebarExpanded ? 256 : 80,
+          marginLeft: 0,
           background: "linear-gradient(135deg, #065f46 0%, #059669 60%, #10b981 100%)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
           padding: "1.25rem 1.5rem",
@@ -241,6 +241,11 @@ export default function RegistrarDashboardPage() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: "1rem",
+          position: "fixed",
+          top: 0,
+          left: 256,
+          right: 0,
+          zIndex: 1001,
         }}
       >
         {/* Left: title */}
@@ -313,7 +318,7 @@ export default function RegistrarDashboardPage() {
         </>
       )}
 
-      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} readOnly={false} hideTopbarControls role="registrar" />
+      <AdminDashboardPage hideBanner onSidebarExpandChange={setSidebarExpanded} readOnly={false} hideTopbarControls role="registrar" bannerHeight={85} />
     </div>
   );
 }

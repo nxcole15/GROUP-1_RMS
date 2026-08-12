@@ -153,15 +153,26 @@ const navItems = [
   { id:"timelog",       label:"Teacher Time Logs" },
 ];
 
-function initials(name: string) { return name.split(" ").map(n => n[0]).join("").slice(0, 2); }
+function initials(name: string) { 
+  if (!name) return "??";
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2); 
+}
 
 /*  Sidebar  */
-function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean }) {
+function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests, role }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean; role?: string }) {
   const expanded = true; // Always expanded
 
   useEffect(() => {
     onExpandChange?.(true);
   }, [onExpandChange]);
+
+  const roleConfig = {
+    principal: { title: "Principal Panel", subtitle: "Full Access", initials: "PR", email: "principal@cfei.edu" },
+    registrar: { title: "Registrar Panel", subtitle: "Full Access", initials: "RG", email: "registrar@cfei.edu" },
+    accounting: { title: "Accounting Panel", subtitle: "Full Access", initials: "AC", email: "accounting@cfei.edu" },
+  };
+
+  const config = roleConfig[role as keyof typeof roleConfig] || { title: "Admin Panel", subtitle: "Full Access", initials: "AD", email: "admin@cfei.edu" };
 
   return (
     <>
@@ -170,7 +181,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
         style={{ 
           width: 256,
-          zIndex: 1045, 
+          zIndex: 1000, 
           background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
           overflowY: "auto",
           overflowX: "hidden"
@@ -181,7 +192,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">Admin Panel</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
+              <div className="sidebar-brand-title">{config.title}</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
           <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
@@ -208,10 +219,10 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
           <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
             {/* Admin info row */}
             <div className="d-flex align-items-center gap-3">
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{config.initials}</div>
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">Admin User</div>
-                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@cfei.edu</div>
+                <div className="text-white small fw-semibold text-truncate">{role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} User</div>
+                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{config.email}</div>
               </div>
             </div>
             {/* Logout button below */}
@@ -762,35 +773,52 @@ function EnrollmentPanel() {
 
   const [enrollments, setEnrollments] = useState<{
     name: string; id: string; track: string; grade: number;
-    date: string; enrollDate: Date; status: string; photo: string | null;
+    date: string; enrollDate: Date; status: string; photo: string | null; appId?: number;
   }[]>([]);
 
   useEffect(() => {
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch(`${API_BASE}/api/admin/enrollments`, {
+  
+  // Fetch from applications API (where students actually submit)
+  fetch(`${API_BASE}/api/applications`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
-    .then(r => r.ok ? r.json() : null)
+    .then(r => {
+      if (!r.ok) {
+        console.error("Applications fetch error:", r.status);
+        return null;
+      }
+      return r.json();
+    })
     .then(data => {
-      if (data?.enrollments?.length) {
-        setEnrollments(data.enrollments.map((e: {
-          id: number; student_id: string; student_name: string;
-          term: string; status: string; created_at: string;
+      console.log("Applications data:", data);
+      if (data?.applications && Array.isArray(data.applications)) {
+        // Map applications to enrollment format
+        setEnrollments(data.applications.map((app: {
+          id: number; student_name?: string; email: string;
+          pathway?: string; grade_level?: number; status: string; created_at: string;
         }) => ({
-          name: e.student_name,
-          id: e.student_id,
-          track: "N/A",
-          grade: 0,
-          date: new Date(e.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
-          enrollDate: new Date(e.created_at),
-          status: e.status === "approved" ? "Confirmed" : e.status === "rejected" ? "Rejected" : "Pending",
+          name: app.student_name || app.email || "Unknown",
+          id: app.email,
+          track: app.pathway || "N/A",
+          grade: app.grade_level || 0,
+          date: new Date(app.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+          enrollDate: new Date(app.created_at),
+          status: app.status === "approved" ? "Confirmed" : app.status === "submitted" || app.status === "registrar_review" ? "Pending" : "Other",
           photo: null,
+          appId: app.id,
         })));
+      } else {
+        console.warn("No applications data received");
+        setEnrollments([]);
       }
     })
-    .catch(() => {});
+    .catch(err => {
+      console.error("Applications fetch error:", err);
+      setEnrollments([]);
+    });
 }, []);
 
   function confirmEnrollment(id: string) {
@@ -809,6 +837,29 @@ function EnrollmentPanel() {
      
       if (!match) return;
       return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/approve`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+    })
+    .catch(() => {});
+}
+
+  function rejectEnrollment(id: string) {
+  setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Rejected" } : e));
+  const token = localStorage.getItem("inform_token");
+
+  if (!token) return;
+  fetch(`${API_BASE}/api/admin/enrollments`, {
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+  })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
+      if (!match) return;
+      return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/reject`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
@@ -904,7 +955,7 @@ function EnrollmentPanel() {
                       </span>
                     </td>
                     <td className="text-end pe-4">
-                      <div className="d-flex gap-2 justify-content-end align-items-center">
+                      <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
                         {/* Upload ID photo */}
                         <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
                           Add Photo
@@ -916,7 +967,32 @@ function EnrollmentPanel() {
                           />
                         </label>
                         {e.status === "Pending" && (
-                          <button onClick={() => confirmEnrollment(e.id)} className="btn btn-primary btn-sm" style={{ fontSize:11 }}>Confirm</button>
+                          <>
+                            <button onClick={() => {
+                              const token = localStorage.getItem("inform_token");
+                              if (!token || !e.appId) return;
+                              fetch(`${API_BASE}/api/applications/${e.appId}/forward`, {
+                                method: "PATCH",
+                                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({}),
+                              }).then(() => {
+                                setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Confirmed" } : el));
+                              });
+                            }} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Accept</button>
+                            <button onClick={() => {
+                              const token = localStorage.getItem("inform_token");
+                              if (!token || !e.appId) return;
+                              fetch(`${API_BASE}/api/applications/${e.appId}/reject`, {
+                                method: "PATCH",
+                                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({}),
+                              }).then(() => {
+                                setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Rejected" } : el));
+                              });
+                            }} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ Reject</button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -2390,7 +2466,7 @@ function AdminTimeLogPanel() {
 }
 
 /*  Page  */
-export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string } = {}) {
+export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role, bannerHeight }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string; bannerHeight?: number } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -2519,36 +2595,41 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
   return (
     <div className="admin-dashboard-layout" suppressHydrationWarning>
-      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} />
+      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} role={role} />
+
+      {/* Fixed header bar - above everything */}
+      {!hideTopbarControls && (
+      <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 shadow-sm flex-wrap" style={{ position: "fixed", top: 0, left: 256, right: 0, zIndex: 1046, transition: "left 0.3s ease", height: 57 }}>
+        <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
+          <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
+            <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
+          </span>
+          <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)} aria-label="Notifications">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
+          </button>
+          <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
+        </div>
+      </header>
+      )}
 
       {/* Main content - responsive for all screen sizes */}
-      <div className="admin-dashboard-main" style={{ marginLeft: 256, minHeight: "100vh", transition: "margin-left 0.3s ease" }}>
+      <div className="admin-dashboard-main" style={{ marginLeft: 256, minHeight: "100vh", transition: "margin-left 0.3s ease", display: "flex", flexDirection: "column", paddingTop: !hideTopbarControls ? 57 : (bannerHeight || 0) }}>
         {/* Topbar � hidden when parent supplies its own banner (e.g. Principal portal) */}
         {!hideTopbarControls && (
-        <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
-          <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
-              <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
-            </span>
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)} aria-label="Notifications">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
-            </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
-          </div>
-        </header>
+        <div style={{ display: "none" }}>hidden header</div>
         )}
 
-        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4">
+        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4" style={{ minHeight: 0 }}>
           {renderPanel()}
         </main>
       </div>
@@ -2556,7 +2637,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       {/* Notification Dropdown - responsive */}
       {showNotifDropdown && (
         <>
-          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:9999, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
+          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
             <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">

@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  // ── Output file tracing root ─────────────────────────────────────────────
+  // Fixes workspace root detection when multiple lockfiles exist
+  outputFileTracingRoot: path.resolve(__dirname),
+
   // ── Server-side runtime env vars ────────────────────────────────────────────
   // BACKEND_URL is used by Next.js API routes (server-side only) to reach
   // the Express backend. It is NOT exposed to the browser.

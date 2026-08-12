@@ -336,7 +336,7 @@ export default function PrincipalDashboardPage() {
   return (
     <div className="min-vh-100">
       {/* Welcome banner */}
-      <div style={{ marginLeft: 0, background: "linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 60%,#2563eb 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "1.25rem 1.5rem", transition: "margin-left 0.3s ease", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", position: "relative", zIndex: 1000 }}>
+      <div style={{ marginLeft: 0, background: "linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 60%,#2563eb 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "1.25rem 1.5rem", transition: "margin-left 0.3s ease", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", position: "fixed", top: 0, left: 256, right: 0, zIndex: 1001 }}>
         <div>
           <div className="small text-uppercase fw-semibold mb-1" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}>Principal Portal</div>
           <h1 className="fw-black mb-0" style={{ color: "#ffffff", fontSize: "1.5rem", lineHeight: 1.2 }}>Welcome back, Principal</h1>
@@ -397,6 +397,7 @@ export default function PrincipalDashboardPage() {
         onSidebarExpandChange={setSidebarExpanded}
         hideTopbarControls
         role="principal"
+        bannerHeight={85}
       />
 
       {/* Profile overlay */}
