@@ -775,6 +775,76 @@ function EnrollmentPanel() {
     date: string; enrollDate: Date; status: string; photo: string | null; appId?: number;
   }[]>([]);
 
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [requirementsStatus, setRequirementsStatus] = useState<Record<string, Record<string, boolean>>>({});
+  const [requirementsNotes, setRequirementsNotes] = useState<Record<string, string>>({});
+  const [rejectionDropdownStudentId, setRejectionDropdownStudentId] = useState<string | null>(null);
+  const [rejectionChecklist, setRejectionChecklist] = useState<Record<string, boolean>>({});
+  const [rejectionReason, setRejectionReason] = useState<string>("");
+
+  const admissionRequirements = [
+    { id: "form9", label: "School Form 9/Report Card" },
+    { id: "birthcert", label: "Birth Certificate" },
+    { id: "gmoral", label: "Certificate of Good Moral Character" },
+    { id: "idpic", label: "2x2 Colored ID Pictures" },
+    { id: "esc", label: "ESC Certificate" },
+    { id: "completion", label: "Certificate of Completion/Diploma" },
+    { id: "form10", label: "School Form 10" },
+  ];
+
+  const toggleRequirement = (studentId: string, requirementId: string) => {
+    setRequirementsStatus(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [requirementId]: !prev[studentId]?.[requirementId],
+      },
+    }));
+  };
+
+  const openRejectionDropdown = (studentId: string) => {
+    setRejectionDropdownStudentId(rejectionDropdownStudentId === studentId ? null : studentId);
+    // Initialize empty checklist for this rejection (none are checked initially)
+    setRejectionChecklist({});
+    // Pre-fill reason with all requirements (none are checked)
+    const allReqs = admissionRequirements.map(req => req.label);
+    setRejectionReason(allReqs.join(", "));
+  };
+
+  const toggleRejectionRequirement = (requirementId: string) => {
+    setRejectionChecklist(prev => ({
+      ...prev,
+      [requirementId]: !prev[requirementId],
+    }));
+    // Update reason to reflect unchecked items
+    const updatedChecklist = { ...rejectionChecklist, [requirementId]: !rejectionChecklist[requirementId] };
+    const uncheckedReqs = admissionRequirements
+      .filter(req => !updatedChecklist[req.id])
+      .map(req => req.label);
+    setRejectionReason(uncheckedReqs.join(", "));
+  };
+
+  const confirmRejection = async (studentId: string, appId?: number) => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || !appId) return;
+    
+    try {
+      await fetch(`${API_BASE}/api/applications/${appId}/reject`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+      
+      setEnrollments(prev => prev.map(e => e.id === studentId ? { ...e, status: "Rejected" } : e));
+      setRejectionDropdownStudentId(null);
+      setRejectionChecklist({});
+      setRejectionReason("");
+    } catch (err) {
+      console.error("Rejection error:", err);
+    }
+  };
+
   useEffect(() => {
   const token = localStorage.getItem("inform_token");
   if (!token) return;
@@ -820,53 +890,54 @@ function EnrollmentPanel() {
     });
 }, []);
 
-  function confirmEnrollment(id: string) {
-  setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Confirmed" } : e));
-  const token = localStorage.getItem("inform_token");
 
-  if (!token) return;
-  // Find the enrollment db id from the list � for now we match by student_id
-  fetch(`${API_BASE}/api/admin/enrollments`, {
-    headers: { Authorization: `Bearer ${token}` },
-    credentials: "include",
-  })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
-     
-      if (!match) return;
-      return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/approve`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
+  function confirmEnrollment(id: string) {
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Confirmed" } : e));
+    const token = localStorage.getItem("inform_token");
+
+    if (!token) return;
+    // Find the enrollment db id from the list – for now we match by student_id
+    fetch(`${API_BASE}/api/admin/enrollments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     })
-    .catch(() => {});
-}
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
+       
+        if (!match) return;
+        return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/approve`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        });
+      })
+      .catch(() => {});
+  }
 
   function rejectEnrollment(id: string) {
-  setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Rejected" } : e));
-  const token = localStorage.getItem("inform_token");
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Rejected" } : e));
+    const token = localStorage.getItem("inform_token");
 
-  if (!token) return;
-  fetch(`${API_BASE}/api/admin/enrollments`, {
-    headers: { Authorization: `Bearer ${token}` },
-    credentials: "include",
-  })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
-      if (!match) return;
-      return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/reject`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
+    if (!token) return;
+    fetch(`${API_BASE}/api/admin/enrollments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     })
-    .catch(() => {});
-}
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
+        if (!match) return;
+        return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/reject`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        });
+      })
+      .catch(() => {});
+  }
 
   function handlePhotoUpload(id: string, file: File) {
     const url = URL.createObjectURL(file);
@@ -920,88 +991,383 @@ function EnrollmentPanel() {
             <tbody>
               {enrollments.map((e) => {
                 const isLate = e.enrollDate > DEADLINE;
+                const isExpanded = expandedStudentId === e.id;
                 return (
-                  <tr key={e.id} style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
-                    <td className="ps-4">
-                      <div className="d-flex align-items-center gap-2">
-                        {/* ID Photo or initials avatar */}
-                        {e.photo ? (
-                          <img
-                            src={e.photo}
-                            alt={e.name}
-                            className="rounded-circle flex-shrink-0"
-                            style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }}
-                          />
-                        ) : (
-                          <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:11 }}>
-                            {initials(e.name)}
+                  <React.Fragment key={e.id}>
+                    <tr style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
+                      <td className="ps-4">
+                        <div className="d-flex align-items-center gap-2">
+                          {/* ID Photo or initials avatar */}
+                          {e.photo ? (
+                            <img
+                              src={e.photo}
+                              alt={e.name}
+                              className="rounded-circle flex-shrink-0"
+                              style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }}
+                            />
+                          ) : (
+                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:11 }}>
+                              {initials(e.name)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="small fw-medium text-dark">{e.name}</div>
+                            {isLate && (
+                              <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <div className="small fw-medium text-dark">{e.name}</div>
-                          {isLate && (
-                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
+                        </div>
+                      </td>
+                      <td className="d-none d-sm-table-cell font-mono text-muted small">
+                        <button
+                          onClick={() => setExpandedStudentId(isExpanded ? null : e.id)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: isExpanded ? "#1e40af" : "#64748b",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            fontSize: "0.875rem",
+                            fontWeight: isExpanded ? 600 : 400,
+                            padding: 0,
+                          }}
+                          title="Click to view admission requirements"
+                        >
+                          {e.id}
+                        </button>
+                      </td>
+                      <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
+                      <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
+                      <td>
+                        <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
+                          {e.status}
+                        </span>
+                      </td>
+                      <td className="text-end pe-4">
+                        <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
+                          {/* Upload ID photo */}
+                          <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
+                            Add Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display:"none" }}
+                              onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }}
+                            />
+                          </label>
+                          {e.status === "Pending" && (
+                            <>
+                              <button onClick={() => {
+                                const token = localStorage.getItem("inform_token");
+                                if (!token || !e.appId) return;
+                                fetch(`${API_BASE}/api/applications/${e.appId}/forward`, {
+                                  method: "PATCH",
+                                  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({}),
+                                }).then(() => {
+                                  setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Confirmed" } : el));
+                                });
+                              }} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Accept</button>
+                              <button onClick={() => openRejectionDropdown(e.id)} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ Reject</button>
+                            </>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="d-none d-sm-table-cell font-mono text-muted small">{e.id}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
-                    <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
-                    <td>
-                      <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
-                        {e.status}
-                      </span>
-                    </td>
-                    <td className="text-end pe-4">
-                      <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
-                        {/* Upload ID photo */}
-                        <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
-                          Add Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display:"none" }}
-                            onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }}
-                          />
-                        </label>
-                        {e.status === "Pending" && (
-                          <>
-                            <button onClick={() => {
-                              const token = localStorage.getItem("inform_token");
-                              if (!token || !e.appId) return;
-                              fetch(`${API_BASE}/api/applications/${e.appId}/forward`, {
-                                method: "PATCH",
-                                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                                credentials: "include",
-                                body: JSON.stringify({}),
-                              }).then(() => {
-                                setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Confirmed" } : el));
-                              });
-                            }} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Accept</button>
-                            <button onClick={() => {
-                              const token = localStorage.getItem("inform_token");
-                              if (!token || !e.appId) return;
-                              fetch(`${API_BASE}/api/applications/${e.appId}/reject`, {
-                                method: "PATCH",
-                                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                                credentials: "include",
-                                body: JSON.stringify({}),
-                              }).then(() => {
-                                setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Rejected" } : el));
-                              });
-                            }} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ Reject</button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    
+                    {/* Admission Requirements Dropdown */}
+                    {isExpanded && (
+                      <tr style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+                        <td colSpan={6} className="p-0">
+                          <div style={{ padding: "1rem 2rem" }}>
+                            <div className="fw-bold text-dark mb-3" style={{ fontSize: "0.95rem" }}>
+                              ADMISSION REQUIREMENTS SUBMITTED:
+                            </div>
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                              gap: "1rem",
+                            }}>
+                              {admissionRequirements.map(req => (
+                                <label
+                                  key={req.id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
+                                    cursor: "pointer",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "0.375rem",
+                                    background: requirementsStatus[e.id]?.[req.id] ? "rgba(16, 185, 129, 0.1)" : "rgba(0,0,0,0.02)",
+                                    border: `1px solid ${requirementsStatus[e.id]?.[req.id] ? "rgba(16, 185, 129, 0.3)" : "rgba(0,0,0,0.05)"}`,
+                                    transition: "all 0.2s",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={requirementsStatus[e.id]?.[req.id] ?? false}
+                                    onChange={() => toggleRequirement(e.id, req.id)}
+                                    style={{
+                                      cursor: "pointer",
+                                      width: "1.1rem",
+                                      height: "1.1rem",
+                                      accentColor: "#10b981",
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: "0.875rem",
+                                      color: requirementsStatus[e.id]?.[req.id] ? "#059669" : "#475569",
+                                      fontWeight: requirementsStatus[e.id]?.[req.id] ? 600 : 400,
+                                      textDecoration: requirementsStatus[e.id]?.[req.id] ? "line-through" : "none",
+                                    }}
+                                  >
+                                    {req.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                            
+                            {/* Missing Requirements / Rejection Reason Text Area */}
+                            <div style={{ marginTop: "1.5rem" }}>
+                              <label style={{
+                                display: "block",
+                                fontSize: "0.875rem",
+                                fontWeight: 600,
+                                color: "#0f172a",
+                                marginBottom: "0.5rem",
+                              }}>
+                                Missing Requirements / Rejection Reason
+                              </label>
+                              <textarea
+                                value={requirementsNotes[e.id] ?? ""}
+                                onChange={(ev) => setRequirementsNotes(prev => ({
+                                  ...prev,
+                                  [e.id]: ev.target.value,
+                                }))}
+                                placeholder="Type notes about any unchecked items or missing documents..."
+                                style={{
+                                  width: "100%",
+                                  minHeight: "80px",
+                                  padding: "0.75rem",
+                                  border: "1px solid #cbd5e1",
+                                  borderRadius: "0.5rem",
+                                  fontSize: "0.875rem",
+                                  fontFamily: "inherit",
+                                  color: "#e5e8f0",
+                                  resize: "vertical",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                            </div>
+                            
+                            <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                              <button
+                                onClick={() => setExpandedStudentId(null)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: "none",
+                                  border: "1px solid #cbd5e1",
+                                  color: "#475569",
+                                  cursor: "pointer",
+                                  padding: "0.375rem 0.75rem",
+                                  fontSize: "0.8125rem",
+                                  borderRadius: "0.375rem",
+                                }}
+                              >
+                                Close
+                              </button>
+                              <button
+                                style={{
+                                  background: "#10b981",
+                                  border: "none",
+                                  color: "white",
+                                  cursor: "pointer",
+                                  padding: "0.375rem 0.75rem",
+                                  fontSize: "0.8125rem",
+                                  borderRadius: "0.375rem",
+                                  fontWeight: 600,
+                                }}
+                                onClick={() => {
+                                  setExpandedStudentId(null);
+                                }}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Rejection Dropdown - Add as separate row for expanded rejection */}
+      {rejectionDropdownStudentId && (
+        <div className="card border-0 shadow-sm rounded-3 mt-3" style={{ background: "#fef2f2" }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h4 className="fw-bold text-dark mb-0">
+                Reject Enrollment: {enrollments.find(e => e.id === rejectionDropdownStudentId)?.name}
+              </h4>
+              <button
+                onClick={() => setRejectionDropdownStudentId(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.25rem",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {/* Admission Requirements Checklist */}
+              <div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginBottom: "1rem" }}>
+                  ADMISSION REQUIREMENTS SUBMITTED:
+                </div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "0.75rem",
+                }}>
+                  {admissionRequirements.map(req => (
+                    <label
+                      key={req.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        cursor: "pointer",
+                        padding: "0.5rem 0.75rem",
+                        borderRadius: "0.375rem",
+                        background: rejectionChecklist[req.id] ? "rgba(16, 185, 129, 0.1)" : "rgba(0,0,0,0.02)",
+                        border: `1px solid ${rejectionChecklist[req.id] ? "rgba(16, 185, 129, 0.3)" : "rgba(0,0,0,0.05)"}`,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={rejectionChecklist[req.id] ?? false}
+                        onChange={() => toggleRejectionRequirement(req.id)}
+                        style={{
+                          cursor: "pointer",
+                          width: "1.1rem",
+                          height: "1.1rem",
+                          accentColor: "#10b981",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          color: rejectionChecklist[req.id] ? "#059669" : "#475569",
+                          fontWeight: rejectionChecklist[req.id] ? 600 : 400,
+                          textDecoration: rejectionChecklist[req.id] ? "line-through" : "none",
+                        }}
+                      >
+                        {req.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              <div>
+                <label style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  marginBottom: "0.5rem",
+                }}>
+                  Rejection Reason
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Edit or add additional comments..."
+                  style={{
+                    width: "100%",
+                    minHeight: "100px",
+                    padding: "0.75rem",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.875rem",
+                    fontFamily: "inherit",
+                    color: "#0f172a",
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <div style={{
+                  fontSize: "0.75rem",
+                  color: "#64748b",
+                  marginTop: "0.25rem",
+                }}>
+                  Pre-filled with unchecked requirements. Edit as needed.
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setRejectionDropdownStudentId(null)}
+                  style={{
+                    padding: "0.5rem 1.25rem",
+                    border: "1px solid #cbd5e1",
+                    background: "white",
+                    color: "#475569",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const student = enrollments.find(e => e.id === rejectionDropdownStudentId);
+                    if (student) {
+                      confirmRejection(rejectionDropdownStudentId, student.appId);
+                    }
+                  }}
+                  style={{
+                    padding: "0.5rem 1.25rem",
+                    border: "none",
+                    background: "#dc2626",
+                    color: "white",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#b91c1c")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#dc2626")}
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
