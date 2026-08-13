@@ -63,9 +63,10 @@ export default function EnrollmentPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
+    lrn: "",
     firstName: "", lastName: "", middleName: "", extensionName: "",
     email: "", phone: "",
-    course: "", year: "",
+    pathway: "", track: "", year: "",
     address: "", dateOfBirth: "",
     studentStatus: "", studentId: "",
     gender: "", civilStatus: "",
@@ -96,8 +97,9 @@ export default function EnrollmentPage() {
 
   function validateForm(): string | null {
     const required: Record<string, string> = {
+      lrn: "Learners Reference No. (LRN)",
       firstName: "First Name", lastName: "Last Name", email: "Email",
-      phone: "Phone", course: "Pathway", year: "Grade Level",
+      phone: "Phone", pathway: "Track", track: "Strand", year: "Grade Level",
       address: "Address", dateOfBirth: "Date of Birth",
       studentStatus: "Student Status", gender: "Gender",
       nationality: "Nationality", religion: "Religion",
@@ -106,6 +108,7 @@ export default function EnrollmentPage() {
     for (const [key, label] of Object.entries(required)) {
       if (!formData[key as keyof typeof formData]?.toString().trim()) return `${label} is required.`;
     }
+    if (formData.lrn.length !== 12 || !/^\d{12}$/.test(formData.lrn)) return "LRN must be exactly 12 digits.";
     if (formData.studentStatus === "old" && !formData.studentId.trim()) return "Student ID is required for returning students.";
     if (!formData.idPhoto) return "Please upload a 2×2 ID photo.";
     return null;
@@ -124,6 +127,7 @@ export default function EnrollmentPage() {
     setSubmitError(null);
     try {
       const payload = {
+        lrn:                     formData.lrn,
         first_name:              formData.firstName,
         last_name:               formData.lastName,
         middle_name:             formData.middleName || null,
@@ -138,7 +142,8 @@ export default function EnrollmentPage() {
         address:                 formData.address,
         student_status:          formData.studentStatus || "new",
         existing_student_id:     formData.studentId || null,
-        pathway:                 formData.course,
+        track:                   formData.pathway,
+        strand:                  formData.track,
         grade_level:             formData.year,
         learning_modality:       formData.learningModality,
         father_name:             formData.fatherName || null,
@@ -198,9 +203,11 @@ export default function EnrollmentPage() {
 
             <div className="alert alert-info text-start mb-4">
               <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
+              <div className="mb-2"><strong>LRN:</strong> {formData.lrn}</div>
               <div className="mb-2"><strong>Email:</strong> {formData.email}</div>
               <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
-              <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
+              <div className="mb-2"><strong>Track:</strong> {formData.pathway}</div>
+              <div className="mb-2"><strong>Strand:</strong> {formData.track}</div>
               <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
               <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
             </div>
@@ -445,13 +452,45 @@ export default function EnrollmentPage() {
                 <div className="col-12"><hr className="my-1" /><div className="fw-bold small text-dark">Academic Information</div></div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold text-muted small">Pathway *</label>
-                  <select name="course" value={formData.course} onChange={handleChange} className="form-select rounded-2" required>
-                    <option value="">Select a pathway</option>
-                    <option value="Academic">Academic Pathway (STEM, HUMSS, ABM)</option>
-                    <option value="TechPro">Technical-Vocational-Livelihood (TVL-TechPro) Pathway</option>
+                  <label className="form-label fw-semibold text-muted small">Learners Reference No. (LRN) *</label>
+                  <input type="text" name="lrn" value={formData.lrn} onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                    setFormData(prev => ({ ...prev, lrn: val }));
+                  }} placeholder="12 digits (e.g., 123456789012)" className="form-control rounded-2" maxLength={12} required />
+                  {formData.lrn && formData.lrn.length < 12 && <small className="text-muted">Remaining: {12 - formData.lrn.length} digits</small>}
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold text-muted small">Track *</label>
+                  <select name="pathway" value={formData.pathway} onChange={handleChange} className="form-select rounded-2" required>
+                    <option value="">Select a track</option>
+                    <option value="Academic Track">Academic Track</option>
+                    <option value="TECH-PRO">TECH-PRO</option>
                   </select>
                 </div>
+
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold text-muted small">Strand *</label>
+                  <select name="track" value={formData.track} onChange={handleChange} className="form-select rounded-2" required disabled={!formData.pathway}>
+                    <option value="">
+                      {!formData.pathway ? "Select track first" : "Select a strand"}
+                    </option>
+                    {formData.pathway === "Academic Track" && (
+                      <>
+                        <option value="STEM">STEM (Science, Technology, Engineering, Mathematics)</option>
+                        <option value="ABM">ABM (Accountancy, Business, Management)</option>
+                        <option value="HUMSS">HUMSS (Humanities, Social Sciences)</option>
+                      </> 
+                    )}
+                    {formData.pathway === "TECH-PRO" && (
+                      <>
+                        <option value="ICT">ICT (Information and Communication Technology)</option>
+                        <option value="Cookery">Cookery</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
                 <div className="col-md-6">
                   <label className="form-label fw-semibold text-muted small">Grade Level *</label>
                   <select name="year" value={formData.year} onChange={handleChange} className="form-select rounded-2" required>
@@ -631,9 +670,11 @@ export default function EnrollmentPage() {
                 {
                   title: "Academic Information",
                   fields: [
+                    ["Learners Reference No. (LRN)", formData.lrn],
                     ["Student Status", formData.studentStatus === "new" ? "New Student" : "Returning Student"],
                     ...(formData.studentStatus === "old" ? [["Student ID", formData.studentId] as [string,string]] : []),
-                    ["Pathway", formData.course],
+                    ["Track", formData.pathway],
+                    ["Strand", formData.track],
                     ["Grade Level", `Grade ${formData.year}`],
                     ["Learning Modality", formData.learningModality],
                   ],

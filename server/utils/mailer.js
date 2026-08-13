@@ -2,18 +2,32 @@
  * utils/mailer.js
  * Nodemailer transporter — used to email credentials to approved students.
  *
- * Setup (Gmail):
- *   1. Go to Google Account → Security → App Passwords
- *   2. Generate an app password for "Mail"
- *   3. Set SMTP_USER and SMTP_PASS in server/.env
+ * SMTP Configuration Required:
+ *   Set these in server/.env:
+ *   - SMTP_HOST (e.g., smtp.gmail.com)
+ *   - SMTP_PORT (e.g., 587)
+ *   - SMTP_USER (your email address)
+ *   - SMTP_PASS (your app password or API key)
+ *   - EMAIL_FROM (optional, defaults to SMTP_USER)
  *
- * If SMTP_USER is not set the mailer falls back to Ethereal (test) transport
- * so development still works without real email credentials.
+ * Example for Gmail:
+ *   SMTP_HOST=smtp.gmail.com
+ *   SMTP_PORT=587
+ *   SMTP_USER=your-email@gmail.com
+ *   SMTP_PASS=xxxx xxxx xxxx xxxx (16-char app password)
+ *   EMAIL_FROM="CFEI INFORM" <your-email@gmail.com>
+ *
+ * Example for SendGrid:
+ *   SMTP_HOST=smtp.sendgrid.net
+ *   SMTP_PORT=587
+ *   SMTP_USER=apikey
+ *   SMTP_PASS=SG.your_api_key_here
+ *   EMAIL_FROM=noreply@cfei.edu
  */
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 
-let transporter;
+let transporter = null;
 
 if (process.env.SMTP_USER && process.env.SMTP_PASS) {
   // Real SMTP transport (Gmail / SendGrid / etc.)
@@ -26,19 +40,13 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       pass: process.env.SMTP_PASS,
     },
   });
-  console.log("✅  Mailer: using SMTP transport →", process.env.SMTP_HOST);
+  console.log("✅  Mailer: SMTP configured → using real email transport");
+  console.log("   Host:", process.env.SMTP_HOST);
+  console.log("   User:", process.env.SMTP_USER);
 } else {
-  // Ethereal test transport — no real emails sent, preview URL logged instead
-  nodemailer.createTestAccount().then((account) => {
-    transporter = nodemailer.createTransport({
-      host:   "smtp.ethereal.email",
-      port:   587,
-      secure: false,
-      auth: { user: account.user, pass: account.pass },
-    });
-    console.log("⚠️  Mailer: no SMTP credentials found — using Ethereal test transport");
-    console.log("   Ethereal user:", account.user);
-  });
+  console.error("❌  MAILER ERROR: SMTP credentials not configured!");
+  console.error("   Set SMTP_USER and SMTP_PASS in server/.env to enable email sending.");
+  console.error("   Enrollment emails will NOT be sent until SMTP is configured.");
 }
 
 /**
@@ -51,11 +59,14 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
  */
 async function sendCredentials({ to, fullName, studentId, tempPass }) {
   if (!transporter) {
-    console.warn("⚠️  Mailer not ready yet — skipping email to", to);
-    return;
+    console.error("❌  Email not sent: SMTP not configured");
+    console.error(`   To: ${to}`);
+    console.error(`   Student ID: ${studentId}`);
+    console.error("   Reason: SMTP_USER and SMTP_PASS not set in server/.env");
+    throw new Error("Email service not configured. Please set SMTP credentials in server/.env");
   }
 
-  const from = process.env.EMAIL_FROM || '"CFEI INFORM System" <no-reply@cfei.edu>';
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@cfei.edu";
   const loginUrl = process.env.CLIENT_ORIGIN
     ? `${process.env.CLIENT_ORIGIN}/login`
     : "http://localhost:3000/login";
@@ -121,12 +132,7 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
     text: `Dear ${fullName},\n\nYour enrollment has been approved.\n\nStudent ID: ${studentId}\nTemporary Password: ${tempPass}\n\nLogin at: ${loginUrl}\n\nPlease change your password after first login.\n\n— CFEI INFORM System`,
   });
 
-  // Log Ethereal preview URL when using test transport
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  if (previewUrl) {
-    console.log("📧  Email preview (Ethereal):", previewUrl);
-  }
-
+  console.log(`✅  Email sent successfully to ${to}`);
   return info;
 }
 

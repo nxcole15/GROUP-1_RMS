@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import { API_BASE } from "../lib/auth";
 
 /*  Data  */
 const students = [
@@ -152,21 +152,26 @@ const navItems = [
   { id:"timelog",       label:"Teacher Time Logs" },
 ];
 
-function initials(name: string) { return name.split(" ").map(n => n[0]).join("").slice(0, 2); }
+function initials(name: string) { 
+  if (!name) return "??";
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2); 
+}
 
 /*  Sidebar  */
-function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests, role }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean; role?: string }) {
+  const expanded = true; // Always expanded
 
-  const handleMouseEnter = () => {
-    setExpanded(true);
+  useEffect(() => {
     onExpandChange?.(true);
+  }, [onExpandChange]);
+
+  const roleConfig = {
+    principal: { title: "Principal Panel", subtitle: "Full Access", initials: "PR", email: "principal@cfei.edu" },
+    registrar: { title: "Registrar Panel", subtitle: "Full Access", initials: "RG", email: "registrar@cfei.edu" },
+    accounting: { title: "Accounting Panel", subtitle: "Full Access", initials: "AC", email: "accounting@cfei.edu" },
   };
 
-  const handleMouseLeave = () => {
-    setExpanded(false);
-    onExpandChange?.(false);
-  };
+  const config = roleConfig[role as keyof typeof roleConfig] || { title: "Admin Panel", subtitle: "Full Access", initials: "AD", email: "admin@cfei.edu" };
 
   return (
     <>
@@ -174,26 +179,21 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
       <div 
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
         style={{ 
-          width: show ? 256 : expanded ? 256 : 80, 
-          zIndex: 1045, 
+          width: 256,
+          zIndex: 1000, 
           background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
           overflowY: "auto",
-          transition: "width 0.3s ease",
           overflowX: "hidden"
         }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
-            {expanded && (
-              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-                <div className="sidebar-brand-title">Admin Panel</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>Full Access</div></div>
-            )}
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+              <div className="sidebar-brand-title">{config.title}</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
-          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
+          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -203,35 +203,33 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
               style={{ 
                 color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", 
                 background: active === item.id ? "#4f46e5" : "transparent",
-                justifyContent: expanded ? "flex-start" : "center",
+                justifyContent: "flex-start",
                 whiteSpace: "nowrap"
               }}
               title={item.label}>
               <NavIcon id={item.id} />
-              {expanded && <span>{item.label}</span>}
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-              {/* Admin info row */}
-              <div className="d-flex align-items-center gap-3">
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>AD</div>
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="text-white small fw-semibold text-truncate">Admin User</div>
-                  <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>admin@cfei.edu</div>
-                </div>
+        <div className="px-3 py-4 border-top border-white border-opacity-10">
+          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+            {/* Admin info row */}
+            <div className="d-flex align-items-center gap-3">
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{config.initials}</div>
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="text-white small fw-semibold text-truncate">{role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} User</div>
+                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{config.email}</div>
               </div>
-              {/* Logout button below */}
-              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
-                Logout
-              </button>
             </div>
+            {/* Logout button below */}
+            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
+              Logout
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
@@ -249,7 +247,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/dashboard", {
+    fetch(`${API_BASE}/api/admin/dashboard`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -595,7 +593,7 @@ function StudentsPanel() {
     }
     setSearchLoading(true);
     const timer = setTimeout(() => {
-      fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/students/search?q=${encodeURIComponent(search.trim())}`, {
+      fetch(`${API_BASE}/api/admin/students/search?q=${encodeURIComponent(search.trim())}`, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
       })
@@ -774,61 +772,172 @@ function EnrollmentPanel() {
 
   const [enrollments, setEnrollments] = useState<{
     name: string; id: string; track: string; grade: number;
-    date: string; enrollDate: Date; status: string; photo: string | null;
+    date: string; enrollDate: Date; status: string; photo: string | null; appId?: number;
   }[]>([]);
+
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [requirementsStatus, setRequirementsStatus] = useState<Record<string, Record<string, boolean>>>({});
+  const [requirementsNotes, setRequirementsNotes] = useState<Record<string, string>>({});
+  const [rejectionDropdownStudentId, setRejectionDropdownStudentId] = useState<string | null>(null);
+  const [rejectionChecklist, setRejectionChecklist] = useState<Record<string, boolean>>({});
+  const [rejectionReason, setRejectionReason] = useState<string>("");
+
+  const admissionRequirements = [
+    { id: "form9", label: "School Form 9/Report Card" },
+    { id: "birthcert", label: "Birth Certificate" },
+    { id: "gmoral", label: "Certificate of Good Moral Character" },
+    { id: "idpic", label: "2x2 Colored ID Pictures" },
+    { id: "esc", label: "ESC Certificate" },
+    { id: "completion", label: "Certificate of Completion/Diploma" },
+    { id: "form10", label: "School Form 10" },
+  ];
+
+  const toggleRequirement = (studentId: string, requirementId: string) => {
+    setRequirementsStatus(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [requirementId]: !prev[studentId]?.[requirementId],
+      },
+    }));
+  };
+
+  const openRejectionDropdown = (studentId: string) => {
+    setRejectionDropdownStudentId(rejectionDropdownStudentId === studentId ? null : studentId);
+    // Initialize empty checklist for this rejection (none are checked initially)
+    setRejectionChecklist({});
+    // Pre-fill reason with all requirements (none are checked)
+    const allReqs = admissionRequirements.map(req => req.label);
+    setRejectionReason(allReqs.join(", "));
+  };
+
+  const toggleRejectionRequirement = (requirementId: string) => {
+    setRejectionChecklist(prev => ({
+      ...prev,
+      [requirementId]: !prev[requirementId],
+    }));
+    // Update reason to reflect unchecked items
+    const updatedChecklist = { ...rejectionChecklist, [requirementId]: !rejectionChecklist[requirementId] };
+    const uncheckedReqs = admissionRequirements
+      .filter(req => !updatedChecklist[req.id])
+      .map(req => req.label);
+    setRejectionReason(uncheckedReqs.join(", "));
+  };
+
+  const confirmRejection = async (studentId: string, appId?: number) => {
+    const token = localStorage.getItem("inform_token");
+    if (!token || !appId) return;
+    
+    try {
+      await fetch(`${API_BASE}/api/applications/${appId}/reject`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+      
+      setEnrollments(prev => prev.map(e => e.id === studentId ? { ...e, status: "Rejected" } : e));
+      setRejectionDropdownStudentId(null);
+      setRejectionChecklist({});
+      setRejectionReason("");
+    } catch (err) {
+      console.error("Rejection error:", err);
+    }
+  };
 
   useEffect(() => {
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments", {
+  
+  // Fetch from applications API (where students actually submit)
+  fetch(`${API_BASE}/api/applications`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
-    .then(r => r.ok ? r.json() : null)
+    .then(r => {
+      if (!r.ok) {
+        console.error("Applications fetch error:", r.status);
+        return null;
+      }
+      return r.json();
+    })
     .then(data => {
-      if (data?.enrollments?.length) {
-        setEnrollments(data.enrollments.map((e: {
-          id: number; student_id: string; student_name: string;
-          term: string; status: string; created_at: string;
+      console.log("Applications data:", data);
+      if (data?.applications && Array.isArray(data.applications)) {
+        // Map applications to enrollment format
+        setEnrollments(data.applications.map((app: {
+          id: number; student_name?: string; email: string;
+          pathway?: string; grade_level?: number; status: string; created_at: string;
         }) => ({
-          name: e.student_name,
-          id: e.student_id,
-          track: "N/A",
-          grade: 0,
-          date: new Date(e.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
-          enrollDate: new Date(e.created_at),
-          status: e.status === "approved" ? "Confirmed" : e.status === "rejected" ? "Rejected" : "Pending",
+          name: app.student_name || app.email || "Unknown",
+          id: app.email,
+          track: app.pathway || "N/A",
+          grade: app.grade_level || 0,
+          date: new Date(app.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
+          enrollDate: new Date(app.created_at),
+          status: app.status === "approved" ? "Confirmed" : app.status === "submitted" || app.status === "registrar_review" ? "Pending" : "Other",
           photo: null,
+          appId: app.id,
         })));
+      } else {
+        console.warn("No applications data received");
+        setEnrollments([]);
       }
     })
-    .catch(() => {});
+    .catch(err => {
+      console.error("Applications fetch error:", err);
+      setEnrollments([]);
+    });
 }, []);
 
-  function confirmEnrollment(id: string) {
-  setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Confirmed" } : e));
-  const token = localStorage.getItem("inform_token");
 
-  if (!token) return;
-  // Find the enrollment db id from the list � for now we match by student_id
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments`, {
-    headers: { Authorization: `Bearer ${token}` },
-    credentials: "include",
-  })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
-     
-      if (!match) return;
-      return fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/enrollments/${match.id}/approve`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
+  function confirmEnrollment(id: string) {
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Confirmed" } : e));
+    const token = localStorage.getItem("inform_token");
+
+    if (!token) return;
+    // Find the enrollment db id from the list – for now we match by student_id
+    fetch(`${API_BASE}/api/admin/enrollments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     })
-    .catch(() => {});
-}
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
+       
+        if (!match) return;
+        return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/approve`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        });
+      })
+      .catch(() => {});
+  }
+
+  function rejectEnrollment(id: string) {
+    setEnrollments(prev => prev.map(e => e.id === id ? { ...e, status: "Rejected" } : e));
+    const token = localStorage.getItem("inform_token");
+
+    if (!token) return;
+    fetch(`${API_BASE}/api/admin/enrollments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const match = data?.enrollments?.find((e: { student_id: string; id: number }) => e.student_id === id);
+        if (!match) return;
+        return fetch(`${API_BASE}/api/admin/enrollments/${match.id}/reject`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        });
+      })
+      .catch(() => {});
+  }
 
   function handlePhotoUpload(id: string, file: File) {
     const url = URL.createObjectURL(file);
@@ -882,63 +991,383 @@ function EnrollmentPanel() {
             <tbody>
               {enrollments.map((e) => {
                 const isLate = e.enrollDate > DEADLINE;
+                const isExpanded = expandedStudentId === e.id;
                 return (
-                  <tr key={e.id} style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
-                    <td className="ps-4">
-                      <div className="d-flex align-items-center gap-2">
-                        {/* ID Photo or initials avatar */}
-                        {e.photo ? (
-                          <img
-                            src={e.photo}
-                            alt={e.name}
-                            className="rounded-circle flex-shrink-0"
-                            style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }}
-                          />
-                        ) : (
-                          <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:11 }}>
-                            {initials(e.name)}
+                  <React.Fragment key={e.id}>
+                    <tr style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
+                      <td className="ps-4">
+                        <div className="d-flex align-items-center gap-2">
+                          {/* ID Photo or initials avatar */}
+                          {e.photo ? (
+                            <img
+                              src={e.photo}
+                              alt={e.name}
+                              className="rounded-circle flex-shrink-0"
+                              style={{ width:32, height:32, objectFit:"cover", border:"2px solid #e2e8f0" }}
+                            />
+                          ) : (
+                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:11 }}>
+                              {initials(e.name)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="small fw-medium text-dark">{e.name}</div>
+                            {isLate && (
+                              <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <div className="small fw-medium text-dark">{e.name}</div>
-                          {isLate && (
-                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
+                        </div>
+                      </td>
+                      <td className="d-none d-sm-table-cell font-mono text-muted small">
+                        <button
+                          onClick={() => setExpandedStudentId(isExpanded ? null : e.id)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: isExpanded ? "#1e40af" : "#64748b",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            fontSize: "0.875rem",
+                            fontWeight: isExpanded ? 600 : 400,
+                            padding: 0,
+                          }}
+                          title="Click to view admission requirements"
+                        >
+                          {e.id}
+                        </button>
+                      </td>
+                      <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
+                      <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
+                      <td>
+                        <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
+                          {e.status}
+                        </span>
+                      </td>
+                      <td className="text-end pe-4">
+                        <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
+                          {/* Upload ID photo */}
+                          <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
+                            Add Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display:"none" }}
+                              onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }}
+                            />
+                          </label>
+                          {e.status === "Pending" && (
+                            <>
+                              <button onClick={() => {
+                                const token = localStorage.getItem("inform_token");
+                                if (!token || !e.appId) return;
+                                fetch(`${API_BASE}/api/applications/${e.appId}/forward`, {
+                                  method: "PATCH",
+                                  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({}),
+                                }).then(() => {
+                                  setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Confirmed" } : el));
+                                });
+                              }} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Accept</button>
+                              <button onClick={() => openRejectionDropdown(e.id)} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ Reject</button>
+                            </>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="d-none d-sm-table-cell font-mono text-muted small">{e.id}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
-                    <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
-                    <td>
-                      <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
-                        {e.status}
-                      </span>
-                    </td>
-                    <td className="text-end pe-4">
-                      <div className="d-flex gap-2 justify-content-end align-items-center">
-                        {/* Upload ID photo */}
-                        <label className="btn btn-outline-secondary btn-sm mb-0" style={{ fontSize:10, cursor:"pointer" }} title="Upload ID Photo">
-                          Add Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display:"none" }}
-                            onChange={ev => { if (ev.target.files?.[0]) handlePhotoUpload(e.id, ev.target.files[0]); }}
-                          />
-                        </label>
-                        {e.status === "Pending" && (
-                          <button onClick={() => confirmEnrollment(e.id)} className="btn btn-primary btn-sm" style={{ fontSize:11 }}>Confirm</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    
+                    {/* Admission Requirements Dropdown */}
+                    {isExpanded && (
+                      <tr style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+                        <td colSpan={6} className="p-0">
+                          <div style={{ padding: "1rem 2rem" }}>
+                            <div className="fw-bold text-dark mb-3" style={{ fontSize: "0.95rem" }}>
+                              ADMISSION REQUIREMENTS SUBMITTED:
+                            </div>
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                              gap: "1rem",
+                            }}>
+                              {admissionRequirements.map(req => (
+                                <label
+                                  key={req.id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.75rem",
+                                    cursor: "pointer",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "0.375rem",
+                                    background: requirementsStatus[e.id]?.[req.id] ? "rgba(16, 185, 129, 0.1)" : "rgba(0,0,0,0.02)",
+                                    border: `1px solid ${requirementsStatus[e.id]?.[req.id] ? "rgba(16, 185, 129, 0.3)" : "rgba(0,0,0,0.05)"}`,
+                                    transition: "all 0.2s",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={requirementsStatus[e.id]?.[req.id] ?? false}
+                                    onChange={() => toggleRequirement(e.id, req.id)}
+                                    style={{
+                                      cursor: "pointer",
+                                      width: "1.1rem",
+                                      height: "1.1rem",
+                                      accentColor: "#10b981",
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: "0.875rem",
+                                      color: requirementsStatus[e.id]?.[req.id] ? "#059669" : "#475569",
+                                      fontWeight: requirementsStatus[e.id]?.[req.id] ? 600 : 400,
+                                      textDecoration: requirementsStatus[e.id]?.[req.id] ? "line-through" : "none",
+                                    }}
+                                  >
+                                    {req.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                            
+                            {/* Missing Requirements / Rejection Reason Text Area */}
+                            <div style={{ marginTop: "1.5rem" }}>
+                              <label style={{
+                                display: "block",
+                                fontSize: "0.875rem",
+                                fontWeight: 600,
+                                color: "#0f172a",
+                                marginBottom: "0.5rem",
+                              }}>
+                                Missing Requirements / Rejection Reason
+                              </label>
+                              <textarea
+                                value={requirementsNotes[e.id] ?? ""}
+                                onChange={(ev) => setRequirementsNotes(prev => ({
+                                  ...prev,
+                                  [e.id]: ev.target.value,
+                                }))}
+                                placeholder="Type notes about any unchecked items or missing documents..."
+                                style={{
+                                  width: "100%",
+                                  minHeight: "80px",
+                                  padding: "0.75rem",
+                                  border: "1px solid #cbd5e1",
+                                  borderRadius: "0.5rem",
+                                  fontSize: "0.875rem",
+                                  fontFamily: "inherit",
+                                  color: "#e5e8f0",
+                                  resize: "vertical",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                            </div>
+                            
+                            <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                              <button
+                                onClick={() => setExpandedStudentId(null)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: "none",
+                                  border: "1px solid #cbd5e1",
+                                  color: "#475569",
+                                  cursor: "pointer",
+                                  padding: "0.375rem 0.75rem",
+                                  fontSize: "0.8125rem",
+                                  borderRadius: "0.375rem",
+                                }}
+                              >
+                                Close
+                              </button>
+                              <button
+                                style={{
+                                  background: "#10b981",
+                                  border: "none",
+                                  color: "white",
+                                  cursor: "pointer",
+                                  padding: "0.375rem 0.75rem",
+                                  fontSize: "0.8125rem",
+                                  borderRadius: "0.375rem",
+                                  fontWeight: 600,
+                                }}
+                                onClick={() => {
+                                  setExpandedStudentId(null);
+                                }}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Rejection Dropdown - Add as separate row for expanded rejection */}
+      {rejectionDropdownStudentId && (
+        <div className="card border-0 shadow-sm rounded-3 mt-3" style={{ background: "#fef2f2" }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h4 className="fw-bold text-dark mb-0">
+                Reject Enrollment: {enrollments.find(e => e.id === rejectionDropdownStudentId)?.name}
+              </h4>
+              <button
+                onClick={() => setRejectionDropdownStudentId(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.25rem",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {/* Admission Requirements Checklist */}
+              <div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginBottom: "1rem" }}>
+                  ADMISSION REQUIREMENTS SUBMITTED:
+                </div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "0.75rem",
+                }}>
+                  {admissionRequirements.map(req => (
+                    <label
+                      key={req.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        cursor: "pointer",
+                        padding: "0.5rem 0.75rem",
+                        borderRadius: "0.375rem",
+                        background: rejectionChecklist[req.id] ? "rgba(16, 185, 129, 0.1)" : "rgba(0,0,0,0.02)",
+                        border: `1px solid ${rejectionChecklist[req.id] ? "rgba(16, 185, 129, 0.3)" : "rgba(0,0,0,0.05)"}`,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={rejectionChecklist[req.id] ?? false}
+                        onChange={() => toggleRejectionRequirement(req.id)}
+                        style={{
+                          cursor: "pointer",
+                          width: "1.1rem",
+                          height: "1.1rem",
+                          accentColor: "#10b981",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          color: rejectionChecklist[req.id] ? "#059669" : "#475569",
+                          fontWeight: rejectionChecklist[req.id] ? 600 : 400,
+                          textDecoration: rejectionChecklist[req.id] ? "line-through" : "none",
+                        }}
+                      >
+                        {req.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              <div>
+                <label style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  marginBottom: "0.5rem",
+                }}>
+                  Rejection Reason
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Edit or add additional comments..."
+                  style={{
+                    width: "100%",
+                    minHeight: "100px",
+                    padding: "0.75rem",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.875rem",
+                    fontFamily: "inherit",
+                    color: "#0f172a",
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <div style={{
+                  fontSize: "0.75rem",
+                  color: "#64748b",
+                  marginTop: "0.25rem",
+                }}>
+                  Pre-filled with unchecked requirements. Edit as needed.
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setRejectionDropdownStudentId(null)}
+                  style={{
+                    padding: "0.5rem 1.25rem",
+                    border: "1px solid #cbd5e1",
+                    background: "white",
+                    color: "#475569",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const student = enrollments.find(e => e.id === rejectionDropdownStudentId);
+                    if (student) {
+                      confirmRejection(rejectionDropdownStudentId, student.appId);
+                    }
+                  }}
+                  style={{
+                    padding: "0.5rem 1.25rem",
+                    border: "none",
+                    background: "#dc2626",
+                    color: "white",
+                    borderRadius: "0.375rem",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#b91c1c")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#dc2626")}
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -956,7 +1385,7 @@ function TuitionPanel() {
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
+    fetch(`${API_BASE}/api/admin/payments`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1076,7 +1505,7 @@ function TuitionPanel() {
                             onClick={() => {
                               const token = localStorage.getItem("inform_token");
                               if (!token) return;
-                              fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/payments/${(r as typeof r & { paymentId?: number }).paymentId}/verify`, {
+                              fetch(`${API_BASE}/api/admin/payments/${(r as typeof r & { paymentId?: number }).paymentId}/verify`, {
                                 method: "PATCH",
                                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                                 credentials: "include",
@@ -1133,7 +1562,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/teachers", {
+    fetch(`${API_BASE}/api/admin/teachers`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1478,13 +1907,13 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
     const endpoint = role === "registrar"
-      ? "https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar"
-      : "https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal";
+      ? `${API_BASE}/api/grade-requests/registrar`
+      : `${API_BASE}/api/grade-requests/principal`;
     fetch(endpoint, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.requests) setRequests(data.requests); })
       .catch(() => {});
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
+    fetch(`${API_BASE}/api/grade-requests/config`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.config) setTermConfig(data.config); })
       .catch(() => {});
@@ -1502,7 +1931,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) { showToast("Session expired. Please log in again."); return; }
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${open ? "open" : "close"}`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1520,7 +1949,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function sendToPrincipal(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/send-to-principal`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/send-to-principal`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1533,7 +1962,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function releaseToTeacher(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/release`, {
+    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1547,7 +1976,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function approveRequest(id: number) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/approve`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${id}/approve`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include", body: JSON.stringify({}),
@@ -1562,7 +1991,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     if (!token) return;
     const reason = prompt("Reason for rejection (required):") || "";
     if (!reason.trim()) { showToast("Rejection reason is required."); return; }
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/reject`, {
+    fetch(`${API_BASE}/api/grade-requests/principal/${id}/reject`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1809,7 +2238,7 @@ function AdminDocumentsPanel() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
     setLoading(true);
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/documents", {
+    fetch(`${API_BASE}/api/admin/documents`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1865,7 +2294,7 @@ function AdminDocumentsPanel() {
   // Real API call
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/documents/${id}/approve`, {
+  fetch(`${API_BASE}/api/admin/documents/${id}/approve`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
@@ -1895,7 +2324,7 @@ function AdminDocumentsPanel() {
   const token = localStorage.getItem("inform_token");
 
   if (!token) return;
-  fetch(`https://group-1rms-production-a4d8.up.railway.app/api/admin/documents/${id}/reject`, {
+  fetch(`${API_BASE}/api/admin/documents/${id}/reject`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     credentials: "include",
@@ -2402,7 +2831,7 @@ function AdminTimeLogPanel() {
 }
 
 /*  Page  */
-export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string } = {}) {
+export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role, bannerHeight }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string; bannerHeight?: number } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -2443,7 +2872,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     function fetchStaffNotifs() {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (!token) return;
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications", {
+      fetch(`${API_BASE}/api/grade-requests/admin-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -2484,7 +2913,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       // The ID is offset by 100000 for grade_request notifs � get the real DB id
       const realId = id > 100000 ? id - 100000 : null;
       if (token && realId) {
-        fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications/${realId}/read`, {
+        fetch(`${API_BASE}/api/grade-requests/admin-notifications/${realId}/read`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
@@ -2499,7 +2928,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     if (["registrar", "principal"].includes(role ?? "")) {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (token) {
-        fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/admin-notifications/read", {
+        fetch(`${API_BASE}/api/grade-requests/admin-notifications/read`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
@@ -2531,36 +2960,41 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
   return (
     <div className="admin-dashboard-layout" suppressHydrationWarning>
-      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} />
+      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} role={role} />
+
+      {/* Fixed header bar - above everything */}
+      {!hideTopbarControls && (
+      <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 shadow-sm flex-wrap" style={{ position: "fixed", top: 0, left: 256, right: 0, zIndex: 1046, transition: "left 0.3s ease", height: 57 }}>
+        <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
+          <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
+            <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
+          </span>
+          <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)} aria-label="Notifications">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
+          </button>
+          <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
+        </div>
+      </header>
+      )}
 
       {/* Main content - responsive for all screen sizes */}
-      <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div className="admin-dashboard-main" style={{ marginLeft: 256, minHeight: "100vh", transition: "margin-left 0.3s ease", display: "flex", flexDirection: "column", paddingTop: !hideTopbarControls ? 57 : (bannerHeight || 0) }}>
         {/* Topbar � hidden when parent supplies its own banner (e.g. Principal portal) */}
         {!hideTopbarControls && (
-        <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
-          <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-          <div className="d-flex align-items-center gap-2 gap-md-3 ms-auto flex-wrap">
-            <span className="badge bg-success-subtle text-success border border-success-subtle d-none d-md-flex align-items-center gap-1" style={{ fontSize: "clamp(10px, 2vw, 12px)" }}>
-              <span className="rounded-circle bg-success d-inline-block" style={{ width:7, height:7 }} />System Online
-            </span>
-            <button className="btn btn-link text-muted p-1 position-relative" onClick={() => setShowNotifDropdown(!showNotifDropdown)} aria-label="Notifications">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
-            </button>
-            <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
-          </div>
-        </header>
+        <div style={{ display: "none" }}>hidden header</div>
         )}
 
-        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4">
+        <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-md-4" style={{ minHeight: 0 }}>
           {renderPanel()}
         </main>
       </div>
@@ -2568,7 +3002,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       {/* Notification Dropdown - responsive */}
       {showNotifDropdown && (
         <>
-          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:9999, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
+          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
             <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">

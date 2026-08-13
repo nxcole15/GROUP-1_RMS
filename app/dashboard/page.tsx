@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import React from "react";
 import type { ReactNode as _ReactNode } from "react";
 import Link from "next/link";
+import { API_BASE } from "../lib/auth";
 
 type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile";
 type JMsg  = { role:"ai"|"user"; text:string; feedback?:"up"|"down"|null };
@@ -230,81 +231,75 @@ const navItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
 
 /* -- Sidebar -- */
 function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?:(v:boolean)=>void; student?: { student_id:string; full_name:string; pathway:string; grade_level:number } | null }) {
-  const [expanded, setExpanded] = useState(false);
-  const handleMouseEnter = () => { setExpanded(true);  onExpandChange?.(true);  };
-  const handleMouseLeave = () => { setExpanded(false); onExpandChange?.(false); };
+  const expanded = true; // Always expanded
+
+  useEffect(() => {
+    onExpandChange?.(true);
+  }, [onExpandChange]);
 
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex:1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show?"":"d-none d-lg-flex"}`}
-        style={{ width: show ? 256 : expanded ? 256 : 80, zIndex:1045, background:"linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY:"auto", overflowX:"hidden", transition:"width 0.3s ease" }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        style={{ width: 256, zIndex:1045, background:"linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY:"auto", overflowX:"hidden" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
-            {expanded && (
-              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-                <div className="sidebar-brand-title">Student Portal</div>
-                <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${(student as any).course ?? ""} ${(student as any).year_level ? `Year ${(student as any).year_level}` : ""}`.trim() : ""}</div>
-              </div>
-            )}
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+              <div className="sidebar-brand-title">Student Portal</div>
+              <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${(student as any).course ?? ""} ${(student as any).year_level ? `Year ${(student as any).year_level}` : ""}`.trim() : ""}</div>
+            </div>
           </div>
-          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
+          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
 
         {/* Student badge */}
-        {expanded && (
-          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-            <span className="text-white-50"><Icon name="graduation" size={16} /></span>
-            <div>
-              <div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Student</div>
-              <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${student.pathway} Grade ${student.grade_level}` : ""}</div>
-            </div>
+        <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
+          <span className="text-white-50"><Icon name="graduation" size={16} /></span>
+          <div>
+            <div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Student</div>
+            <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${student.pathway} Grade ${student.grade_level}` : ""}</div>
           </div>
-        )}
+        </div>
 
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color:active===item.id?"#fff":"rgba(255,255,255,0.5)", background:active===item.id?"#4f46e5":"transparent", justifyContent:expanded?"flex-start":"center", whiteSpace:"nowrap" }}
+              style={{ color:active===item.id?"#fff":"rgba(255,255,255,0.5)", background:active===item.id?"#4f46e5":"transparent", justifyContent:"flex-start", whiteSpace:"nowrap" }}
               title={item.label}>
               {item.icon}
-              {expanded && <span>{item.label}</span>}
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
 
         {/* User / logout */}
-        {expanded && (
-          <div className="px-3 py-4 border-top border-white border-opacity-10">
-            <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-              <div className="d-flex align-items-center gap-3">
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{student ? student.full_name.split(" ").map((n:string) => n[0]).join("").slice(0,2): "?"}</div>
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="text-white small fw-semibold text-truncate">{student?.full_name ?? "Loading..."}</div>
-                  <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{student?.student_id}</div>
-                </div>
+        <div className="px-3 py-4 border-top border-white border-opacity-10">
+          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div className="d-flex align-items-center gap-3">
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{student ? student.full_name.split(" ").map((n:string) => n[0]).join("").slice(0,2): "?"}</div>
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="text-white small fw-semibold text-truncate">{student?.full_name ?? "Loading..."}</div>
+                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{student?.student_id}</div>
               </div>
-              <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize:12, borderRadius:8 }}>
-                Logout
-              </button>
             </div>
+            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize:12, borderRadius:8 }}>
+              Logout
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
 }
 
 /* -- Home / Overview -- */
-function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJobert:(p:string)=>void }) {
+function HomePanel({ setPanel, onAskJobert, student }: { setPanel:(p:Panel)=>void; onAskJobert:(p:string)=>void; student?: { student_id: string; full_name: string; pathway: string; grade_level: number; term: string; email: string } | null }) {
   const totalPaid    = fees.filter(f => f.paid).reduce((a,f) => a+f.amount, 0);
   const totalFees    = fees.reduce((a,f) => a+f.amount, 0);
   const avgGrade     = Math.round(gradeData.map(g => g.term1.pct).reduce((a,b) => a+b,0)/gradeData.length);
@@ -321,8 +316,8 @@ function HomePanel({ setPanel, onAskJobert }: { setPanel:(p:Panel)=>void; onAskJ
     <div className="d-flex flex-column gap-4">
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Jamie Santos</h2>
-        <p className="text-white-50 small mb-0">STU-2024-001 · STEM Grade 11 · Term 1 SY 2025-2026</p>
+        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {student?.full_name ?? "Student"}</h2>
+        <p className="text-white-50 small mb-0">{student?.student_id ?? "STU-2024-001"} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {student?.term ?? "Term 1"} SY 2025-2026</p>
         <div className="d-flex gap-2 mt-3 flex-wrap">
           <span className="badge bg-white bg-opacity-20 text-black border border-white border-opacity-25 d-inline-flex align-items-center gap-1"><Icon name="check" size={12} /> Active Student</span>
           <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25 d-inline-flex align-items-center gap-1"><Icon name="calendar" size={12} /> Enrollment Open</span>
@@ -513,7 +508,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/enrollment/schedule", {
+    fetch(`${API_BASE}/api/enrollment/schedule`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -561,7 +556,7 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
     setConfirmSubjectId(null);
     const token = localStorage.getItem("inform_token");
     if (token) {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/student", {
+      fetch(`${API_BASE}/api/grade-requests/student`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
@@ -780,7 +775,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
   // Fetch term config (no auth needed) � poll every 15s so it auto-updates when principal opens/closes
   useEffect(() => {
     function fetchConfig() {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
+      fetch(`${API_BASE}/api/grade-requests/config`)
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data?.config) setRequestConfig(data.config); })
         .catch(() => {});
@@ -795,7 +790,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
     const token = localStorage.getItem("inform_token");
     if (!token) return;
     function fetchRequests() {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/student", {
+      fetch(`${API_BASE}/api/grade-requests/student`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -958,7 +953,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/enrollment/schedule", {
+    fetch(`${API_BASE}/api/enrollment/schedule`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1029,7 +1024,7 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
     if (!token || token.startsWith("demo_")) return;
     setLoading(true);
     setError(false);
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/payments", {
+    fetch(`${API_BASE}/api/payments`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1119,7 +1114,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
     if (!token || token.startsWith("demo_")) return;
     setDocsLoading(true);
     setDocsError(false);
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/documents", {
+    fetch(`${API_BASE}/api/documents`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1156,7 +1151,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
     // Real API call if backend is live
     if (token && !token.startsWith("demo_")) {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/documents", {
+      fetch(`${API_BASE}/api/documents`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
@@ -1604,7 +1599,7 @@ export default function DashboardPage() {
     if (!token || token.startsWith("demo_")) return;
 
     function fetchNotifs() {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/notifications", {
+      fetch(`${API_BASE}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -1634,7 +1629,7 @@ export default function DashboardPage() {
   if (!authChecked) return;
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch("https://group-1rms-production-a4d8.up.railway.app/api/auth/me", {
+  fetch(`${API_BASE}/api/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
@@ -1658,7 +1653,7 @@ export default function DashboardPage() {
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
       case "notifications": return <NotificationsView />;
-      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} />;
+      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} />;
     }
   }
 
@@ -1666,7 +1661,7 @@ export default function DashboardPage() {
     <div className="admin-dashboard-layout" style={{ background:"#f0f4ff" }} suppressHydrationWarning>
       <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} student={student} />
 
-      <div className="admin-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div className="admin-dashboard-main" style={{ marginLeft: 256 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
           <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">

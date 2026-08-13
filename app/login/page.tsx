@@ -1,8 +1,8 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function normalizeId(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -20,8 +20,9 @@ function detectRole(id: string): string {
   return "";
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +46,15 @@ export default function LoginPage() {
       // ignore (e.g., SSR or blocked storage)
     }
   }, []);
+
+  // Pre-fill credentials from URL params (e.g., from enrollment confirmation email link)
+  useEffect(() => {
+    const studentId = searchParams?.get("student_id");
+    const password = searchParams?.get("password");
+    if (studentId && password) {
+      setForm({ identifier: decodeURIComponent(studentId), password: decodeURIComponent(password) });
+    }
+  }, [searchParams]);
 
   const detectedRole = detectRole(form.identifier);
   const normalizedId = normalizeId(form.identifier);
@@ -228,7 +238,7 @@ export default function LoginPage() {
                       name="identifier"
                       value={form.identifier}
                       onChange={handleChange}
-                      placeholder="e.g. 202400001, T001, R001, P001, A001"
+                      placeholder="e.g. 202500001, T001, R001, P001, A001"
                       autoComplete="username"
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
@@ -388,5 +398,13 @@ export default function LoginPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
