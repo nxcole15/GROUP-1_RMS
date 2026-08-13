@@ -238,7 +238,7 @@ function LoginContent() {
                       name="identifier"
                       value={form.identifier}
                       onChange={handleChange}
-                      placeholder="e.g. 202400001, T001, R001, P001, A001"
+                      placeholder="e.g. 202500001, T001, R001, P001, A001"
                       autoComplete="username"
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
