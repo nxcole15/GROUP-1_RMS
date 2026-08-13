@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { API_BASE } from "../lib/auth";
 
 /*  Data  */
