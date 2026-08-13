@@ -36,6 +36,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!server/.env.example
+!app/.env.example
 
 # Server config with credentials — keep locally, never commit
 server/config/env.js

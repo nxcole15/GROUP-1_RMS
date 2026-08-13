@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { API_BASE } from "../../lib/auth";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
 
@@ -88,12 +89,12 @@ const subjects = [
 ];
 
 const teacherSchedule = [
-  { day: "Monday",    time: "07:30�08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Monday",    time: "08:30�09:30", subject: "Geometry",   room: "Room 205", enter: "08:25", leave: "09:35" },
-  { day: "Tuesday",   time: "07:30�09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Wednesday", time: "07:30�08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Thursday",  time: "07:30�09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Friday",    time: "07:30�08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Monday",    time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Monday",    time: "08:30-09:30", subject: "Geometry",   room: "Room 205", enter: "08:25", leave: "09:35" },
+  { day: "Tuesday",   time: "07:30-09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
+  { day: "Wednesday", time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
+  { day: "Thursday",  time: "07:30-09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
+  { day: "Friday",    time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
 ];
 
 const students = [
@@ -125,22 +126,22 @@ const attendance = [
 ];
 
 const recentActivity = [
-  { action: "Grade Submitted",    name: "Jamie Santos",    time: "2h ago",   icon: "??" },
-  { action: "Attendance Updated", name: "Maria Reyes",     time: "3h ago",   icon: "?" },
-  { action: "Grade Submitted",    name: "Carlo Dela Cruz", time: "5h ago",   icon: "??" },
-  { action: "Attendance Updated", name: "Luis Fernandez",  time: "Yesterday",icon: "?" },
+  { action: "Grade Submitted",    name: "Jamie Santos",    time: "2h ago",   icon: "chart" },
+  { action: "Attendance Updated", name: "Maria Reyes",     time: "3h ago",   icon: "calendar" },
+  { action: "Grade Submitted",    name: "Carlo Dela Cruz", time: "5h ago",   icon: "chart" },
+  { action: "Attendance Updated", name: "Luis Fernandez",  time: "Yesterday",icon: "calendar" },
 ];
 
 const teacherNotifications = [
-  { id: 1, type: "document",   title: "Document Request",   message: "Jamie Santos requested a TOR",                        time: "1h ago", read: false, icon: "??" },
-  { id: 2, type: "grade",      title: "Grade Submitted",    message: "Your grades for Algebra I have been submitted",       time: "2h ago", read: false, icon: "?" },
-  { id: 3, type: "enrollment", title: "New Student Enrolled",message: "Rosa Bautista enrolled in your Geometry class",     time: "1d ago", read: true,  icon: "??" },
+  { id: 1, type: "document",   title: "Document Request",   message: "Jamie Santos requested a TOR",                        time: "1h ago", read: false, icon: "file" },
+  { id: 2, type: "grade",      title: "Grade Submitted",    message: "Your grades for Algebra I have been submitted",       time: "2h ago", read: false, icon: "check" },
+  { id: 3, type: "enrollment", title: "New Student Enrolled",message: "Rosa Bautista enrolled in your Geometry class",     time: "1d ago", read: true,  icon: "students" },
 ];
 
 const documentApprovals = [
-  { id: 1, student: "Jamie Santos",    type: "TOR",         status: "pending",  requestedAt: "May 18, 2026", approvedAt: "",            icon: "??" },
-  { id: 2, student: "Maria Reyes",     type: "Certificate", status: "pending",  requestedAt: "May 17, 2026", approvedAt: "",            icon: "??" },
-  { id: 3, student: "Carlo Dela Cruz", type: "TOR",         status: "approved", requestedAt: "May 15, 2026", approvedAt: "May 16, 2026",icon: "?" },
+  { id: 1, student: "Jamie Santos",    type: "TOR",         status: "pending",  requestedAt: "May 18, 2026", approvedAt: "",            icon: "file" },
+  { id: 2, student: "Maria Reyes",     type: "Certificate", status: "pending",  requestedAt: "May 17, 2026", approvedAt: "",            icon: "file" },
+  { id: 3, student: "Carlo Dela Cruz", type: "TOR",         status: "approved", requestedAt: "May 15, 2026", approvedAt: "May 16, 2026",icon: "checkCircle" },
 ];
 
 /* -- Trimester deadline logic -- */
@@ -162,63 +163,58 @@ function isDeadlinePassed() {
 type Panel = "overview"|"subjects"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
-  { id: "overview",       label: "Overview",        icon: "??" },
-  { id: "subjects",       label: "My Classes",       icon: "??" },
-  { id: "schedule",       label: "My Schedule",      icon: "??" },
-  { id: "students",       label: "My Students",      icon: "??" },
-  { id: "grades",         label: "Submit Grades",    icon: "??" },
-  { id: "requests",       label: "Grade Requests",   icon: "??" },
-  { id: "attendance",     label: "Attendance",       icon: "?" },
-  { id: "documents",      label: "Documents",        icon: "??" },
-  { id: "timelog" as Panel, label: "Time Log", icon: "??" },
+  { id: "overview",       label: "Overview",        icon: "overview" },
+  { id: "subjects",       label: "My Classes",       icon: "book" },
+  { id: "schedule",       label: "My Schedule",      icon: "calendar" },
+  { id: "students",       label: "My Students",      icon: "students" },
+  { id: "grades",         label: "Submit Grades",    icon: "chart" },
+  { id: "requests",       label: "Grade Requests",   icon: "requests" },
+  { id: "attendance",     label: "Attendance",       icon: "activity" },
+  { id: "documents",      label: "Documents",        icon: "documents" },
+  { id: "timelog" as Panel, label: "Time Log", icon: "clock" },
 ];
 
 /* -- Sidebar -- */
 function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active: string; setActive: (s: Panel) => void; show: boolean; setShow: (b: boolean) => void; onExpandChange?: (expanded: boolean) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const handleMouseEnter = () => { setExpanded(true); onExpandChange?.(true); };
-  const handleMouseLeave = () => { setExpanded(false); onExpandChange?.(false); };
+  const expanded = true;
+  useEffect(() => {
+    onExpandChange?.(true);
+  }, [onExpandChange]);
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: show ? 256 : expanded ? 256 : 80, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: expanded ? "column" : "row", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
-            {expanded && (
-              <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-                <div className="sidebar-brand-title">Teacher Portal</div>
-              </div>
-            )}
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+              <div className="sidebar-brand-title">Teacher Portal</div>
+            </div>
           </div>
-          {expanded && <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />}
+          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
 
         {/* Profile - Right after Teacher Portal */}
-        {expanded && (
-          <div className="px-3 mt-3 mb-2">
-            <Link href="/teacher/profile" className="text-decoration-none">
-              <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                  {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-                </div>
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
-                  <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
-                </div>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>??</span>
+        <div className="px-3 mt-3 mb-2">
+          <Link href="/teacher/profile" className="text-decoration-none">
+            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
+                {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
               </div>
-            </Link>
-          </div>
-        )}
+              <div className="flex-grow-1 overflow-hidden">
+                <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
+                <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
+              </div>
+              <span style={{ color: "rgba(255,255,255,0.5)" }}><Icon name="arrowRight" size={16} /></span>
+            </div>
+          </Link>
+        </div>
 
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -254,21 +250,12 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
   const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
   const avgGrade = Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length);
 
-
-  const quickLinks = [
-    { id: "subjects"  as Panel, label: "My Classes",     icon: "??", bg: "#3b82f6" },
-    { id: "grades"    as Panel, label: "Submit Grades",  icon: "??", bg: isGradeLocked ? "#94a3b8" : "#8b5cf6" },
-    { id: "requests"  as Panel, label: "Grade Requests", icon: "??", bg: isGradeLocked ? "#94a3b8" : "#f59e0b" },
-    { id: "attendance"as Panel, label: "Attendance",     icon: "?", bg: "#14b8a6" },
-    { id: "documents" as Panel, label: "Documents",      icon: "??", bg: "#ec4899" },
-  ];
-
   return (
     <div className="d-flex flex-column gap-4">
       {/* Welcome */}
       <div className="rounded-3 p-4" style={{ background: "linear-gradient(135deg,#059669,#10b981)", boxShadow: "0 8px 32px rgba(5,150,105,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {displayTeacher.full_name} ??</h2>
-        <p className="text-white-50 small mb-0">Department: {displayTeacher.department} � {displayTeacher.teacher_id}</p>
+        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {displayTeacher.full_name} </h2>
+        <p className="text-white-50 small mb-0">Department: {displayTeacher.department}  {displayTeacher.teacher_id}</p>
       </div>
 
       {/* Lock banner */}
@@ -276,7 +263,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
           <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked � {activeTerm} Deadline Passed</div>
+            <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} Deadline Passed</div>
             <div className="text-muted small">You have unresolved grade requests. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -285,10 +272,10 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label: "My Classes",       value: subjects.length,    icon: "??", cls: "border-primary-subtle bg-primary-subtle",   val: "text-primary"   },
-          { label: "My Students",      value: students.length,    icon: "??", cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
-          { label: "Class Avg. Grade", value: `${avgGrade}%`,     icon: "??", cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
-          { label: "Pending Requests", value: pendingRequests,    icon: "??", cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
+          { label: "My Classes",       value: subjects.length,    icon: "book", cls: "border-primary-subtle bg-primary-subtle",   val: "text-primary"   },
+          { label: "My Students",      value: students.length,    icon: "students", cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
+          { label: "Class Avg. Grade", value: `${avgGrade}%`,     icon: "chart", cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
+          { label: "Pending Requests", value: pendingRequests,    icon: "requests", cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
@@ -302,30 +289,6 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Quick Access */}
-      <div>
-        <p className="text-muted text-uppercase small fw-semibold mb-3" style={{ letterSpacing: "0.08em" }}>Quick Access</p>
-        <div className="row g-3">
-          {quickLinks.map(q => {
-            const locked = isGradeLocked && (q.id === "grades" || q.id === "requests");
-            return (
-              <div key={q.id} className="col-6 col-sm-4 col-lg-2">
-                <button onClick={() => !locked && setActive(q.id)}
-                  disabled={locked}
-                  title={locked ? "Locked � visit Registrar's Office" : undefined}
-                  className="btn w-100 py-3 d-flex flex-column align-items-center gap-2 rounded-3 text-white border-0 shadow-sm"
-                  style={{ background: q.bg, transition: "transform 0.15s", opacity: locked ? 0.5 : 1, cursor: locked ? "not-allowed" : "pointer" }}
-                  onMouseEnter={e => { if (!locked) e.currentTarget.style.transform = "scale(1.04)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}>
-                  <span style={{ fontSize: 28 }}>{locked ? "??" : q.icon}</span>
-                  <span className="small fw-bold">{q.label}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* Recent Activity + Class Summary */}
@@ -359,7 +322,7 @@ function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive
                     <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 36, height: 36 }}><Icon name="book" size={18} /></div>
                     <div className="flex-grow-1 overflow-hidden">
                       <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{s.code} � {s.units} units</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{s.code} – {s.units} units</div>
                     </div>
                     <span className="badge bg-success-subtle text-success border border-success-subtle">{s.enrolled}/{s.max}</span>
                   </div>
@@ -381,7 +344,7 @@ function SchedulePanel() {
   const daySchedule = teacherSchedule.filter(s => s.day === day);
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2><p className="text-muted small mb-0">Term 1 � 2025�2026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2><p className="text-muted small mb-0">Term 1     2025-2026</p></div>
       <div className="d-flex gap-2 overflow-auto pb-1">
         {days.map(d => (
           <button key={d} onClick={() => setDay(d)}
@@ -397,11 +360,11 @@ function SchedulePanel() {
               <div key={i} className="card border-0 shadow-sm rounded-3">
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div><div className="fw-bold text-dark">{cls.subject}</div><div className="text-muted small">?? {cls.room}</div></div>
+                    <div><div className="fw-bold text-dark">{cls.subject}</div><div className="text-muted small"> {cls.room}</div></div>
                     <span className="badge bg-dark text-white">{cls.time}</span>
                   </div>
                   <div className="row g-2">
-                    {[["?? Room", cls.room, "bg-light"], ["?? Enter", cls.enter, "bg-success bg-opacity-10 border-success border-opacity-25"], ["?? Leave", cls.leave, "bg-danger bg-opacity-10 border-danger border-opacity-25"], ["?? Students", String(subjects.find(s => s.name === cls.subject)?.enrolled || 0), "bg-info bg-opacity-10 border-info border-opacity-25"]].map(([label, val, bg]) => (
+                    {[[" Room", cls.room, "bg-light"], ["✓ Enter", cls.enter, "bg-success bg-opacity-10 border-success border-opacity-25"], ["✓ Leave", cls.leave, "bg-danger bg-opacity-10 border-danger border-opacity-25"], ["👥 Students", String(subjects.find(s => s.name === cls.subject)?.enrolled || 0), "bg-info bg-opacity-10 border-info border-opacity-25"]].map(([label, val, bg]) => (
                       <div key={label} className="col-6 col-sm-3">
                         <div className={`rounded-3 p-3 border ${bg}`}>
                           <div className="text-muted small mb-1">{label}</div>
@@ -469,7 +432,7 @@ function StudentsPanel({ students: propStudents }: { students?: typeof students 
     <div className="d-flex flex-column gap-4">
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Students</h2><p className="text-muted small mb-0">{displayStudents.length} students in your classes</p></div>
       <div className="input-group shadow-sm" style={{ maxWidth: 400 }}>
-        <span className="input-group-text bg-white">??</span>
+        <span className="input-group-text bg-white"><Icon name="search" size={18} /></span>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or ID..." className="form-control border-start-0" />
       </div>
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
@@ -517,7 +480,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
     if (!token || token.startsWith("demo_")) return;
     setGradesLoading(true);
     setGradesError(false);
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/teacher/grades/${selectedSubject}`, {
+    fetch(`${API_BASE}/api/teacher/grades/${selectedSubject}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -542,7 +505,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
           <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked � {activeTerm} deadline passed</div>
+            <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} deadline passed</div>
             <div className="text-muted small">This panel is read-only. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -611,7 +574,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher", {
+    fetch(`${API_BASE}/api/grade-requests/teacher`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -625,7 +588,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher", {
+    fetch(`${API_BASE}/api/grade-requests/teacher`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -654,7 +617,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       
     const token = localStorage.getItem("inform_token");
       if (token) {
-        fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher/${id}/submit`, {
+        fetch(`${API_BASE}/api/grade-requests/teacher/${id}/submit`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           credentials: "include",
@@ -673,7 +636,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     if (isGradeLocked) return;
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/teacher/${id}/release`, {
+    fetch(`${API_BASE}/api/grade-requests/teacher/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -739,7 +702,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
           <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
           <div>
-            <div className="fw-bold small text-danger">Actions Locked � {activeTerm} deadline passed</div>
+            <div className="fw-bold small text-danger">Actions Locked – {activeTerm} deadline passed</div>
             <div className="text-muted small">Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
           </div>
         </div>
@@ -908,8 +871,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 40, height: 40 }}><Icon name="checkCircle" size={20} /></div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student} � {req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) � Released: {req.releasedAt}</div>
+                    <div className="fw-bold small text-dark">{req.student} – {req.subject}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}</div>
                   </div>
                   <span className="badge bg-success text-white" style={{ fontSize: 10 }}><Icon name="check" size={12} className="me-1" /> Released</span>
                 </div>
@@ -964,7 +927,7 @@ function DocumentApprovalsPanel() {
               <div key={doc.id} className="card border-0 shadow-sm rounded-3">
                 <div className="card-body p-3">
                   <div className="d-flex align-items-center justify-content-between mb-2">
-                    <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} � {doc.requestedAt}</div></div>
+                    <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type}  {doc.requestedAt}</div></div>
                     <span className="badge bg-warning-subtle text-warning border border-warning-subtle">Pending</span>
                   </div>
                   <div className="d-flex gap-2">
@@ -984,8 +947,8 @@ function DocumentApprovalsPanel() {
             {approved.map(doc => (
               <div key={doc.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type} � Approved {doc.approvedAt}</div></div>
-                  <span className="badge bg-success-subtle text-success border border-success-subtle">? Approved</span>
+                  <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type}  Approved {doc.approvedAt}</div></div>
+                  <span className="badge bg-success-subtle text-success border border-success-subtle"> Approved</span>
                 </div>
               </div>
             ))}
@@ -1003,7 +966,7 @@ function NotificationsPanel() {
   function fetchNotifs() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications", {
+    fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -1035,7 +998,7 @@ function NotificationsPanel() {
   function markAllRead() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications/read", {
+    fetch(`${API_BASE}/api/grade-requests/staff-notifications/read`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -1068,7 +1031,7 @@ function NotificationsPanel() {
                     <div className="d-flex gap-1">
                       <button onClick={() => {
                         const token = localStorage.getItem("inform_token");
-                        if (token) fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        if (token) fetch(`${API_BASE}/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
                         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
                       }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>?</button>
                       <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
@@ -1115,7 +1078,7 @@ function AttendancePanel() {
     if (!token || token.startsWith("demo_")) return;
     setAttLoading(true);
     setAttError(false);
-    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/teacher/attendance/${selectedSubject}`, {
+    fetch(`${API_BASE}/api/teacher/attendance/${selectedSubject}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1141,7 +1104,7 @@ function AttendancePanel() {
     showAttToast(present ? "? Marked Present" : "? Marked Absent");
 
     if (!token || token.startsWith("demo_")) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/teacher/attendance", {
+    fetch(`${API_BASE}/api/teacher/attendance`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -1277,7 +1240,7 @@ function TimeLogPanel() {
       <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#1e40af,#3b82f6)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-3">
-            <span style={{ fontSize: 36 }}>{currentSession ? "??" : "??"}</span>
+            <Icon name={currentSession ? "checkCircle" : "clock"} size={40} className="text-white" />
             <div>
               <div className="fw-black fs-5">{currentSession ? "Currently On Campus" : "Not Timed In"}</div>
               {currentSession && <div className="text-white-50 small">Time In: {currentSession.timeIn}</div>}
@@ -1288,7 +1251,7 @@ function TimeLogPanel() {
             className="btn btn-light fw-black w-100 rounded-3"
             style={{ fontSize: 15, color: currentSession ? "#059669" : "#1e40af" }}
           >
-            {currentSession ? "?? Time Out" : "?? Time In"}
+            {currentSession ? "Time Out" : "Time In"}
           </button>
         </div>
       </div>
@@ -1383,7 +1346,7 @@ export default function TeacherDashboardPage() {
     function fetchNotifs() {
       const token = localStorage.getItem("inform_token");
       if (!token) return;
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/staff-notifications", {
+      fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -1435,7 +1398,7 @@ export default function TeacherDashboardPage() {
     if (!authChecked) return;
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/teacher/dashboard", {
+    fetch(`${API_BASE}/api/teacher/dashboard`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
@@ -1473,7 +1436,7 @@ export default function TeacherDashboardPage() {
     <div className="teacher-dashboard-layout" style={{ minHeight: "100vh", background: "#f0f4ff" }} suppressHydrationWarning>
       <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
 
-      <div className="teacher-dashboard-main" style={{ marginLeft: sidebarExpanded ? 256 : 80 }}>
+      <div className="teacher-dashboard-main" style={{ marginLeft: 256 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm">
           <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
@@ -1527,7 +1490,7 @@ export default function TeacherDashboardPage() {
               </div>
             </div>
             {notifs.length === 0
-              ? <div className="px-4 py-5 text-center text-muted"><div style={{ fontSize: 32, marginBottom: 8 }}>??</div><small>No notifications</small></div>
+              ? <div className="px-4 py-5 text-center text-muted"><div className="mb-2"><Icon name="bell" size={32} className="text-muted opacity-50" /></div><small>No notifications</small></div>
               : notifs.map(n => (
                 <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
                   <div className="text-muted" style={{ minWidth: 24 }}><Icon name={n.icon as IconName} size={18} /></div>

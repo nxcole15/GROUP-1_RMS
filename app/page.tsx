@@ -6,62 +6,121 @@ import LoadingScreen from "./components/LoadingScreen";
 
 const FEATURES = [
   {
-    icon: "📚",
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 17l10 5 10-5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 12l10 5 10-5" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
     title: "Modern Learning",
-    short: "F2F and Modular and Blended learning", 
+    short: "F2F and Modular and Blended learning",
     color: "#dc2626",
     gradient: "linear-gradient(135deg, #dc2626, #f97316)",
     details: [
-      { icon: "🖥️", label: "Digital Classrooms", desc: "Access learning materials, lecture notes, and modules anytime from any device." },
-      { icon: "🎯", label: "Personalized Path", desc: "Adaptive content tailored to your academic strand and learning pace." },
-      { icon: "📁", label: "Resource Library", desc: "Thousands of references, past exams, and supplemental reading materials." },
-      { icon: "🏆", label: "Achievement Tracking", desc: "Monitor milestones and celebrate your academic accomplishments." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#dc2626" strokeWidth="2"/><path d="M8 21h8M12 17v4" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "Digital Classrooms", desc: "Access learning materials, lecture notes, and modules anytime from any device." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="#dc2626" strokeWidth="2"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "Personalized Path", desc: "Adaptive content tailored to your academic strand and learning pace." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Resource Library", desc: "Thousands of references, past exams, and supplemental reading materials." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Achievement Tracking", desc: "Monitor milestones and celebrate your academic accomplishments." },
     ],
     bg: "linear-gradient(135deg, rgba(220,38,38,0.06), rgba(249,115,22,0.06))",
     border: "rgba(220,38,38,0.25)",
   },
   {
-    icon: "📊",
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <line x1="18" y1="20" x2="18" y2="10" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="12" y1="20" x2="12" y2="4" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="6" y1="20" x2="6" y2="14" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
     title: "Real-time Grades",
     short: "Instant grade updates",
     color: "#f97316",
     gradient: "linear-gradient(135deg, #f97316, #fbbf24)",
     details: [
-      { icon: "⚡", label: "Live Updates", desc: "Grades update as the request moves forward—student request, teacher calculation, admin verification, then final release." },
-      { icon: "📝", label: "Request a Grade", desc: "If you need reconsideration, request the grade from the student portal. The request is sent to your teacher with your reason and subject details." },
-      { icon: "📤", label: "Teacher to Admin", desc: "Your teacher reviews and calculates the grade, then submits the computed score to the Admin for verification." },
-      { icon: "✅", label: "Admin Verify → Release", desc: "Admin verifies the computed grade. When approved, the final grade is released back to you and appears instantly in your grades list." },
-      { icon: "🔔", label: "Status & Alerts", desc: "Track the request status (requested → teacher calculating → sent to admin → released) and receive alerts if approved or rejected." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Live Updates", desc: "Grades update as the request moves forward—student request, teacher calculation, admin verification, then final release." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/><polyline points="10 9 9 9 8 9" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "Request a Grade", desc: "If you need reconsideration, request the grade from the student portal. The request is sent to your teacher with your reason and subject details." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Teacher to Admin", desc: "Your teacher reviews and calculates the grade, then submits the computed score to the Admin for verification." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="22 4 12 14.01 9 11.01" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Admin Verify → Release", desc: "Admin verifies the computed grade. When approved, the final grade is released back to you and appears instantly in your grades list." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Status & Alerts", desc: "Track the request status (requested → teacher calculating → sent to admin → released) and receive alerts if approved or rejected." },
     ],
     bg: "linear-gradient(135deg, rgba(249,115,22,0.06), rgba(251,191,36,0.06))",
     border: "rgba(249,115,22,0.25)",
   },
   {
-    icon: "📅",
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke="#d97706" strokeWidth="2"/>
+        <line x1="16" y1="2" x2="16" y2="6" stroke="#d97706" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="8" y1="2" x2="8" y2="6" stroke="#d97706" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="3" y1="10" x2="21" y2="10" stroke="#fbbf24" strokeWidth="2"/>
+      </svg>
+    ),
     title: "Smart Scheduling",
     short: "Optimized timetables",
     color: "#d97706",
     gradient: "linear-gradient(135deg, #d97706, #fbbf24)",
     details: [
-      { icon: "🗓️", label: "Auto Timetable", desc: "Your weekly schedule is generated and updated automatically each term." },
-      { icon: "⏰", label: "Class Reminders", desc: "Never miss a class with smart reminders 15 minutes before each session." },
-      { icon: "🔄", label: "Schedule Changes", desc: "Instant notifications when a class is moved, cancelled, or rescheduled." },
-      { icon: "📍", label: "Room Mapping", desc: "Know exactly which room and building your next class is in." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d97706" strokeWidth="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="#d97706" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="#d97706" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="#d97706" strokeWidth="2"/></svg>
+      ), label: "Auto Timetable", desc: "Your weekly schedule is generated and updated automatically each term." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#d97706" strokeWidth="2"/><polyline points="12 6 12 12 16 14" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Class Reminders", desc: "Never miss a class with smart reminders 15 minutes before each session." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><polyline points="1 4 1 10 7 10" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Schedule Changes", desc: "Instant notifications when a class is moved, cancelled, or rescheduled." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="#d97706" strokeWidth="2"/><circle cx="12" cy="10" r="3" stroke="#d97706" strokeWidth="2"/></svg>
+      ), label: "Room Mapping", desc: "Know exactly which room and building your next class is in." },
     ],
     bg: "linear-gradient(135deg, rgba(217,119,6,0.06), rgba(251,191,36,0.06))",
     border: "rgba(217,119,6,0.25)",
   },
   {
-    icon: "💬",
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <line x1="9" y1="10" x2="15" y2="10" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="9" y1="14" x2="13" y2="14" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
     title: "Easy Communication",
     short: "Connect with teachers",
     color: "#b91c1c",
     gradient: "linear-gradient(135deg, #b91c1c, #dc2626)",
     details: [
-      { icon: "✉️", label: "Direct Messaging", desc: "Message your teachers or the registrar directly from the portal." },
-      { icon: "📢", label: "Announcements", desc: "School-wide and class-specific announcements delivered in real time." },
-      { icon: "📝", label: "Grade Inquiries", desc: "Submit grade reconsideration requests and track their status." },
-      { icon: "🤖", label: "JOBERT AI", desc: "Ask JOBERT anything — from your GWA to enrollment deadlines, 24/7." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#b91c1c" strokeWidth="2"/><polyline points="22,6 12,13 2,6" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "Direct Messaging", desc: "Message your teachers or the registrar directly from the portal." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 2L11 13" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/><path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      ), label: "Announcements", desc: "School-wide and class-specific announcements delivered in real time." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "Grade Inquiries", desc: "Submit grade reconsideration requests and track their status." },
+      { icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#b91c1c" strokeWidth="2"/><path d="M9 9h.01M15 9h.01M9.5 14s1 1.5 2.5 1.5 2.5-1.5 2.5-1.5" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/></svg>
+      ), label: "JOBERT AI", desc: "Ask JOBERT anything — from your GWA to enrollment deadlines, 24/7." },
     ],
     bg: "linear-gradient(135deg, rgba(185,28,28,0.06), rgba(220,38,38,0.06))",
     border: "rgba(185,28,28,0.25)",
@@ -367,7 +426,7 @@ export default function LandingPage() {
 
                     {/* Icon with spin-in on activate */}
                     <div style={{
-                      fontSize: "2.2rem", marginBottom: "0.75rem",
+                      marginBottom: "0.75rem",
                       display: "inline-block",
                       transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1)",
                       transform: isActive ? "scale(1.25) rotate(-8deg)" : "scale(1) rotate(0deg)",
@@ -414,7 +473,7 @@ export default function LandingPage() {
                       borderRadius: "1.25rem",
                       border: `1.5px solid ${f.border}`,
                       background: f.bg,
-                      padding: "2rem 2.5rem",
+                      padding: "1.25rem 1.25rem",
                       animation: "featurePanelIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
                       position: "relative",
                       overflow: "hidden",
@@ -433,7 +492,6 @@ export default function LandingPage() {
                     <div className="position-relative" style={{ zIndex: 1 }}>
                       <div className="d-flex align-items-center gap-3 mb-4">
                         <div style={{
-                          fontSize: "2rem",
                           background: f.gradient,
                           borderRadius: "0.75rem",
                           width: 52, height: 52,
@@ -471,7 +529,7 @@ export default function LandingPage() {
                               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 12px 28px ${f.color}22`; }}
                               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}
                             >
-                              <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{d.icon}</div>
+                              <div style={{ marginBottom: "0.5rem" }}>{d.icon}</div>
                               <div className="fw-bold small mb-1" style={{ color: f.color }}>{d.label}</div>
                               <div className="text-muted" style={{ fontSize: "0.8rem", lineHeight: 1.5 }}>{d.desc}</div>
                             </div>
@@ -496,10 +554,46 @@ export default function LandingPage() {
           </div>
           <div className="row g-4">
             {[
-              { icon: "📋", title: "Enrollment", desc: "Register for classes", href: "/enrollment" },
-              { icon: "📊", title: "Grades", desc: "View your results", href: "/login" },
-              { icon: "🕐", title: "Schedule", desc: "Class timetable", href: "/login" },
-              { icon: "💳", title: "Fees & Payments", desc: "Pay tuition & fees", href: "/login" }
+              {
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <rect x="9" y="3" width="6" height="4" rx="1" stroke="white" strokeWidth="2"/>
+                    <line x1="9" y1="12" x2="15" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="9" y1="16" x2="13" y2="16" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                ),
+                title: "Enrollment", desc: "Register for classes", href: "/enrollment"
+              },
+              {
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <line x1="18" y1="20" x2="18" y2="10" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="12" y1="20" x2="12" y2="4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="6" y1="20" x2="6" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                ),
+                title: "Grades", desc: "View your results", href: "/login"
+              },
+              {
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
+                    <polyline points="12 6 12 12 16 14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ),
+                title: "Schedule", desc: "Class timetable", href: "/login"
+              },
+              {
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="white" strokeWidth="2"/>
+                    <line x1="2" y1="10" x2="22" y2="10" stroke="white" strokeWidth="2"/>
+                    <line x1="7" y1="15" x2="10" y2="15" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                ),
+                title: "Fees & Payments", desc: "Pay tuition & fees", href: "/login"
+              },
             ].map((service, idx) => (
               <div
                 key={idx}
@@ -510,7 +604,7 @@ export default function LandingPage() {
                   <div className="card-3d-tilt h-100 scroll-reveal" onMouseMove={(e) => handleTiltMouseMove(e, idx)} onMouseLeave={handleTiltMouseLeave}>
                     <div className="card-glow-border h-100">
                       <div className="card-glow-inner h-100 text-center">
-                        <div className="mb-3 rounded-xl" style={{ width: "48px", height: "48px", background: "linear-gradient(135deg, #dc2626, #f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", margin: "0 auto" }}>
+                        <div className="mb-3 rounded-xl" style={{ width: "48px", height: "48px", background: "linear-gradient(135deg, #dc2626, #f97316)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
                           {service.icon}
                         </div>
                         <h5 className="fw-bold mb-1" style={{ color: "#dc2626" }}>{service.title}</h5>
@@ -539,7 +633,11 @@ export default function LandingPage() {
                 </p>
                 <div className="mb-4">
                   <p className="fw-semibold mb-2" style={{ color: "#fef3c7", fontSize: "1.05rem" }}>
-                    📍 Located at:
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ marginRight: 6, verticalAlign: "middle" }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="#fef3c7" strokeWidth="2"/>
+                      <circle cx="12" cy="10" r="3" stroke="#fef3c7" strokeWidth="2"/>
+                    </svg>
+                    Located at:
                   </p>
                     <div style={{ background: "rgba(255,255,255,0.15)", padding: "12px 20px", borderRadius: "8px", backdropFilter: "blur(8px)" }}>
                       <p className="mb-0"><strong>Basak Lapu-Lapu Campus</strong></p>
@@ -548,7 +646,10 @@ export default function LandingPage() {
                 </div>
               </div>
               <Link href="/visit-us" className="btn btn-lg px-6 py-3 fw-semibold rounded-xl btn-shimmer" style={{ background: "white", color: "#dc2626" }}>
-                🌟 VISIT US TODAY
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ marginRight: 8, verticalAlign: "middle" }}>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="#fbbf24"/>
+                </svg>
+                VISIT US TODAY
               </Link>
               <p className="text-white-50 small mt-3 mb-0">Discover why hundreds of students choose CFEI for their education</p>
             </div>

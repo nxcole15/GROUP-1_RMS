@@ -32,6 +32,11 @@ function generateTempPassword() {
 /* ─────────────────────────────────────────────────────────────
  * PUBLIC — Student submits enrollment application
  * POST /api/applications
+ * 
+ * Changes:
+ * - Immediately generates Student ID & temporary password
+ * - Sends credentials email right away (no admin approval needed)
+ * - Returns login URL with pre-filled credentials
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
@@ -57,6 +62,40 @@ async function submitApplication(req, res, next) {
         error: "An application with this email is already pending. Please contact the Registrar's Office.",
       });
     }
+
+    // Generate unique student ID (retry if collision)
+    let studentId;
+    for (let i = 0; i < 5; i++) {
+      const candidate = generateStudentId();
+      const [rows] = await db.query(
+        "SELECT id FROM students WHERE student_id = ? LIMIT 1", [candidate]
+      );
+      if (!rows[0]) { studentId = candidate; break; }
+    }
+    if (!studentId) {
+      return res.status(500).json({ error: "Could not generate a unique student ID. Please try again." });
+    }
+
+    // Generate temporary password
+    const tempPass = generateTempPassword();
+    const hashedPass = await bcrypt.hash(tempPass, 10);
+    const fullName = [req.body.first_name, req.body.middle_name, req.body.last_name, req.body.extension_name]
+                       .filter(v => v?.trim())
+                       .join(" ");
+
+    // Determine active term from config
+    const [configRows] = await db.query(
+      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
+    );
+    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
+
+    // Create student account immediately (so they can login right away)
+    await db.query(
+      `INSERT INTO students
+         (student_id, password, full_name, pathway, grade_level, term, email, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [studentId, hashedPass, fullName, req.body.pathway, parseInt(req.body.grade_level, 10), term, req.body.email.trim().toLowerCase()]
+    );
 
     const app = await ApplicationModel.create({
       first_name:              req.body.first_name?.trim(),
@@ -86,11 +125,33 @@ async function submitApplication(req, res, next) {
       previous_school:         req.body.previous_school?.trim() || null,
       previous_school_address: req.body.previous_school_address?.trim() || null,
       years_attended:          req.body.years_attended?.trim() || null,
+      generated_student_id:    studentId,
+      temp_password:           tempPass,
+      credentials_sent_at:     new Date(),
+      status:                  "approved", // Skip admin review — auto-approve with generated credentials
     });
 
+    // Send credentials email immediately (non-blocking, but log errors)
+    sendCredentials({ to: req.body.email.trim().toLowerCase(), fullName, studentId, tempPass })
+      .then(() => console.log(`📧  Credentials sent to ${req.body.email.trim().toLowerCase()}`))
+      .catch(err => {
+        console.error("⚠️  Failed to send credentials email:", err.message);
+        // Application is still saved, but email failed
+      });
+
+    // Build login URL with pre-filled credentials (encoded as params)
+    const loginUrl = process.env.CLIENT_ORIGIN
+      ? `${process.env.CLIENT_ORIGIN}/login`
+      : "http://localhost:3000/login";
+    const prefilledLoginUrl = `${loginUrl}?student_id=${encodeURIComponent(studentId)}&password=${encodeURIComponent(tempPass)}`;
+
     res.status(201).json({
-      message: "Application submitted successfully. The Registrar will review it and you will receive an email once approved.",
+      message: "Application submitted successfully! Your enrollment has been approved. Login credentials have been sent to your email.",
       application_id: app.id,
+      student_id: studentId,
+      login_url: prefilledLoginUrl,
+      email: req.body.email.trim().toLowerCase(),
+      instructions: "Check your email for your Student ID and temporary password. You can also click the login button above.",
     });
   } catch (err) { next(err); }
 }
