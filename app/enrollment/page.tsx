@@ -65,7 +65,7 @@ export default function EnrollmentPage() {
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", middleName: "", extensionName: "",
     email: "", phone: "",
-    course: "", year: "",
+    track: "", strand: "", year: "",
     address: "", dateOfBirth: "",
     studentStatus: "", studentId: "",
     gender: "", civilStatus: "",
@@ -85,7 +85,12 @@ export default function EnrollmentPage() {
       if (files && files[0]) setFormData(prev => ({ ...prev, idPhoto: files[0] }));
     } else {
       const { name, value } = target;
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // Reset strand when track changes
+      if (name === "track") {
+        setFormData(prev => ({ ...prev, [name]: value, strand: "" }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
   };
 
@@ -97,7 +102,7 @@ export default function EnrollmentPage() {
   function validateForm(): string | null {
     const required: Record<string, string> = {
       firstName: "First Name", lastName: "Last Name", email: "Email",
-      phone: "Phone", course: "Pathway", year: "Grade Level",
+      phone: "Phone", track: "Track", strand: "Strand", year: "Grade Level",
       address: "Address", dateOfBirth: "Date of Birth",
       studentStatus: "Student Status", gender: "Gender",
       nationality: "Nationality", religion: "Religion",
@@ -138,7 +143,8 @@ export default function EnrollmentPage() {
         address:                 formData.address,
         student_status:          formData.studentStatus || "new",
         existing_student_id:     formData.studentId || null,
-        pathway:                 formData.course,
+        track:                   formData.track,
+        strand:                  formData.strand,
         grade_level:             formData.year,
         learning_modality:       formData.learningModality,
         father_name:             formData.fatherName || null,
@@ -200,7 +206,8 @@ export default function EnrollmentPage() {
               <div className="mb-2"><strong>Name:</strong> {formData.firstName} {formData.middleName && formData.middleName+" "}{formData.lastName}{formData.extensionName && " "+formData.extensionName}</div>
               <div className="mb-2"><strong>Email:</strong> {formData.email}</div>
               <div className="mb-2"><strong>Status:</strong> {formData.studentStatus === "new" ? "New Student" : "Returning Student"}</div>
-              <div className="mb-2"><strong>Pathway:</strong> {formData.course}</div>
+              <div className="mb-2"><strong>Track:</strong> {formData.track}</div>
+              <div className="mb-2"><strong>Strand:</strong> {formData.strand}</div>
               <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
               <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
             </div>
@@ -445,11 +452,26 @@ export default function EnrollmentPage() {
                 <div className="col-12"><hr className="my-1" /><div className="fw-bold small text-dark">Academic Information</div></div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold text-muted small">Pathway *</label>
-                  <select name="course" value={formData.course} onChange={handleChange} className="form-select rounded-2" required>
-                    <option value="">Select a pathway</option>
-                    <option value="Academic">Academic Pathway (STEM, HUMSS, ABM)</option>
-                    <option value="TechPro">Technical-Vocational-Livelihood (TVL-TechPro) Pathway</option>
+                  <label className="form-label fw-semibold text-muted small">Track *</label>
+                  <select name="track" value={formData.track} onChange={handleChange} className="form-select rounded-2" required>
+                    <option value="">Select a track</option>
+                    <option value="Academic">Academic Track</option>
+                    <option value="TechPro">Tech-Voc Track</option>
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold text-muted small">Strand *</label>
+                  <select name="strand" value={formData.strand} onChange={handleChange} className="form-select rounded-2" required disabled={!formData.track}>
+                    <option value="">{!formData.track ? "Select a track first" : "Select a strand"}</option>
+                    {formData.track === "Academic" && [
+                      <option key="STEM" value="STEM">STEM</option>,
+                      <option key="HUMSS" value="HUMSS">HUMSS</option>,
+                      <option key="ABM" value="ABM">ABM</option>,
+                    ]}
+                    {formData.track === "TechPro" && [
+                      <option key="ICT" value="ICT">ICT</option>,
+                      <option key="Cookery" value="Cookery">Cookery</option>,
+                    ]}
                   </select>
                 </div>
                 <div className="col-md-6">
@@ -633,7 +655,8 @@ export default function EnrollmentPage() {
                   fields: [
                     ["Student Status", formData.studentStatus === "new" ? "New Student" : "Returning Student"],
                     ...(formData.studentStatus === "old" ? [["Student ID", formData.studentId] as [string,string]] : []),
-                    ["Pathway", formData.course],
+                    ["Track", formData.track],
+                    ["Strand", formData.strand],
                     ["Grade Level", `Grade ${formData.year}`],
                     ["Learning Modality", formData.learningModality],
                   ],
