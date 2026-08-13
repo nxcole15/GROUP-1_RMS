@@ -1,9 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
-import AdminDashboardPage from "../../dashboard/page";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { AdminDashboardPage } from "../../../components/AdminDashboardShell";
 
 /* ── Grade Requests Panel for Registrar ── */
 function RegistrarGradeRequestsPanel() {
@@ -15,7 +13,7 @@ function RegistrarGradeRequestsPanel() {
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/registrar`, {
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -33,7 +31,7 @@ function RegistrarGradeRequestsPanel() {
   function sendToPrincipal(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/send-to-principal`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/send-to-principal`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -47,7 +45,7 @@ function RegistrarGradeRequestsPanel() {
   function releaseToTeacher(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/registrar/${id}/release`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/registrar/${id}/release`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -319,3 +317,4 @@ export default function RegistrarDashboardPage() {
     </div>
   );
 }
+

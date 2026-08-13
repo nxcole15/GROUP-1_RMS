@@ -1,9 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
-import AdminDashboardPage from "../../dashboard/page";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { AdminDashboardPage } from "../../../components/AdminDashboardShell";
 
 /* ── Profile Panel ── */
 function PrincipalProfile({ onClose }: { onClose: () => void }) {
@@ -90,7 +88,7 @@ function PrincipalGradeRequestsPanel() {
   function reload() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/principal`, {
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
@@ -101,7 +99,7 @@ function PrincipalGradeRequestsPanel() {
       .then(data => { if (data?.requests) setRequests(data.requests); })
       .catch(() => {});
 
-    fetch(`${API_BASE}/api/grade-requests/config`)
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.config) setTermConfig(data.config); })
       .catch(() => {});
@@ -109,7 +107,7 @@ function PrincipalGradeRequestsPanel() {
 
   // Re-fetch config only (lighter than full reload)
   function reloadConfig() {
-    fetch(`${API_BASE}/api/grade-requests/config`)
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/config")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.config) setTermConfig(data.config); })
       .catch(() => {});
@@ -126,7 +124,7 @@ function PrincipalGradeRequestsPanel() {
     if (!token) { showToast("⚠️ Session expired. Please log in again."); return; }
     // Optimistic update — flip immediately so UI responds at once
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
-    fetch(`${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -151,7 +149,7 @@ function PrincipalGradeRequestsPanel() {
   function approveRequest(id: number) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/principal/${id}/approve`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/approve`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -167,7 +165,7 @@ function PrincipalGradeRequestsPanel() {
     if (!token) return;
     const reason = prompt("Reason for rejection (required):") || "";
     if (!reason.trim()) { showToast("⚠️ Rejection reason is required."); return; }
-    fetch(`${API_BASE}/api/grade-requests/principal/${id}/reject`, {
+    fetch(`https://group-1rms-production-a4d8.up.railway.app/api/grade-requests/principal/${id}/reject`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
@@ -410,3 +408,4 @@ export default function PrincipalDashboardPage() {
     </div>
   );
 }
+

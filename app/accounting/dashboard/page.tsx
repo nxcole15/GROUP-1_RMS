@@ -92,7 +92,7 @@ export default function AccountingDashboardPage() {
 
     // Fetch real payments from API if backend is live
     if (!token.startsWith("demo_")) {
-      fetch("http://localhost:4000/api/admin/payments", {
+      fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
       })
@@ -441,4 +441,5 @@ export default function AccountingDashboardPage() {
     </div>
   );
 }
+
 
