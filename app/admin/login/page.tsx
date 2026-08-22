@@ -70,12 +70,8 @@ export default function AdminLoginPage() {
 
         {/* Logo */}
         <div className="d-flex flex-column align-items-center gap-2">
-          <div className="d-flex align-items-center gap-3">
-            <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 56, height: 56, objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
-            <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.2)" }} />
-            <img src="/newimlogo.png" alt="INFORM" className="rounded-3 shadow" style={{ width: 56, height: 56, objectFit: "cover" }} />
-          </div>
-          <div className="text-white fw-bold fs-5">INFORM</div>
+          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 56, height: 56, objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
+          <h1 className="text-white fw-bold fs-4 mb-2">Login</h1>
           <div style={{ color: "#a5b4fc", fontSize: 12 }}>Cebu Far East Institute · Student Information System</div>
           <span className="badge rounded-pill d-flex align-items-center gap-1 px-3 py-2" style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.35)", color: "#a5b4fc", fontSize: 12 }}>
             🛡️ Administrator Access
@@ -85,7 +81,6 @@ export default function AdminLoginPage() {
         <hr className="w-100 my-0" style={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
         <div className="text-center">
-          <h1 className="text-white fw-black fs-4 mb-1">Admin Login</h1>
           <p style={{ color: "#a5b4fc", fontSize: 13 }} className="mb-0">Restricted to authorized personnel only</p>
         </div>
 

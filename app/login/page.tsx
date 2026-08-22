@@ -208,23 +208,16 @@ function LoginContent() {
                 Back to Home
               </Link>
 
-              <div className="text-center mb-5">
-                <h1 className="display-4 fw-bold mb-3" style={{ color: "#dc2626" }}>Login</h1>
-                <p className="text-muted lead">Enter your User ID and password. The portal detects your role automatically.</p>
-              </div>
-
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
-                <div className="d-flex justify-content-center mb-5">
-                  <div className="d-flex align-items-center gap-4">
-                    <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
-                    <div style={{ width: "2px", height: "48px", background: "linear-gradient(180deg, #dc2626, #f97316, #fbbf24)" }} />
-                    <img src="/newimlogo.png" alt="INFORM" className="rounded-3" style={{ width: "56px", height: "56px", objectFit: "cover" }} />
-                  </div>
+                <div className="d-flex flex-column align-items-center mb-5">
+                  <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-4" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
+                  <h2 className="fw-bold mb-4" style={{ color: "#dc2626" }}>Login</h2>
+                  <p className="text-muted text-center mb-0" style={{ fontSize: "14px" }}>Enter your User ID and password. The portal detects your role automatically.</p>
                 </div>
 
                 {detectedRole && (
                   <div className="mb-4 text-center">
-                    <span className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
+                    <span className="d-inline-flex align-items-center gap-2 roundddded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
                       Detected role: <strong>{detectedRole}</strong>
                     </span>
                   </div>
