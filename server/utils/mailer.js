@@ -67,9 +67,13 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   }
 
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@cfei.edu";
-  const loginUrl = process.env.CLIENT_ORIGIN
-    ? `${process.env.CLIENT_ORIGIN}/login`
-    : "http://localhost:3000/login";
+  
+  // For emails, always use production URL if available (first URL in comma-separated list)
+  const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
+  const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
+  const loginUrl = `${productionUrl}/login`;
+  
+
 
   const info = await transporter.sendMail({
     from,

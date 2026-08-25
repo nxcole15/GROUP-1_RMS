@@ -4,7 +4,8 @@
  */
 const jwt          = require("jsonwebtoken");
 const TeacherModel = require("./teacherModel");
-const { TEACHER_JWT_SECRET } = require("../../config/env");
+require("dotenv").config();
+const TEACHER_JWT_SECRET = process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET || 'teacher-secret-key-change-this';
 
 async function login(req, res, next) {
   try {

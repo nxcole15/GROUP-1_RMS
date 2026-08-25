@@ -4,7 +4,10 @@
  * Attaches decoded payload to req.student.
  */
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../../config/env");
+require("dotenv").config();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
 
 function authenticateStudent(req, res, next) {
   const token =

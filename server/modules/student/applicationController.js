@@ -48,6 +48,13 @@ async function submitApplication(req, res, next) {
       if (!req.body[field]?.toString().trim()) {
         return res.status(400).json({ error: `${field.replace(/_/g," ")} is required.` });
       }
+    
+    
+    // Map 'strand' to 'pathway' for compatibility
+    if (req.body.strand && !req.body.pathway) {
+      req.body.pathway = req.body.strand;
+    }
+
     }
 
     // Prevent duplicate pending applications for same email
@@ -133,16 +140,16 @@ async function submitApplication(req, res, next) {
 
     // Send credentials email immediately (non-blocking, but log errors)
     sendCredentials({ to: req.body.email.trim().toLowerCase(), fullName, studentId, tempPass })
-      .then(() => console.log(`📧  Credentials sent to ${req.body.email.trim().toLowerCase()}`))
       .catch(err => {
         console.error("⚠️  Failed to send credentials email:", err.message);
         // Application is still saved, but email failed
       });
 
     // Build login URL with pre-filled credentials (encoded as params)
-    const loginUrl = process.env.CLIENT_ORIGIN
-      ? `${process.env.CLIENT_ORIGIN}/login`
-      : "http://localhost:3000/login";
+    // For prefilled URLs, use production URL if available (first HTTPS URL in comma-separated list)
+    const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
+    const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
+    const loginUrl = `${productionUrl}/login`;
     const prefilledLoginUrl = `${loginUrl}?student_id=${encodeURIComponent(studentId)}&password=${encodeURIComponent(tempPass)}`;
 
     res.status(201).json({
@@ -256,7 +263,6 @@ async function approveApplication(req, res, next) {
 
     // Send credentials email (non-blocking — don't fail the request if email fails)
     sendCredentials({ to: app.email, fullName, studentId, tempPass })
-      .then(() => console.log(`📧  Credentials sent to ${app.email}`))
       .catch(err => console.error("⚠️  Failed to send credentials email:", err.message));
 
     res.json({

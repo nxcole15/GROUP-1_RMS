@@ -9,7 +9,13 @@
 
 require("dotenv").config();
 const mysql = require("mysql2/promise");
-const env   = require("../config/env");
+const env = {
+  DB_HOST: process.env.DB_HOST || 'localhost',
+  DB_PORT: process.env.DB_PORT || 3306,
+  DB_USER: process.env.DB_USER || 'root',
+  DB_PASSWORD: process.env.DB_PASSWORD,
+  DB_NAME: process.env.DB_NAME || 'smart_student_service'
+};
 
 async function run() {
   const conn = await mysql.createConnection({

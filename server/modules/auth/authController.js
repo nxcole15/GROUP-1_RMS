@@ -4,7 +4,9 @@
 const bcrypt       = require("bcryptjs");
 const jwt          = require("jsonwebtoken");
 const StudentModel = require("../student/studentModel");
-const { JWT_SECRET, JWT_EXPIRES_IN } = require("../../config/env");
+require("dotenv").config();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 const LOCKOUT_ATTEMPTS = 5;
 const LOCKOUT_MINUTES  = 15;
@@ -112,7 +114,7 @@ async function universalLogin(req, res, next) {
       const AdminModel = require("../admin/adminModel");
       const admin = await AdminModel.findByAdminId(id.toUpperCase());
       if (admin && await bcrypt.compare(password, admin.password)) {
-        const { ADMIN_JWT_SECRET } = require("../../config/env");
+        const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key';
         const token = jwt.sign(
           { id: admin.id, admin_id: admin.admin_id, full_name: admin.full_name, role: admin.role },
           ADMIN_JWT_SECRET, { expiresIn: "8h" }
@@ -124,7 +126,7 @@ async function universalLogin(req, res, next) {
 
     // ── Try Teacher ────────────────────────────────────────
     if (id.toUpperCase().startsWith("T")) {
-      const { TEACHER_JWT_SECRET } = require("../../config/env");
+      const TEACHER_JWT_SECRET = process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET || 'teacher-secret-key';
       const db = require("../../config/db");
 
       const [rows] = await db.query(
