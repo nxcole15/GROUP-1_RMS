@@ -82,27 +82,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
 
     // Apply saved theme on mount
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+    try {
+      const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
 
-    const html = document.documentElement;
-    if (initialTheme === "dark") {
-      html.setAttribute("data-theme", "dark");
-    } else {
-      html.removeAttribute("data-theme");
-    }
+      const html = document.documentElement;
+      if (initialTheme === "dark") {
+        html.setAttribute("data-theme", "dark");
+      } else {
+        html.removeAttribute("data-theme");
+      }
 
-    // Apply calm UI effects (reduces motion/noise but keeps orange/red/yellow theme)
-    const calm = localStorage.getItem("effects") === "calm";
-    if (calm) {
-      html.setAttribute("data-effects", "calm");
-    } else {
-      html.removeAttribute("data-effects");
+      // Apply calm UI effects (reduces motion/noise but keeps orange/red/yellow theme)
+      const calm = localStorage.getItem("effects") === "calm";
+      if (calm) {
+        html.setAttribute("data-effects", "calm");
+      } else {
+        html.removeAttribute("data-effects");
+      }
+    } catch (e) {
+      // localStorage might not be available during SSR
     }
   }, []);
 
-  if (!mounted) return <>{children}</>;
-
+  // Always render children, with suppressHydrationWarning on html
   return <>{children}</>;
 }

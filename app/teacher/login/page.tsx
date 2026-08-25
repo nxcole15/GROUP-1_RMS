@@ -83,22 +83,13 @@ export default function TeacherLoginPage() {
                 </svg>
                 Back to Home
               </Link>
-              <div className="text-center mb-5">
-                <div className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium mb-4" style={{ background: "linear-gradient(135deg, #f97316, #fbbf24)", color: "white", padding: "8px 20px" }}>
-                  👨‍🏫 Teacher Access
-                </div>
-                <h1 className="display-4 fw-extrabold mb-3" style={{ color: "#dc2626" }}>Teacher Login</h1>
-                <p className="text-muted lead">Access your class management and grading portal</p>
-              </div>
 
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
-                {/* Logo Area */}
-                <div className="d-flex justify-content-center mb-5">
-                  <div className="d-flex align-items-center gap-4">
-                    <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
-                    <div style={{ width: "2px", height: "48px", background: "linear-gradient(180deg, #dc2626, #f97316, #fbbf24)" }}></div>
-                    <img src="/newimlogo.png" alt="INFORM" className="rounded-3" style={{ width: "56px", height: "56px", objectFit: "cover", boxShadow: "0 4px 6px -1px rgba(249, 115, 22, 0.4)" }} />
-                  </div>
+                {/* Logo Area with Login Text */}
+                <div className="d-flex flex-column align-items-center mb-5">
+                  <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-4" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
+                  <h2 className="fw-bold mb-4" style={{ color: "#dc2626" }}>Login</h2>
+                  <p className="text-muted text-center mb-0" style={{ fontSize: "14px" }}>Access your class management and grading portal</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>
