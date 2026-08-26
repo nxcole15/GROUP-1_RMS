@@ -1,6 +1,6 @@
 /**
  * utils/mailer.js
- * Nodemailer transporter — used to email credentials to approved students.
+ * Nodemailer transporter — used to email credentials to applicants.
  *
  * SMTP Configuration Required:
  *   Set these in server/.env:
@@ -50,7 +50,7 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
 }
 
 /**
- * Send enrollment credentials to an approved student.
+ *Send enrollment credentials to an applicant.
  * @param {object} opts
  * @param {string} opts.to         - Recipient email
  * @param {string} opts.fullName   - Student's full name
@@ -78,7 +78,7 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   const info = await transporter.sendMail({
     from,
     to,
-    subject: "🎓 Your CFEI Enrollment Has Been Approved — Login Credentials",
+    subject: "CFEI Enrollment Application Received — Login Credentials",
     html: `
 <!DOCTYPE html>
 <html>
@@ -86,15 +86,15 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1e40af,#dc2626);padding:32px 24px;text-align:center;">
-      <h1 style="color:#fff;margin:0;font-size:22px;">🎓 Enrollment Approved!</h1>
+      <h1 style="color:#fff;margin:0;font-size:22px;"> 🎓 Enrollment Application Received</h1>
       <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Cebu Far East Institute — INFORM Student Portal</p>
     </div>
     <!-- Body -->
     <div style="padding:32px 24px;">
       <p style="color:#334155;font-size:15px;margin:0 0 16px;">Dear <strong>${fullName}</strong>,</p>
       <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;">
-        Congratulations! Your enrollment application to <strong>Cebu Far East Institute</strong> has been reviewed and <strong>approved</strong>.
-        Below are your login credentials for the INFORM Student Portal.
+        Thank you for submitting your enrollment application to <strong>Cebu Far East Institute</strong>.
+        Below are your login credentials for the INFORM Student Portal. Your account will become active after Principal approval.
       </p>
 
       <!-- Credentials box -->
@@ -110,8 +110,8 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
       </div>
 
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#92400e;">
-        ⚠️ <strong>Important:</strong> Please change your password immediately after your first login.
-        Do not share your credentials with anyone.
+        ⚠️ <strong>Important:</strong> Your account is not active yet. You may log in after Principal approval.
+        Please change your password after your first login and do not share your credentials.
       </div>
 
       <div style="text-align:center;margin-bottom:24px;">
@@ -133,7 +133,19 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   </div>
 </body>
 </html>`,
-    text: `Dear ${fullName},\n\nYour enrollment has been approved.\n\nStudent ID: ${studentId}\nTemporary Password: ${tempPass}\n\nLogin at: ${loginUrl}\n\nPlease change your password after first login.\n\n— CFEI INFORM System`,
+    text: `Dear ${fullName},
+
+    Your enrollment application has been received.
+
+    Student ID: ${studentId}
+    Temporary Password: ${tempPass}
+
+    Your account will become active after Principal approval.
+    Login at: ${loginUrl}
+
+    Please change your password after Principal approval.
+
+    CFEI INFORM System`,
   });
 
   console.log(`✅  Email sent successfully to ${to}`);

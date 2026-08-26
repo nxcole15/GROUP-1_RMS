@@ -36,7 +36,7 @@ function generateTempPassword() {
  * Changes:
  * - Immediately generates Student ID & temporary password
  * - Sends credentials email right away (no admin approval needed)
- * - Returns login URL with pre-filled credentials
+  * - Provides credentials by email without exposing them in a URL
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
@@ -96,11 +96,11 @@ async function submitApplication(req, res, next) {
     );
     const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
 
-    // Create student account immediately (so they can login right away)
+    // Create the account now, but keep login disabled until Principal approval
     await db.query(
       `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
       [studentId, hashedPass, fullName, req.body.pathway, parseInt(req.body.grade_level, 10), term, req.body.email.trim().toLowerCase()]
     );
 
@@ -135,7 +135,7 @@ async function submitApplication(req, res, next) {
       generated_student_id:    studentId,
       temp_password:           tempPass,
       credentials_sent_at:     new Date(),
-      status:                  "approved", // Skip admin review — auto-approve with generated credentials
+      status:                  "submitted", 
     });
 
     // Send credentials email immediately (non-blocking, but log errors)
@@ -145,20 +145,12 @@ async function submitApplication(req, res, next) {
         // Application is still saved, but email failed
       });
 
-    // Build login URL with pre-filled credentials (encoded as params)
-    // For prefilled URLs, use production URL if available (first HTTPS URL in comma-separated list)
-    const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
-    const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
-    const loginUrl = `${productionUrl}/login`;
-    const prefilledLoginUrl = `${loginUrl}?student_id=${encodeURIComponent(studentId)}&password=${encodeURIComponent(tempPass)}`;
-
     res.status(201).json({
-      message: "Application submitted successfully! Your enrollment has been approved. Login credentials have been sent to your email.",
+      message: "Application submitted successfully. Your login credentials have been sent to your email. Please wait for Principal approval before logging in.",
       application_id: app.id,
       student_id: studentId,
-      login_url: prefilledLoginUrl,
       email: req.body.email.trim().toLowerCase(),
-      instructions: "Check your email for your Student ID and temporary password. You can also click the login button above.",
+      instructions: "Check your email for your Student ID and temporary password. Your account will be activated after Principal approval.",
     });
   } catch (err) { next(err); }
 }
@@ -209,7 +201,7 @@ async function listForPrincipal(req, res, next) {
 }
 
 /* ─────────────────────────────────────────────────────────────
- * PRINCIPAL — Approve application → create student account → send email
+ * PRINCIPAL — Approve application → activate existing student account
  * PATCH /api/applications/:id/approve
  * ───────────────────────────────────────────────────────────── */
 async function approveApplication(req, res, next) {
@@ -221,34 +213,35 @@ async function approveApplication(req, res, next) {
       return res.status(409).json({ error: "Application is not pending principal review." });
     }
 
-    // Generate unique student ID (retry if collision)
-    let studentId;
-    for (let i = 0; i < 5; i++) {
-      const candidate = generateStudentId();
-      const [rows] = await db.query(
-        "SELECT id FROM students WHERE student_id = ? LIMIT 1", [candidate]
-      );
-      if (!rows[0]) { studentId = candidate; break; }
+    // Change account_status to active
+    const studentId = app.generated_student_id;
+
+    if (!studentId) {
+      return res.status(409).json({
+        error: "This application has no linked student account.",
+      });
     }
-    if (!studentId) return res.status(500).json({ error: "Could not generate a unique student ID. Please try again." });
 
-    const tempPass   = generateTempPassword();
-    const hashedPass = await bcrypt.hash(tempPass, 10);
-    const fullName   = [app.first_name, app.middle_name, app.last_name, app.extension_name]
-                         .filter(Boolean).join(" ");
-
-    // Determine active term from config
-    const [configRows] = await db.query(
-      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
+    const [ studentRows ] = await db.query(
+      "SELECT id, account_status FROM students WHERE student_id = ? LIMIT 1",
+      [studentId]
     );
-    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
 
-    // Create student account
+    if (!studentRows[0]) {
+      return res.status(409).json({
+        error: "The student account linked to this application was not found.",
+      });
+    }
+
+    if (studentRows[0].account_status !== "pending") {
+      return res.status(409).json({
+        error: "The linked student account has already been processed.",
+      });
+    }
+
     await db.query(
-      `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [studentId, hashedPass, fullName, app.pathway, app.grade_level, term, app.email]
+      "UPDATE students SET account_status = 'active' WHERE student_id = ?",
+      [studentId]
     );
 
     // Mark application approved and save generated credentials
@@ -256,17 +249,10 @@ async function approveApplication(req, res, next) {
       reviewed_by_principal: req.admin.admin_id,
       principal_reviewed_at: new Date(),
       principal_note:        req.body.principal_note?.trim() || null,
-      generated_student_id:  studentId,
-      temp_password:         tempPass,           // stored in plain text for audit; student must change it
-      credentials_sent_at:   new Date(),
     });
 
-    // Send credentials email (non-blocking — don't fail the request if email fails)
-    sendCredentials({ to: app.email, fullName, studentId, tempPass })
-      .catch(err => console.error("⚠️  Failed to send credentials email:", err.message));
-
     res.json({
-      message:    `Application approved. Student account created and credentials emailed to ${app.email}.`,
+      message: `Application approved. Student account ${studentId} is now active.`,
       student_id: studentId,
       application: updated,
     });
@@ -289,6 +275,13 @@ async function rejectApplication(req, res, next) {
     if (!app) return res.status(404).json({ error: "Application not found." });
     if (["approved","rejected"].includes(app.status)) {
       return res.status(409).json({ error: "Application has already been processed." });
+    }
+
+    if (app.generated_student_id) {
+      await db.query(
+        "UPDATE students SET account_status = 'suspended' WHERE student_id = ?",
+        [app.generated_student_id]
+      );
     }
 
     const updated = await ApplicationModel.updateStatus(id, "rejected", {

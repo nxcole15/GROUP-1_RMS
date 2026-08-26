@@ -30,7 +30,7 @@ async function searchStudents(req, res, next) {
     if (!query) return res.status(400).json({ error: "Search query is required." });
 
     const [rows] = await db.query(
-      `SELECT id, student_id, full_name, course, year_level, semester, email
+      `SELECT id, student_id, full_name, course, year_level, semester, email, account_status
        FROM students
        WHERE full_name LIKE ? OR student_id LIKE ?
        ORDER BY full_name`,
@@ -191,9 +191,37 @@ async function getTeachers(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function reactivateStudent(req, res, next) {
+  try {
+    const studentId = req.params.student_id;
+
+    const [result] = await db.query(
+      `UPDATE students
+       SET account_status = 'active'
+       WHERE student_id = ? AND account_status = 'suspended'`,
+      [studentId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        error: "Suspended student account not found.",
+      });
+    }
+
+    res.json({
+      message: "Student account reactivated successfully.",
+      student_id: studentId,
+      account_status: "active",
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 module.exports = {
   getDashboard, searchStudents,
+  reactivateStudent,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,

@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
   // forward those requests to the backend — avoiding CORS issues from the
   // browser side entirely.
   //
-  // Usage: fetch('/proxy/api/auth/login', ...) from client components.
+  // Usage: fetch('/proxy/api/auth/universal-login', ...) from client components.
   // The Next.js API routes already call BACKEND_URL directly, so they don't
   // need these rewrites.
   async rewrites() {
