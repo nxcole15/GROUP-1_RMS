@@ -2,18 +2,16 @@
  * modules/student/applicationController.js
  *
  * Enrollment application flow:
- *   1. Student submits form  → POST /api/applications        (public, no token)
- *   2. Registrar reviews     → GET  /api/applications        (admin token, registrar role)
- *                           → PATCH /api/applications/:id/forward  (send to principal)
- *                           → PATCH /api/applications/:id/reject
- *   3. Principal reviews     → GET  /api/applications/principal
- *                           → PATCH /api/applications/:id/approve  (creates student account + sends email)
- *                           → PATCH /api/applications/:id/reject
+ *    1. Student submits form → application saved as submitted
+ *   2. Requirements email sent with deadline
+ *   3. Registrar reviews and forwards to Principal
+ *   4. Principal approves → account created and credentials emailed
  */
+
 const bcrypt          = require("bcryptjs");
 const db              = require("../../config/db");
 const ApplicationModel = require("./applicationModel");
-const { sendCredentials } = require("../../utils/mailer");
+const { sendRequirementsEmail, sendCredentials, } = require("../../utils/mailer");
 
 /* ── helpers ── */
 function generateStudentId() {
@@ -70,39 +68,9 @@ async function submitApplication(req, res, next) {
       });
     }
 
-    // Generate unique student ID (retry if collision)
-    let studentId;
-    for (let i = 0; i < 5; i++) {
-      const candidate = generateStudentId();
-      const [rows] = await db.query(
-        "SELECT id FROM students WHERE student_id = ? LIMIT 1", [candidate]
-      );
-      if (!rows[0]) { studentId = candidate; break; }
-    }
-    if (!studentId) {
-      return res.status(500).json({ error: "Could not generate a unique student ID. Please try again." });
-    }
-
-    // Generate temporary password
-    const tempPass = generateTempPassword();
-    const hashedPass = await bcrypt.hash(tempPass, 10);
     const fullName = [req.body.first_name, req.body.middle_name, req.body.last_name, req.body.extension_name]
                        .filter(v => v?.trim())
                        .join(" ");
-
-    // Determine active term from config
-    const [configRows] = await db.query(
-      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
-    );
-    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
-
-    // Create the account now, but keep login disabled until Principal approval
-    await db.query(
-      `INSERT INTO students
-        (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-      [studentId, hashedPass, fullName, req.body.pathway, parseInt(req.body.grade_level, 10), term, req.body.email.trim().toLowerCase()]
-    );
 
     const app = await ApplicationModel.create({
       first_name:              req.body.first_name?.trim(),
@@ -132,25 +100,34 @@ async function submitApplication(req, res, next) {
       previous_school:         req.body.previous_school?.trim() || null,
       previous_school_address: req.body.previous_school_address?.trim() || null,
       years_attended:          req.body.years_attended?.trim() || null,
-      generated_student_id:    studentId,
-      temp_password:           tempPass,
-      credentials_sent_at:     new Date(),
       status:                  "submitted", 
     });
 
-    // Send credentials email immediately (non-blocking, but log errors)
-    sendCredentials({ to: req.body.email.trim().toLowerCase(), fullName, studentId, tempPass })
-      .catch(err => {
-        console.error("⚠️  Failed to send credentials email:", err.message);
-        // Application is still saved, but email failed
+    const [configRows] = await db.query(
+      "SELECT deadline FROM enrollment_config ORDER BY id DESC LIMIT 1"
+      );
+
+      const dueDate = configRows[0]?.deadline
+      ? new Date(configRows[0].deadline).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "the announced deadline";
+
+      sendRequirementsEmail({
+        to: req.body.email.trim().toLowerCase(),
+        fullName,
+        dueDate,
+      }).catch(err => {
+        console.error("Requirements email failed:", err.message);
       });
 
     res.status(201).json({
-      message: "Application submitted successfully. Your login credentials have been sent to your email. Please wait for Principal approval before logging in.",
+      message: "Application submitted successfully. Please submit your requirements before the deadline. Your application will be reviewed by the Registrar and Principal.",
       application_id: app.id,
-      student_id: studentId,
       email: req.body.email.trim().toLowerCase(),
-      instructions: "Check your email for your Student ID and temporary password. Your account will be activated after Principal approval.",
+      instructions: "Check your email for the requirements checklist and deadline. Login credentials will be sent after Principal approval.",
     });
   } catch (err) { next(err); }
 }
@@ -213,35 +190,50 @@ async function approveApplication(req, res, next) {
       return res.status(409).json({ error: "Application is not pending principal review." });
     }
 
-    // Change account_status to active
-    const studentId = app.generated_student_id;
+    // Generate the account only after Principal approval
+    let studentId;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = generateStudentId();
+      const [rows] = await db.query(
+        "SELECT id FROM students WHERE student_id = ? LIMIT 1",
+        [candidate]
+      );
+
+      if (!rows[0]) {
+        studentId = candidate;
+        break;
+      }
+    }
 
     if (!studentId) {
-      return res.status(409).json({
-        error: "This application has no linked student account.",
+      return res.status(500).json({
+        error: "Could not generate a unique student ID. Please try again.",
       });
     }
 
-    const [ studentRows ] = await db.query(
-      "SELECT id, account_status FROM students WHERE student_id = ? LIMIT 1",
-      [studentId]
+    const tempPass = generateTempPassword();
+    const hashedPass = await bcrypt.hash(tempPass, 10);
+
+    const [configRows] = await db.query(
+      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
     );
 
-    if (!studentRows[0]) {
-      return res.status(409).json({
-        error: "The student account linked to this application was not found.",
-      });
-    }
-
-    if (studentRows[0].account_status !== "pending") {
-      return res.status(409).json({
-        error: "The linked student account has already been processed.",
-      });
-    }
+    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
 
     await db.query(
-      "UPDATE students SET account_status = 'active' WHERE student_id = ?",
-      [studentId]
+      `INSERT INTO students
+      (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
+      [
+        studentId,
+        hashedPass,
+        `${app.first_name} ${app.last_name}`,
+        app.pathway,
+        app.grade_level,
+        term,
+        app.email,
+      ]
     );
 
     // Mark application approved and save generated credentials
@@ -249,10 +241,22 @@ async function approveApplication(req, res, next) {
       reviewed_by_principal: req.admin.admin_id,
       principal_reviewed_at: new Date(),
       principal_note:        req.body.principal_note?.trim() || null,
+      generated_student_id:  studentId,
+      temp_password:         tempPass,
+      credentials_sent_at:   new Date(),
+    });
+
+    sendCredentials({
+      to: app.email,
+      fullName: `${app.first_name} ${app.last_name}`,
+      studentId,
+      tempPass,
+      }).catch(err => {
+        console.error("Credentials email failed:", err.message);
     });
 
     res.json({
-      message: `Application approved. Student account ${studentId} is now active.`,
+      message: `Application approved. Student account ${studentId} was created and credentials were emailed.`,
       student_id: studentId,
       application: updated,
     });

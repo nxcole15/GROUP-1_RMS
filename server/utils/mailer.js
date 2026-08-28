@@ -1,6 +1,6 @@
 /**
  * utils/mailer.js
- * Nodemailer transporter — used to email credentials to applicants.
+ * resend — used to email credentials to applicants.
  *
  * SMTP Configuration Required:
  *   Set these in server/.env:
@@ -24,30 +24,26 @@
  *   SMTP_PASS=SG.your_api_key_here
  *   EMAIL_FROM=noreply@cfei.edu
  */
-require("dotenv").config();
-const nodemailer = require("nodemailer");
+  require("dotenv").config();
+  const { Resend } = require("resend");
 
-let transporter = null;
+  const resend = process.env.RESEND_API_KEY
+    ? new Resend(process.env.RESEND_API_KEY)
+    : null;
 
-if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-  // Real SMTP transport (Gmail / SendGrid / etc.)
-  transporter = nodemailer.createTransport({
-    host:   process.env.SMTP_HOST || "smtp.gmail.com",
-    port:   parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: process.env.SMTP_PORT === "465",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-  console.log("✅  Mailer: SMTP configured → using real email transport");
-  console.log("   Host:", process.env.SMTP_HOST);
-  console.log("   User:", process.env.SMTP_USER);
-} else {
-  console.error("❌  MAILER ERROR: SMTP credentials not configured!");
-  console.error("   Set SMTP_USER and SMTP_PASS in server/.env to enable email sending.");
-  console.error("   Enrollment emails will NOT be sent until SMTP is configured.");
-}
+    async function deliverEmail(message) {
+      if (!resend) {
+        throw new Error("RESEND_API_KEY is not configured.");
+      }
+
+      const { data, error } = await resend.emails.send(message);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data;
+    }
 
 /**
  *Send enrollment credentials to an applicant.
@@ -58,15 +54,11 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
  * @param {string} opts.tempPass   - Temporary password
  */
 async function sendCredentials({ to, fullName, studentId, tempPass }) {
-  if (!transporter) {
-    console.error("❌  Email not sent: SMTP not configured");
-    console.error(`   To: ${to}`);
-    console.error(`   Student ID: ${studentId}`);
-    console.error("   Reason: SMTP_USER and SMTP_PASS not set in server/.env");
-    throw new Error("Email service not configured. Please set SMTP credentials in server/.env");
+  if (!resend) {
+    throw new Error("RESEND_API_KEY is not configured.");
   }
 
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@cfei.edu";
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
   
   // For emails, always use production URL if available (first URL in comma-separated list)
   const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
@@ -75,7 +67,7 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   
 
 
-  const info = await transporter.sendMail({
+  const info = await deliverEmail({
     from,
     to,
     subject: "CFEI Enrollment Application Received — Login Credentials",
@@ -152,4 +144,75 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   return info;
 }
 
-module.exports = { sendCredentials };
+async function sendRequirementsEmail({ to, fullName, dueDate }) {
+    if (!resend) {
+      throw new Error("RESEND_API_KEY is not configured.");
+    }
+
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const requirements = [
+    "School Form 9 / Report Card",
+    "Birth Certificate",
+    "Certificate of Good Moral Character",
+    "2x2 Colored ID Pictures",
+    "Certificate of Completion / Diploma",
+    "School Form 10",
+  ];
+
+  await deliverEmail({
+    from,
+    to,
+    subject: "CFEI Enrollment Application Received - Requirements Needed",
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#334155;">
+        <h2 style="color:#1e40af;">Enrollment Application Received</h2>
+
+        <p>Dear <strong>${fullName}</strong>,</p>
+
+        <p>
+          We received your enrollment application for Cebu Far East Institute.
+          Please submit the following requirements before the deadline:
+        </p>
+
+        <ul>
+          ${requirements.map(item => `<li>${item}</li>`).join("")}
+        </ul>
+
+        <p>
+          <strong>Requirements deadline:</strong> ${dueDate}
+        </p>
+
+        <p>
+          Your application will be reviewed by the Registrar and then forwarded
+          to the Principal for final approval.
+        </p>
+
+        <p>
+          Your student account and login credentials will be sent only after
+          Principal approval.
+        </p>
+
+        <p>
+          Regards,<br />
+          CFEI INFORM System
+        </p>
+      </div>
+    `,
+    text: `Dear ${fullName},
+
+We received your enrollment application for Cebu Far East Institute.
+
+Please submit these requirements:
+${requirements.map(item => `- ${item}`).join("\n")}
+
+Requirements deadline: ${dueDate}
+
+Your application will be reviewed by the Registrar and then forwarded to the Principal.
+
+Your student account and login credentials will be sent only after Principal approval.
+
+CFEI INFORM System`,
+  });
+}
+
+module.exports = { sendCredentials, sendRequirementsEmail };
