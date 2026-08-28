@@ -159,12 +159,13 @@ export default function AccountingDashboardPage() {
     setPaymentLog(prev => prev.filter(p => p.id !== id));
   }
 
-  function logout() {
+  async function logout() {
     try {
       localStorage.removeItem(LS_ACTIVE_KEY);
     } catch {
       // ignore
     }
+    await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   }
 

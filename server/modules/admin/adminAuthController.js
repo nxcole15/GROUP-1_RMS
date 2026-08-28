@@ -5,7 +5,8 @@ const bcrypt     = require("bcryptjs");
 const jwt        = require("jsonwebtoken");
 const AdminModel = require("./adminModel");
 const AuditModel = require("./auditModel");
-const { ADMIN_JWT_SECRET } = require("../../config/env");
+require("dotenv").config();
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key-change-this';
 
 async function adminLogin(req, res, next) {
   try {

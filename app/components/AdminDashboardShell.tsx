@@ -600,13 +600,22 @@ function StudentsPanel() {
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (data?.students) {
-            setApiStudents(data.students.map((s: {id:number;student_id:string;full_name:string;track?:string;grade_level?:number;status?:string;tuition_status?:string}) => ({
+            setApiStudents(data.students.map((s: {
+              id: number;
+              student_id: string;
+              full_name: string;
+              track?: string;
+              grade_level?: number;
+              status?: string;
+              account_status?: "pending" | "active" | "suspended";
+              tuition_status?: string;
+            }) => ({
               id: s.student_id || String(s.id),
               name: s.full_name,
               track: s.track || "STEM",
               grade: s.grade_level || 11,
               gwa: 0,
-              status: s.status || "Active",
+              status: s.account_status || s.status || "Active",
               tuition: s.tuition_status || "Unknown",
               room: 1,
             })));
@@ -684,7 +693,17 @@ function StudentsPanel() {
                     <td className="d-none d-lg-table-cell text-muted small">{s.track}  Grade {s.grade}</td>
                     <td className="d-none d-lg-table-cell fw-bold text-primary small">{s.gwa}</td>
                     <td className="d-none d-lg-table-cell text-muted small"><span className="badge bg-info-subtle text-info border border-info-subtle">Room {s.room}</span></td>
-                    <td><span className={`badge ${s.status === "Active" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{s.status}</span></td>
+                    <td>
+                      <span className={`badge ${
+                        s.status === "active" || s.status === "Active"
+                          ? "bg-success-subtle text-success border border-success-subtle"
+                          : s.status === "suspended"
+                            ? "bg-danger-subtle text-danger border border-danger-subtle"
+                            : "bg-secondary-subtle text-secondary border border-secondary-subtle"
+                      }`}>
+                        {s.status}
+                      </span>
+                    </td>
                   </tr>
                 ))
               }
@@ -767,12 +786,13 @@ function GradesPanel() {
 }
 
 /*  Enrollment Panel  */
-function EnrollmentPanel() {
+function EnrollmentPanel({ role }: { role?: string }) {
   const DEADLINE = new Date("2026-06-15");
 
   const [enrollments, setEnrollments] = useState<{
     name: string; id: string; track: string; grade: number;
-    date: string; enrollDate: Date; status: string; photo: string | null; appId?: number;
+    date: string; enrollDate: Date; status: string; photo: string | null;
+    appId?: number; generatedStudentId?: string | null;
   }[]>([]);
 
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
@@ -833,7 +853,7 @@ function EnrollmentPanel() {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify({ rejection_reason: rejectionReason }),
       });
       
       setEnrollments(prev => prev.map(e => e.id === studentId ? { ...e, status: "Rejected" } : e));
@@ -868,6 +888,7 @@ function EnrollmentPanel() {
         setEnrollments(data.applications.map((app: {
           id: number; student_name?: string; email: string;
           pathway?: string; grade_level?: number; status: string; created_at: string;
+          generated_student_id?: string | null;
         }) => ({
           name: app.student_name || app.email || "Unknown",
           id: app.email,
@@ -875,9 +896,19 @@ function EnrollmentPanel() {
           grade: app.grade_level || 0,
           date: new Date(app.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
           enrollDate: new Date(app.created_at),
-          status: app.status === "approved" ? "Confirmed" : app.status === "submitted" || app.status === "registrar_review" ? "Pending" : "Other",
+          status:
+        app.status === "approved"
+          ? "Confirmed"
+          : app.status === "principal_review"
+            ? "Principal Review"
+            : app.status === "rejected"
+              ? "Rejected"
+            : app.status === "submitted" || app.status === "registrar_review"
+              ? "Pending"
+              : "Other",
           photo: null,
           appId: app.id,
+          generatedStudentId: app.generated_student_id,
         })));
       } else {
         console.warn("No applications data received");
@@ -1039,7 +1070,13 @@ function EnrollmentPanel() {
                       <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
                       <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
                       <td>
-                        <span className={`badge ${e.status==="Confirmed" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
+                        <span className={`badge ${
+                          e.status === "Confirmed"
+                            ? "bg-success-subtle text-success border border-success-subtle"
+                            : e.status === "Rejected"
+                              ? "bg-danger-subtle text-danger border border-danger-subtle"
+                              : "bg-warning-subtle text-warning border border-warning-subtle"
+                        }`}>
                           {e.status}
                         </span>
                       </td>
@@ -1066,11 +1103,107 @@ function EnrollmentPanel() {
                                   credentials: "include",
                                   body: JSON.stringify({}),
                                 }).then(() => {
-                                  setEnrollments(prev => prev.map(el => el.id === e.id ? { ...el, status: "Confirmed" } : el));
+                                  setEnrollments(prev =>
+                                    prev.map(el =>
+                                      el.id === e.id ? { ...el, status: "Principal Review" } : el
+                                    )
+                                  );
                                 });
                               }} className="btn btn-success btn-sm" style={{ fontSize:11 }}>✓ Accept</button>
                               <button onClick={() => openRejectionDropdown(e.id)} className="btn btn-danger btn-sm" style={{ fontSize:11 }}>✕ Reject</button>
                             </>
+                          )}
+                          {role === "principal" && e.status === "Principal Review" && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  const token = localStorage.getItem("inform_token");
+
+                                  if (!token || !e.appId) return;
+
+                                  fetch(`${API_BASE}/api/applications/${e.appId}/approve`, {
+                                    method: "PATCH",
+                                    headers: {
+                                      Authorization: `Bearer ${token}`,
+                                      "Content-Type": "application/json",
+                                    },
+                                    credentials: "include",
+                                    body: JSON.stringify({}),
+                                  })
+                                    .then(response => {
+                                      if (!response.ok) {
+                                        throw new Error("Approval failed");
+                                      }
+
+                                      return response.json();
+                                    })
+                                    .then(() => {
+                                      setEnrollments(prev =>
+                                        prev.map(enrollment =>
+                                          enrollment.id === e.id
+                                            ? { ...enrollment, status: "Confirmed" }
+                                            : enrollment
+                                        )
+                                      );
+                                    })
+                                    .catch(error => {
+                                      console.error("Approval error:", error);
+                                    });
+                                }}
+                                className="btn btn-success btn-sm"
+                                style={{ fontSize: 11 }}
+                              >
+                                Approve
+                              </button>
+
+                              <button
+                                onClick={() => openRejectionDropdown(e.id)}
+                                className="btn btn-danger btn-sm"
+                                style={{ fontSize: 11 }}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {(role === "principal" || role === "registrar" || role === "admin") && e.status === "Rejected" && (
+                            <button
+                              onClick={async () => {
+                                const token = localStorage.getItem("inform_token");
+                                if (!token || !e.generatedStudentId) return;
+
+                                try {
+                                  const response = await fetch(
+                                    `${API_BASE}/api/admin/students/${e.generatedStudentId}/reactivate`,
+                                    {
+                                      method: "PATCH",
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                        "Content-Type": "application/json",
+                                      },
+                                      credentials: "include",
+                                    }
+                                  );
+
+                                  if (!response.ok) {
+                                    throw new Error("Reactivation failed");
+                                  }
+
+                                  setEnrollments(prev =>
+                                    prev.map(enrollment =>
+                                      enrollment.id === e.id
+                                        ? { ...enrollment, status: "Confirmed" }
+                                        : enrollment
+                                    )
+                                  );
+                                } catch (error) {
+                                  console.error("Reactivation error:", error);
+                                }
+                              }}
+                              className="btn btn-outline-success btn-sm"
+                              style={{ fontSize: 11 }}
+                            >
+                              Reactivate
+                            </button>
                           )}
                         </div>
                       </td>
@@ -2948,7 +3081,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "grades":        return <GradesPanel />;
       case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
       case "documents":     return <AdminDocumentsPanel />;
-      case "enrollment":    return <EnrollmentPanel />;
+      case "enrollment":    return <EnrollmentPanel role={role} />;
       case "tuition":       return <TuitionPanel />;
       case "announcements": return <AnnouncementsPanel />;
       case "library":       return <LibraryPanel />;

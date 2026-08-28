@@ -21,12 +21,17 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json(data, { status: 200 });
 
     // Set the right cookie based on role
+    const isProd = process.env.NODE_ENV === "production";
+    const adminRoles = ["admin", "principal", "registrar", "accounting"];
+
     if (data.role === "student") {
-      response.cookies.set("token", data.token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 24 * 60 * 60 });
+      response.cookies.set("token", data.token, { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 24 * 60 * 60 });
     } else if (data.role === "teacher") {
-      response.cookies.set("teacher_token", data.token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 8 * 60 * 60 });
-    } else if (data.role === "admin") {
-      response.cookies.set("admin_token", data.token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 8 * 60 * 60 });
+      response.cookies.set("teacher_token", data.token, { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 8 * 60 * 60 });
+    } else if (adminRoles.includes(data.role)) {
+      // All admin sub-roles (admin, principal, registrar, accounting) use the same cookie.
+      // The JWT payload contains the specific role so the middleware can distinguish them.
+      response.cookies.set("admin_token", data.token, { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 8 * 60 * 60 });
     }
 
     return response;

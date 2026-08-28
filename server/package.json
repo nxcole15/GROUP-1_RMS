@@ -18,6 +18,7 @@
     "jsonwebtoken": "9.0.2",
     "mysql2": "3.11.3",
     "nodemailer": "6.9.14",
+    "resend": "^6.24.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   },

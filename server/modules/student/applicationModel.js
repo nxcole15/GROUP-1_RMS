@@ -16,6 +16,7 @@ const ApplicationModel = {
       "father_name","father_occupation","mother_name","mother_occupation",
       "guardian_name","guardian_relation","guardian_phone",
       "previous_school","previous_school_address","years_attended",
+      "generated_student_id","temp_password","credentials_sent_at",
     ];
     const values = fields.map(f => data[f] ?? null);
     const placeholders = fields.map(() => "?").join(", ");

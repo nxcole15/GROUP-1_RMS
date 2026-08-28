@@ -74,32 +74,6 @@ paths:
         "401":
           description: Invalid ID or password
 
-  /api/auth/login:
-    post:
-      tags: [Authentication]
-      summary: Student login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [student_id, password]
-              properties:
-                student_id:
-                  type: string
-                  example: "20240001"
-                password:
-                  type: string
-                  example: "Jamie@2026"
-      responses:
-        "200":
-          description: Login successful
-        "401":
-          description: Invalid credentials
-        "403":
-          description: Account locked
-
   /api/auth/logout:
     post:
       tags: [Authentication]

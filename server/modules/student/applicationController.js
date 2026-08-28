@@ -2,18 +2,16 @@
  * modules/student/applicationController.js
  *
  * Enrollment application flow:
- *   1. Student submits form  → POST /api/applications        (public, no token)
- *   2. Registrar reviews     → GET  /api/applications        (admin token, registrar role)
- *                           → PATCH /api/applications/:id/forward  (send to principal)
- *                           → PATCH /api/applications/:id/reject
- *   3. Principal reviews     → GET  /api/applications/principal
- *                           → PATCH /api/applications/:id/approve  (creates student account + sends email)
- *                           → PATCH /api/applications/:id/reject
+ *    1. Student submits form → application saved as submitted
+ *   2. Requirements email sent with deadline
+ *   3. Registrar reviews and forwards to Principal
+ *   4. Principal approves → account created and credentials emailed
  */
+
 const bcrypt          = require("bcryptjs");
 const db              = require("../../config/db");
 const ApplicationModel = require("./applicationModel");
-const { sendCredentials } = require("../../utils/mailer");
+const { sendRequirementsEmail, sendCredentials, } = require("../../utils/mailer");
 
 /* ── helpers ── */
 function generateStudentId() {
@@ -36,7 +34,7 @@ function generateTempPassword() {
  * Changes:
  * - Immediately generates Student ID & temporary password
  * - Sends credentials email right away (no admin approval needed)
- * - Returns login URL with pre-filled credentials
+  * - Provides credentials by email without exposing them in a URL
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
@@ -48,6 +46,13 @@ async function submitApplication(req, res, next) {
       if (!req.body[field]?.toString().trim()) {
         return res.status(400).json({ error: `${field.replace(/_/g," ")} is required.` });
       }
+    
+    
+    // Map 'strand' to 'pathway' for compatibility
+    if (req.body.strand && !req.body.pathway) {
+      req.body.pathway = req.body.strand;
+    }
+
     }
 
     // Prevent duplicate pending applications for same email
@@ -63,39 +68,9 @@ async function submitApplication(req, res, next) {
       });
     }
 
-    // Generate unique student ID (retry if collision)
-    let studentId;
-    for (let i = 0; i < 5; i++) {
-      const candidate = generateStudentId();
-      const [rows] = await db.query(
-        "SELECT id FROM students WHERE student_id = ? LIMIT 1", [candidate]
-      );
-      if (!rows[0]) { studentId = candidate; break; }
-    }
-    if (!studentId) {
-      return res.status(500).json({ error: "Could not generate a unique student ID. Please try again." });
-    }
-
-    // Generate temporary password
-    const tempPass = generateTempPassword();
-    const hashedPass = await bcrypt.hash(tempPass, 10);
     const fullName = [req.body.first_name, req.body.middle_name, req.body.last_name, req.body.extension_name]
                        .filter(v => v?.trim())
                        .join(" ");
-
-    // Determine active term from config
-    const [configRows] = await db.query(
-      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
-    );
-    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
-
-    // Create student account immediately (so they can login right away)
-    await db.query(
-      `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [studentId, hashedPass, fullName, req.body.pathway, parseInt(req.body.grade_level, 10), term, req.body.email.trim().toLowerCase()]
-    );
 
     const app = await ApplicationModel.create({
       first_name:              req.body.first_name?.trim(),
@@ -125,33 +100,34 @@ async function submitApplication(req, res, next) {
       previous_school:         req.body.previous_school?.trim() || null,
       previous_school_address: req.body.previous_school_address?.trim() || null,
       years_attended:          req.body.years_attended?.trim() || null,
-      generated_student_id:    studentId,
-      temp_password:           tempPass,
-      credentials_sent_at:     new Date(),
-      status:                  "approved", // Skip admin review — auto-approve with generated credentials
+      status:                  "submitted", 
     });
 
-    // Send credentials email immediately (non-blocking, but log errors)
-    sendCredentials({ to: req.body.email.trim().toLowerCase(), fullName, studentId, tempPass })
-      .then(() => console.log(`📧  Credentials sent to ${req.body.email.trim().toLowerCase()}`))
-      .catch(err => {
-        console.error("⚠️  Failed to send credentials email:", err.message);
-        // Application is still saved, but email failed
+    const [configRows] = await db.query(
+      "SELECT deadline FROM enrollment_config ORDER BY id DESC LIMIT 1"
+      );
+
+      const dueDate = configRows[0]?.deadline
+      ? new Date(configRows[0].deadline).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "the announced deadline";
+
+      sendRequirementsEmail({
+        to: req.body.email.trim().toLowerCase(),
+        fullName,
+        dueDate,
+      }).catch(err => {
+        console.error("Requirements email failed:", err.message);
       });
 
-    // Build login URL with pre-filled credentials (encoded as params)
-    const loginUrl = process.env.CLIENT_ORIGIN
-      ? `${process.env.CLIENT_ORIGIN}/login`
-      : "http://localhost:3000/login";
-    const prefilledLoginUrl = `${loginUrl}?student_id=${encodeURIComponent(studentId)}&password=${encodeURIComponent(tempPass)}`;
-
     res.status(201).json({
-      message: "Application submitted successfully! Your enrollment has been approved. Login credentials have been sent to your email.",
+      message: "Application submitted successfully. Please submit your requirements before the deadline. Your application will be reviewed by the Registrar and Principal.",
       application_id: app.id,
-      student_id: studentId,
-      login_url: prefilledLoginUrl,
       email: req.body.email.trim().toLowerCase(),
-      instructions: "Check your email for your Student ID and temporary password. You can also click the login button above.",
+      instructions: "Check your email for the requirements checklist and deadline. Login credentials will be sent after Principal approval.",
     });
   } catch (err) { next(err); }
 }
@@ -202,7 +178,7 @@ async function listForPrincipal(req, res, next) {
 }
 
 /* ─────────────────────────────────────────────────────────────
- * PRINCIPAL — Approve application → create student account → send email
+ * PRINCIPAL — Approve application → activate existing student account
  * PATCH /api/applications/:id/approve
  * ───────────────────────────────────────────────────────────── */
 async function approveApplication(req, res, next) {
@@ -214,34 +190,50 @@ async function approveApplication(req, res, next) {
       return res.status(409).json({ error: "Application is not pending principal review." });
     }
 
-    // Generate unique student ID (retry if collision)
+    // Generate the account only after Principal approval
     let studentId;
-    for (let i = 0; i < 5; i++) {
+
+    for (let attempt = 0; attempt < 5; attempt++) {
       const candidate = generateStudentId();
       const [rows] = await db.query(
-        "SELECT id FROM students WHERE student_id = ? LIMIT 1", [candidate]
+        "SELECT id FROM students WHERE student_id = ? LIMIT 1",
+        [candidate]
       );
-      if (!rows[0]) { studentId = candidate; break; }
+
+      if (!rows[0]) {
+        studentId = candidate;
+        break;
+      }
     }
-    if (!studentId) return res.status(500).json({ error: "Could not generate a unique student ID. Please try again." });
 
-    const tempPass   = generateTempPassword();
+    if (!studentId) {
+      return res.status(500).json({
+        error: "Could not generate a unique student ID. Please try again.",
+      });
+    }
+
+    const tempPass = generateTempPassword();
     const hashedPass = await bcrypt.hash(tempPass, 10);
-    const fullName   = [app.first_name, app.middle_name, app.last_name, app.extension_name]
-                         .filter(Boolean).join(" ");
 
-    // Determine active term from config
     const [configRows] = await db.query(
       "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
     );
+
     const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
 
-    // Create student account
     await db.query(
       `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [studentId, hashedPass, fullName, app.pathway, app.grade_level, term, app.email]
+      (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
+      [
+        studentId,
+        hashedPass,
+        `${app.first_name} ${app.last_name}`,
+        app.pathway,
+        app.grade_level,
+        term,
+        app.email,
+      ]
     );
 
     // Mark application approved and save generated credentials
@@ -250,17 +242,21 @@ async function approveApplication(req, res, next) {
       principal_reviewed_at: new Date(),
       principal_note:        req.body.principal_note?.trim() || null,
       generated_student_id:  studentId,
-      temp_password:         tempPass,           // stored in plain text for audit; student must change it
+      temp_password:         tempPass,
       credentials_sent_at:   new Date(),
     });
 
-    // Send credentials email (non-blocking — don't fail the request if email fails)
-    sendCredentials({ to: app.email, fullName, studentId, tempPass })
-      .then(() => console.log(`📧  Credentials sent to ${app.email}`))
-      .catch(err => console.error("⚠️  Failed to send credentials email:", err.message));
+    sendCredentials({
+      to: app.email,
+      fullName: `${app.first_name} ${app.last_name}`,
+      studentId,
+      tempPass,
+      }).catch(err => {
+        console.error("Credentials email failed:", err.message);
+    });
 
     res.json({
-      message:    `Application approved. Student account created and credentials emailed to ${app.email}.`,
+      message: `Application approved. Student account ${studentId} was created and credentials were emailed.`,
       student_id: studentId,
       application: updated,
     });
@@ -283,6 +279,13 @@ async function rejectApplication(req, res, next) {
     if (!app) return res.status(404).json({ error: "Application not found." });
     if (["approved","rejected"].includes(app.status)) {
       return res.status(409).json({ error: "Application has already been processed." });
+    }
+
+    if (app.generated_student_id) {
+      await db.query(
+        "UPDATE students SET account_status = 'suspended' WHERE student_id = ?",
+        [app.generated_student_id]
+      );
     }
 
     const updated = await ApplicationModel.updateStatus(id, "rejected", {

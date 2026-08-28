@@ -4,17 +4,39 @@
  * Run once:  node database/migrate.js
  */
 
-require("dotenv").config();
 const mysql  = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
-const env    = require("../config/env");
+const fs = require("fs");
+const path = require("path");
+
+// Read .env file directly
+function loadEnvFile() {
+  const envPath = path.join(__dirname, '../.env');
+  const envConfig = {};
+  
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').trim();
+        // Remove quotes if present
+        envConfig[key.trim()] = value.replace(/^["']|["']$/g, '');
+      }
+    });
+  }
+  
+  return envConfig;
+}
+
+const env = loadEnvFile();
 
 async function migrate() {
   // Connect without a database first so we can CREATE it
   const conn = await mysql.createConnection({
-    host:               env.DB_HOST,
-    port:               env.DB_PORT,
-    user:               env.DB_USER,
+    host:               env.DB_HOST || 'localhost',
+    port:               parseInt(env.DB_PORT) || 3306,
+    user:               env.DB_USER || 'root',
     password:           env.DB_PASSWORD,
     multipleStatements: true,
   });
@@ -41,6 +63,8 @@ async function migrate() {
       grade_level     TINYINT UNSIGNED NOT NULL DEFAULT 11,
       term            VARCHAR(50)  NOT NULL,
       email           VARCHAR(100) NOT NULL,
+      account_status  ENUM('pending','active', 'suspended')
+                      NOT NULL DEFAULT 'pending',
       device_token    TEXT         NULL,
       failed_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
       locked_until    DATETIME     NULL,
@@ -323,8 +347,8 @@ console.log("✅  Staff notifications table created");
   for (const s of students) {
     await conn.query(
       `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`, s
+         (student_id, password, full_name, pathway, grade_level, term, email, account_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`, s
     );
   }
   console.log("✅  Students seeded");

@@ -14,6 +14,7 @@ const {
   approveDocument,
   rejectDocument,
   getTeachers,
+  reactivateStudent,
 } = require("./adminController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
@@ -27,6 +28,7 @@ router.use(authenticateAdmin);
 // Dashboard & search
 router.get("/dashboard",       getDashboard);
 router.get("/students/search", searchStudents);
+router.patch("/students/:student_id/reactivate",reactivateStudent);
 router.get("/audit-log",       getAuditLog);
 router.get("/teachers", getTeachers);
 

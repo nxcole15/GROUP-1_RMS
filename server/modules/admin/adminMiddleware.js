@@ -3,7 +3,8 @@
  * Verifies an admin JWT. Attaches decoded payload to req.admin.
  */
 const jwt = require("jsonwebtoken");
-const { ADMIN_JWT_SECRET } = require("../../config/env");
+require("dotenv").config();
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key-change-this';
 
 function authenticateAdmin(req, res, next) {
   const token =
