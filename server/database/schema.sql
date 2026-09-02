@@ -39,13 +39,15 @@ CREATE TABLE IF NOT EXISTS teachers (
 
 -- ── Admins ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admins (
-  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  admin_id   VARCHAR(20)  NOT NULL UNIQUE,
-  password   VARCHAR(255) NOT NULL,
-  full_name  VARCHAR(100) NOT NULL,
-  role       VARCHAR(20)  NOT NULL DEFAULT 'admin',
-  email      VARCHAR(100) NOT NULL,
-  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  admin_id    VARCHAR(20)  NOT NULL UNIQUE,
+  password    VARCHAR(255) NOT NULL,
+  full_name   VARCHAR(100) NOT NULL,
+  role        VARCHAR(20)  NOT NULL DEFAULT 'admin',
+  email       VARCHAR(100) NOT NULL,
+  is_archived TINYINT(1) NOT NULL DEFAULT 0,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ── Subjects ─────────────────────────────────────────────────

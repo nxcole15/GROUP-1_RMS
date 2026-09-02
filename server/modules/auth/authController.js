@@ -40,19 +40,18 @@ async function universalLogin(req, res, next) {
       return res.status(400).json({ error: "ID and password are required." });
     }
 
-    // ── Try Admin ──────────────────────────────────────────
-    if (id.toUpperCase().startsWith("ADMIN")) {
-      const AdminModel = require("../admin/adminModel");
-      const admin = await AdminModel.findByAdminId(id.toUpperCase());
-      if (admin && await bcrypt.compare(password, admin.password)) {
-        const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key';
-        const token = jwt.sign(
-          { id: admin.id, admin_id: admin.admin_id, full_name: admin.full_name, role: admin.role },
-          ADMIN_JWT_SECRET, { expiresIn: "8h" }
-        );
-        return res.cookie("admin_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
-          .json({ message: "Login successful.", role: admin.role, full_name: admin.full_name, token });
-      }
+    // ── Try Admin / Super Admin ───────────────────────────
+    const AdminModel = require("../admin/adminModel");
+    const normalizedId = String(id || "").trim().toUpperCase();
+    const adminById = await AdminModel.findByAdminId(normalizedId);
+    if (adminById && await bcrypt.compare(password, adminById.password)) {
+      const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key';
+      const token = jwt.sign(
+        { id: adminById.id, admin_id: adminById.admin_id, full_name: adminById.full_name, role: adminById.role },
+        ADMIN_JWT_SECRET, { expiresIn: "8h" }
+      );
+      return res.cookie("admin_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
+        .json({ message: "Login successful.", role: adminById.role, full_name: adminById.full_name, token });
     }
 
     // ── Try Teacher ────────────────────────────────────────

@@ -43,41 +43,41 @@ interface AdminProfile {
   hireDate: string;
 }
 
-const SAMPLE_STUDENT_PROFILE: StudentProfile = {
-  id: "202400001",
-  name: "Jamie Santos",
-  email: "jamie.santos@student.cfei.edu",
-  phone: "+63 912 345 6789",
-  address: "123 Basak, Lapu-Lapu City, Cebu",
-  course: "STEM",
-  yearLevel: "Grade 11",
-  dateOfBirth: "2008-05-15",
-  guardianName: "Maria Santos",
-  guardianContact: "+63 912 345 6788",
-  enrollmentDate: "2024-08-15",
+const EMPTY_STUDENT_PROFILE: StudentProfile = {
+  id: "",
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  course: "",
+  yearLevel: "",
+  dateOfBirth: "",
+  guardianName: "",
+  guardianContact: "",
+  enrollmentDate: "",
 };
 
-const SAMPLE_TEACHER_PROFILE: TeacherProfile = {
-  id: "T001",
-  name: "Maria Santos",
-  email: "maria.santos@cfei.edu",
-  phone: "+63 923 456 7890",
-  address: "456 Mandaue City, Cebu",
-  department: "Mathematics",
-  subject: "Algebra, Calculus",
-  dateOfBirth: "1990-03-20",
-  hireDate: "2018-06-01",
-  employmentType: "Full-time",
+const EMPTY_TEACHER_PROFILE: TeacherProfile = {
+  id: "",
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  department: "",
+  subject: "",
+  dateOfBirth: "",
+  hireDate: "",
+  employmentType: "",
 };
 
-const SAMPLE_ADMIN_PROFILE: AdminProfile = {
-  username: "registrar@inform.edu",
-  name: "Registrar Admin",
-  email: "registrar@inform.edu",
-  phone: "+63 932 123 4567",
-  role: "Registrar",
-  department: "Registrar Office",
-  hireDate: "2015-01-10",
+const EMPTY_ADMIN_PROFILE: AdminProfile = {
+  username: "",
+  name: "",
+  email: "",
+  phone: "",
+  role: "",
+  department: "",
+  hireDate: "",
 };
 
 export default function ProfilePage() {
@@ -88,19 +88,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const [studentProfile, setStudentProfile] = useState(SAMPLE_STUDENT_PROFILE);
-  const [teacherProfile, setTeacherProfile] = useState(SAMPLE_TEACHER_PROFILE);
-  const [adminProfile, setAdminProfile] = useState(SAMPLE_ADMIN_PROFILE);
+  const [studentProfile, setStudentProfile] = useState(EMPTY_STUDENT_PROFILE);
+  const [teacherProfile, setTeacherProfile] = useState(EMPTY_TEACHER_PROFILE);
+  const [adminProfile, setAdminProfile] = useState(EMPTY_ADMIN_PROFILE);
 
   useEffect(() => {
-    // Detect user role (in real app, get from authentication)
     const storedRole = localStorage.getItem("user-role") as UserRole;
     if (storedRole) {
       setUserRole(storedRole);
     } else {
-      // Default to student for demo
-      setUserRole("student");
-      localStorage.setItem("user-role", "student");
+      setUserRole(null);
     }
 
     // Load theme
@@ -127,10 +124,9 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     setEditMode(false);
-    // Reset to original values
-    setStudentProfile(SAMPLE_STUDENT_PROFILE);
-    setTeacherProfile(SAMPLE_TEACHER_PROFILE);
-    setAdminProfile(SAMPLE_ADMIN_PROFILE);
+    setStudentProfile(EMPTY_STUDENT_PROFILE);
+    setTeacherProfile(EMPTY_TEACHER_PROFILE);
+    setAdminProfile(EMPTY_ADMIN_PROFILE);
   };
 
   const getBackLink = () => {

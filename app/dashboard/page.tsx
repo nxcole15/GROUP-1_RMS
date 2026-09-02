@@ -150,73 +150,15 @@ function JobertChat({ initialPrompt }: { initialPrompt?: string }) {
 }
 
 /* -- Data -- */
-const gradeData = [
-  { subject:"Mathematics",        icon:"", term1:{grade:"A",  pct:92}, term2:{grade:"A-", pct:90}, term3:null, teacher:"Mr. Dela Cruz",  status:"Excellent" },
-  { subject:"Physics",            icon:"", term1:{grade:"B+", pct:87}, term2:{grade:"B+", pct:88}, term3:null, teacher:"Ms. Villanueva", status:"Passing"   },
-  { subject:"English Literature", icon:"", term1:{grade:"A+", pct:96}, term2:{grade:"A",  pct:94}, term3:null, teacher:"Ms. Santos",     status:"Excellent" },
-  { subject:"Chemistry",          icon:"", term1:{grade:"B",  pct:81}, term2:{grade:"B+", pct:84}, term3:null, teacher:"Mr. Fernandez",  status:"Passing"   },
-  { subject:"History",            icon:"", term1:{grade:"B+", pct:85}, term2:{grade:"A-", pct:89}, term3:null, teacher:"Ms. Reyes",      status:"Passing"   },
-  { subject:"Computer Science",   icon:"", term1:{grade:"A",  pct:93}, term2:{grade:"A",  pct:95}, term3:null, teacher:"Mr. Uy",         status:"Excellent" },
-];
+type ScheduleEntry = { time: string; subject: string; room: string; teacher: string; enter: string; leave: string };
 
-const gradeRequests = [
-  { id:1, subject:"Mathematics", teacher:"Mr. Dela Cruz", status:"pending", requestedAt:"2h ago" },
-];
-
-const timetable: Record<string, { time:string; subject:string; room:string; teacher:string; enter:string; leave:string }[]> = {
-  Monday:[
-    { time:"07:30-08:30", subject:"Mathematics",        room:"Room 301", teacher:"Ms. Maria Santos",       enter:"07:25", leave:"08:35" },
-    { time:"08:30-09:30", subject:"English Literature", room:"Room 205", teacher:"Mr. Juan Dela Cruz",     enter:"08:25", leave:"09:35" },
-    { time:"10:00-11:00", subject:"Computer Science",   room:"ICT Lab",  teacher:"Mr. Carlos Fernandez",   enter:"09:55", leave:"11:05" },
-    { time:"13:00-14:00", subject:"Physical Education", room:"Gym",      teacher:"Coach Maria",            enter:"12:55", leave:"14:05" },
-  ],
-  Tuesday:[
-    { time:"07:30-09:00", subject:"Physics",   room:"Sci. Lab", teacher:"Ms. Ana Reyes",        enter:"07:20", leave:"09:05" },
-    { time:"09:00-10:30", subject:"Chemistry", room:"Chem Lab", teacher:"Dr. Luis Fernandez",   enter:"08:55", leave:"10:35" },
-    { time:"13:00-14:30", subject:"History",   room:"Room 108", teacher:"Mr. Juan Dela Cruz",   enter:"12:55", leave:"14:35" },
-  ],
-  Wednesday:[
-    { time:"07:30-08:30", subject:"Mathematics",        room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30-09:30", subject:"English Literature", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"08:25", leave:"09:35" },
-    { time:"10:00-11:00", subject:"Computer Science",   room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"09:55", leave:"11:05" },
-  ],
-  Thursday:[
-    { time:"07:30-09:00", subject:"Physics",   room:"Sci. Lab", teacher:"Ms. Ana Reyes",       enter:"07:20", leave:"09:05" },
-    { time:"09:00-10:30", subject:"Chemistry", room:"Chem Lab", teacher:"Dr. Luis Fernandez",  enter:"08:55", leave:"10:35" },
-    { time:"13:00-14:30", subject:"History",   room:"Room 108", teacher:"Mr. Juan Dela Cruz",  enter:"12:55", leave:"14:35" },
-  ],
-  Friday:[
-    { time:"07:30-08:30", subject:"Mathematics",        room:"Room 301", teacher:"Ms. Maria Santos",     enter:"07:25", leave:"08:35" },
-    { time:"08:30-09:30", subject:"Computer Science",   room:"ICT Lab",  teacher:"Mr. Carlos Fernandez", enter:"08:25", leave:"09:35" },
-    { time:"10:00-11:00", subject:"English Literature", room:"Room 205", teacher:"Mr. Juan Dela Cruz",   enter:"09:55", leave:"11:05" },
-  ],
-};
-
-const fees = [
-  { label:"Tuition Fee",          amount:18500, paid:true  },
-  { label:"Miscellaneous Fee",    amount: 2200, paid:true  },
-  { label:"Laboratory Fee",       amount: 1500, paid:true  },
-  { label:"Student Activity Fee", amount:  800, paid:false },
-  { label:"ID / Registration",    amount:  350, paid:false },
-];
-
-const notifications = [
-  { id:1, type:"grade",      title:"Grade Submitted",      message:"Mr. Dela Cruz submitted your Mathematics grade: A (92%)", time:"2h ago",  read:false},
-  { id:2, type:"document",   title:"Document Approved",    message:"Your TOR request has been approved by Admin",              time:"4h ago",  read:false },
-  { id:3, type:"enrollment", title:"Enrollment Confirmed", message:"Your enrollment for Term 1 has been confirmed",            time:"1d ago",  read:true },
-  { id:4, type:"attendance", title:"Attendance Alert",     message:"Your attendance in Physics is below 80%",                  time:"2d ago",  read:true },
-];
-
-const documentRequests = [
-  { id:1, type:"TOR",         status:"approved", requestedAt:"May 15, 2026", approvedAt:"May 16, 2026", approvedBy:"Admin", releaseDate:"June 10, 2026", downloadUrl:"#" },
-  { id:2, type:"Certificate", status:"pending",  requestedAt:"May 18, 2026", approvedAt:null,           approvedBy:null,    releaseDate:null,             downloadUrl:null },
-];
-
-const availableDocuments = [
-  { id:1, type:"TOR",         name:"Transcript of Records",       description:"Official academic record with grades and GPA"},
-  { id:2, type:"Certificate", name:"Certificate of Enrollment",   description:"Proof of current enrollment status" },
-  { id:3, type:"GoodStanding",name:"Good Standing Certificate",   description:"Certificate showing no outstanding balances" },
-];
+const gradeData: Array<Record<string, any>> = [];
+const gradeRequests: Array<Record<string, any>> = [];
+const timetable: Record<string, ScheduleEntry[]> = {};
+const fees: Array<{ label: string; amount: number; paid: boolean }> = [];
+const notifications: Array<Record<string, any>> = [];
+const documentRequests: Array<Record<string, any>> = [];
+const availableDocuments: Array<{ id: number; type: string; name: string; description: string }> = [];
 
 /* -- Sidebar nav items -- */
 const navItems: { id: Panel; label: string; icon: React.ReactNode }[] = [
@@ -455,7 +397,6 @@ const WORKFLOW_STEPS = [
   { key:"released",    label:"Released"       },
 ];
 
-// For the mock, all pending requests are at step 0 (just requested)
 function WorkflowTracker({ subject, currentStep }: { subject: string; currentStep: number }) {
   return (
     <div className="mt-3 pt-3" style={{ borderTop:"1px solid #f1f5f9" }}>
@@ -978,7 +919,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div><h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2><p className="text-muted small mb-0">Term 1 - 2025-2026</p></div>
-        <button onClick={() => onAskJobert(`Today is ${day}. My classes are: ${displaySchedule.map((c: {subject: string}) => c.subject).join(", ")}. Give me study tips.`)}
+        <button onClick={() => onAskJobert(`Today is ${day}. My classes are: ${displaySchedule.map(c => c.subject).join(", ")}. Give me study tips.`)}
           className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}> Study tips for today</button>
       </div>
       <div className="d-flex gap-2 overflow-auto pb-1">
@@ -1338,17 +1279,17 @@ function ProfilePanel() {
   }
 
   const INITIAL_PROFILE: ProfileData = {
-    id: "202400001",
-    name: "Jamie Santos",
-    email: "jamie.santos@student.cfei.edu",
-    phone: "+63 912 345 6789",
-    address: "123 Basak, Lapu-Lapu City, Cebu",
-    course: "STEM",
-    yearLevel: "Grade 11",
-    dateOfBirth: "2008-05-15",
-    guardianName: "Maria Santos",
-    guardianContact: "+63 912 345 6788",
-    enrollmentDate: "2024-08-15",
+    id: "",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    course: "",
+    yearLevel: "",
+    dateOfBirth: "",
+    guardianName: "",
+    guardianContact: "",
+    enrollmentDate: "",
   };
 
   const [profile, setProfile] = useState(INITIAL_PROFILE);

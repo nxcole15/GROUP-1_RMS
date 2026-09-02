@@ -26,21 +26,8 @@ type StudentTuition = {
 const LS_ACTIVE_KEY = "inform_accounting_active";
 const LS_PAYMENT_LOG_KEY = "inform_accounting_payment_log";
 
-const STUDENT_TUITION: StudentTuition[] = [
-  { id: "STU-2024-001", name: "Jamie Santos", track: "STEM", level: "Grade 11", total: 22050, paid: 22050 },
-  { id: "STU-2024-002", name: "Maria Reyes", track: "HUMMS", level: "Grade 11", total: 22050, paid: 18500 },
-  { id: "STU-2024-003", name: "Carlo Dela Cruz", track: "ABM", level: "Grade 12", total: 22050, paid: 22050 },
-  { id: "STU-2024-005", name: "Luis Fernandez", track: "STEM", level: "Grade 12", total: 22050, paid: 18500 },
-  { id: "STU-2024-006", name: "Rosa Bautista", track: "TVL-TechPro", level: "Grade 11", total: 22050, paid: 22050 },
-  { id: "STU-2024-008", name: "Lena Cruz", track: "HUMMS", level: "Grade 11", total: 22050, paid: 22050 },
-];
-
-const PAYMENT_LOG_SEED: PaymentRecord[] = [
-  { id: 1, studentId: "STU-2024-002", student: "Maria Reyes", amount: 3550, feeItem: "Outstanding Balance", status: "For Verification" },
-  { id: 2, studentId: "STU-2024-005", student: "Luis Fernandez", amount: 3550, feeItem: "Outstanding Balance", status: "For Verification" },
-
-  { id: 3, studentId: "STU-2024-003", student: "Carlo Dela Cruz", amount: 22050, feeItem: "Tuition Fees", status: "Verified" },
-];
+const STUDENT_TUITION: StudentTuition[] = [];
+const PAYMENT_LOG_SEED: PaymentRecord[] = [];
 
 function formatCurrencyPHP(amount: number) {
   return `₱${amount.toLocaleString("en-PH")}`;
@@ -74,7 +61,7 @@ export default function AccountingDashboardPage() {
         const userRaw = localStorage.getItem("inform_user");
         const userObj = userRaw ? JSON.parse(userRaw) : null;
         if (userObj) {
-          setActive({ id: userObj.admin_id || "ADMIN003", name: userObj.full_name || "Accounting Office" });
+          setActive({ id: userObj.admin_id || "", name: userObj.full_name || "Accounting Office" });
         }
       }
     } catch {
@@ -90,27 +77,24 @@ export default function AccountingDashboardPage() {
 
     setAuthLoading(false);
 
-    // Fetch real payments from API if backend is live
-    if (!token.startsWith("demo_")) {
-      fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
+    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.payments?.length) {
+          setPaymentLog(data.payments.map((p: {id: number; student_id: string; fee_item: string; amount: number; status: string}) => ({
+            id:        p.id,
+            studentId: p.student_id,
+            student:   p.student_id,
+            feeItem:   p.fee_item,
+            amount:    Number(p.amount),
+            status:    p.status === "verified" ? "Verified" : "For Verification",
+          })));
+        }
       })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.payments?.length) {
-            setPaymentLog(data.payments.map((p: {id: number; student_id: string; fee_item: string; amount: number; status: string}) => ({
-              id:        p.id,
-              studentId: p.student_id,
-              student:   p.student_id,
-              feeItem:   p.fee_item,
-              amount:    Number(p.amount),
-              status:    p.status === "verified" ? "Verified" : "For Verification",
-            })));
-          }
-        })
-        .catch(() => {}); // keep seed data on error
-    }
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -155,7 +139,6 @@ export default function AccountingDashboardPage() {
   }
 
   function rejectPayment(id: number) {
-    // demo-only: remove record
     setPaymentLog(prev => prev.filter(p => p.id !== id));
   }
 
@@ -250,7 +233,7 @@ export default function AccountingDashboardPage() {
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "linear-gradient(135deg, rgba(220,38,38,0.12), rgba(251,191,36,0.12))", border: "1px solid rgba(220,38,38,0.25)" }}>
                 <div className="fw-bold" style={{ color: "#ecececff" }}>Tuition Summary</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Demo-only: accounting can view tuition and balances.</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Accounting can review tuition totals and outstanding balances.</div>
               </div>
 
               <div className="row g-3">
@@ -318,7 +301,7 @@ export default function AccountingDashboardPage() {
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.18)" }}>
                 <div className="fw-bold" style={{ color: "#ffffffff" }}>Payment Verification</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Only accounting sees this verification panel (demo).</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Review and verify submitted payments.</div>
               </div>
 
               <div className="card rounded-4 overflow-hidden">
@@ -388,7 +371,7 @@ export default function AccountingDashboardPage() {
             <div className="d-flex flex-column gap-4">
               <div style={{ padding: 18, borderRadius: 18, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)" }}>
                 <div className="fw-bold" style={{ color: "#f7faffff" }}>Students (Tuition Related)</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Accounting can access tuition-related student info (demo).</div>
+                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Review tuition-related student information.</div>
               </div>
 
               <div className="card rounded-4 overflow-hidden">

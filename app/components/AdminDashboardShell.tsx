@@ -3,92 +3,82 @@
 import React, { useState, useEffect } from "react";
 import { API_BASE } from "../lib/auth";
 
-/*  Data  */
-const students = [
-  { id:"STU-2024-001", name:"Jamie Santos",    track:"STEM", grade:11, gwa:1.75, status:"Active",   tuition:"Paid",   room:1 },
-  { id:"STU-2024-002", name:"Maria Reyes",     track:"HUMMS", grade:11, gwa:2.00, status:"Active",   tuition:"Unpaid", room:2 },
-  { id:"STU-2024-003", name:"Carlo Dela Cruz", track:"ABM", grade:12, gwa:1.50, status:"Active",   tuition:"Paid",   room:3 },
-  { id:"STU-2024-004", name:"Ana Villanueva",  track:"TVL-TechPro",  grade:11, gwa:2.25, status:"Inactive", tuition:"Unpaid", room:4 },
-  { id:"STU-2024-005", name:"Luis Fernandez",  track:"STEM", grade:12, gwa:1.25, status:"Active",   tuition:"Paid",   room:1 },
-  { id:"STU-2024-006", name:"Rosa Bautista",   track:"TVL-TechPro", grade:11, gwa:2.50, status:"Active",   tuition:"Paid",   room:2 },
-  { id:"STU-2024-007", name:"Mark Uy",         track:"ABM", grade:12, gwa:3.00, status:"Active",   tuition:"Unpaid", room:3 },
-  { id:"STU-2024-008", name:"Lena Cruz",       track:"HUMMS",  grade:11, gwa:1.75, status:"Active",   tuition:"Paid",   room:4 },
-];
+type StudentRecord = {
+  id: string;
+  name: string;
+  track: string;
+  grade: number;
+  gwa: number;
+  status: string;
+  tuition: string;
+  room: number;
+};
 
-const teachers = [
-  {
-    id: "T001", name: "Maria Santos", employmentStatus: "Full Time",
-    section: "STEM-1",
-    subjects: [
-      { name: "Mathematics", timeIn: "7:30 AM", timeOut: "9:30 AM" },
-      { name: "Physics",     timeIn: "10:00 AM", timeOut: "12:00 PM" },
-    ],
-    room: 1,
-  },
-  {
-    id: "T002", name: "Juan Dela Cruz", employmentStatus: "Part Time",
-    section: "HUMMS-1",
-    subjects: [
-      { name: "English Literature", timeIn: "8:00 AM", timeOut: "10:00 AM" },
-      { name: "History",            timeIn: "1:00 PM", timeOut: "3:00 PM" },
-    ],
-    room: 2,
-  },
-  {
-    id: "T003", name: "Ana Reyes", employmentStatus: "Full Time",
-    section: "ABM-1",
-    subjects: [
-      { name: "Chemistry", timeIn: "7:30 AM", timeOut: "9:30 AM" },
-      { name: "Biology",   timeIn: "11:00 AM", timeOut: "1:00 PM" },
-    ],
-    room: 3,
-  },
-  {
-    id: "T004", name: "Carlos Fernandez", employmentStatus: "Part Time",
-    section: "TVL-1",
-    subjects: [
-      { name: "Computer Science",          timeIn: "9:00 AM", timeOut: "11:00 AM" },
-      { name: "Information Technology",    timeIn: "2:00 PM", timeOut: "4:00 PM" },
-    ],
-    room: 4,
-  },
-];
+type TeacherSubject = { name: string; timeIn: string; timeOut: string };
+type TeacherRecord = {
+  id: string;
+  name: string;
+  employmentStatus: string;
+  section: string;
+  subjects: TeacherSubject[];
+  room: number;
+};
 
-const announcements = [
-  { id:1, title:"Enrollment Period Open",       date:"May 20, 2026", target:"All Students",   status:"Active" },
-  { id:2, title:"Final Exam Schedule Released", date:"May 18, 2026", target:"All Students",   status:"Active" },
-  { id:4, title:"Tuition Deadline Reminder",    date:"May 10, 2026", target:"Unpaid Students",status:"Active" },
-  { id:5, title:"Graduation Ceremony Details",  date:"May 5, 2026",  target:"4th Year",       status:"Draft"  },
-];
+type AnnouncementRecord = { id: number; title: string; date: string; target: string; status: string };
 
-const recentActivity = [
-  { action:"New student enrolled",     name:"Rosa Bautista",   time:"2h ago"},
-  { action:"Tuition payment received", name:"Carlo Dela Cruz", time:"3h ago"},
-  { action:"Grade submitted",          name:"Mr. Dela Cruz",   time:"5h ago"},
+type DashboardRecord = {
+  id: number | string;
+  name: string;
+  track: string;
+  grade: number;
+  gwa: number;
+  room: number;
+  status: string;
+  tuition: string;
+  total: number;
+  paid: number;
+  balance: number;
+  paymentId?: number;
+};
 
-  { action:"Announcement posted",      name:"Admin",           time:"Yesterday"},
-];
+type GradeRequestRecord = {
+  id: number;
+  student: string;
+  teacher: string;
+  subject: string;
+  status: string;
+  requestedAt: string;
+};
 
-const allGradeRequests = [
-  { id: 1, student: "Jamie Santos", teacher: "Mr. Dela Cruz", subject: "Algebra I", status: "pending", requestedAt: "2h ago" },
-  { id: 2, student: "Maria Reyes", teacher: "Mr. Dela Cruz", subject: "Algebra I", status: "pending", requestedAt: "1h ago" },
-  { id: 3, student: "Carlo Dela Cruz", teacher: "Mr. Fernandez", subject: "Calculus I", status: "approved", requestedAt: "30m ago" },
-  { id: 4, student: "Luis Fernandez", teacher: "Ms. Villanueva", subject: "Physics", status: "rejected", requestedAt: "1h ago" },
-];
+type DocumentRequestRecord = {
+  id: number;
+  student: string;
+  type: string;
+  teacher: string;
+  grade: number;
+  track: string;
+  status: string;
+  releaseDate?: string | null;
+  rejectionReason?: string;
+};
 
-const allDocumentRequests = [
-  { id: 1, student: "Jamie Santos",    type: "TOR",          status: "pending",  requestedAt: "May 18, 2026", teacher: "Mr. Dela Cruz",   grade: 11, track: "STEM",  releaseDate: null },
-  { id: 2, student: "Maria Reyes",     type: "Certificate",  status: "pending",  requestedAt: "May 17, 2026", teacher: "Mr. Dela Cruz",   grade: 11, track: "HUMMS", releaseDate: null },
-  { id: 3, student: "Carlo Dela Cruz", type: "TOR",          status: "approved", requestedAt: "May 15, 2026", teacher: "Mr. Fernandez",   grade: 12, track: "ABM",   releaseDate: "June 10, 2026", approvedAt: "May 16, 2026" },
-  { id: 4, student: "Ana Villanueva",  type: "Good Standing",status: "approved", requestedAt: "May 14, 2026", teacher: "Ms. Villanueva",  grade: 11, track: "TVL-TechPro",   releaseDate: "June 8, 2026",  approvedAt: "May 15, 2026" },
-];
+type NotificationRecord = {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+};
 
-const adminNotifications = [
-  { id: 1, type: "document", title: "Document Request", message: "Jamie Santos requested a TOR", time: "1h ago", read: false, },
-  { id: 2, type: "grade", title: "Grade Submitted", message: "Mr. Dela Cruz submitted grades for Algebra I", time: "2h ago", read: false, },
-  { id: 3, type: "enrollment", title: "New Enrollment", message: "Rosa Bautista enrolled in the system", time: "1d ago", read: true, },
-  { id: 4, type: "payment", title: "Payment Received", message: "Carlo Dela Cruz paid tuition fee", time: "2d ago", read: true, },
-];
+/* Data loaded from the live backend when available; empty arrays avoid seeded demo records in the UI. */
+const students: StudentRecord[] = [];
+const teachers: TeacherRecord[] = [];
+const announcements: AnnouncementRecord[] = [];
+const recentActivity: Array<Record<string, string>> = [];
+const allGradeRequests: GradeRequestRecord[] = [];
+const allDocumentRequests: DocumentRequestRecord[] = [];
+const adminNotifications: NotificationRecord[] = [];
 
 type IconName =
   | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
@@ -149,7 +139,6 @@ const navItems = [
   { id:"enrollment",    label:"Enrollment"        },
   { id:"tuition",       label:"Tuition"           },
   { id:"announcements", label:"Announcements"     },
-  { id:"timelog",       label:"Teacher Time Logs" },
 ];
 
 function initials(name: string) { 
@@ -418,8 +407,6 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                   const matchTrack = chartTrack === "all" ? true : s.track === chartTrack;
                   const matchGrade = chartGrade === "all" ? true : String(s.grade) === chartGrade;
 
-                  // Your current mock student data doesn't include gender.
-                  // Treat missing gender as "all" so the chart still works.
                   const sGender = (s as unknown as { gender?: string }).gender;
                   const matchGender = chartGender === "all" ? true : (sGender ?? "") === chartGender;
 
@@ -717,17 +704,27 @@ function StudentsPanel() {
 
 /*  Grades Panel  */
 function GradesPanel() {
-  const [selected, setSelected] = useState(students[0].id);
-  const student = students.find(s => s.id === selected)!;
-  const grades = [
-    { subject:"Mathematics",        grade:"A",  pct:92, units:3, teacher:"Mr. Dela Cruz"  },
-    { subject:"Physics",            grade:"B+", pct:87, units:3, teacher:"Ms. Villanueva" },
-    { subject:"English Literature", grade:"A+", pct:96, units:3, teacher:"Ms. Santos"     },
-    { subject:"Chemistry",          grade:"B",  pct:81, units:3, teacher:"Mr. Fernandez"  },
-    { subject:"History",            grade:"B+", pct:85, units:3, teacher:"Ms. Reyes"      },
-    { subject:"Computer Science",   grade:"A",  pct:93, units:3, teacher:"Mr. Uy"         },
-  ];
-  const avg = Math.round(grades.reduce((a, g) => a + g.pct, 0) / grades.length);
+  const [selected, setSelected] = useState("");
+  const student = students.find(s => s.id === selected) ?? students[0] ?? null;
+  const grades: Array<{ subject: string; grade: string; pct: number; units: number; teacher: string }> = [];
+
+  if (!student) {
+    return (
+      <div className="d-flex flex-column gap-4">
+        <div>
+          <h2 className="fw-black fs-4 text-dark mb-0">Grades Management</h2>
+          <p className="text-muted small mb-0">View and manage student grades</p>
+        </div>
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted small">
+            No student grade data is available yet.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const avg = grades.length ? Math.round(grades.reduce((a, g) => a + g.pct, 0) / grades.length) : 0;
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -738,49 +735,55 @@ function GradesPanel() {
       <div className="d-flex flex-column flex-sm-row gap-3">
         <div style={{ width: 220 }}>
           <label className="form-label text-muted fw-semibold text-uppercase mb-1" style={{ fontSize:11 }}>Select Student</label>
-          <select value={selected} onChange={e => setSelected(e.target.value)} className="form-select form-select-sm rounded-3">
+          <select value={selected || student.id} onChange={e => setSelected(e.target.value)} className="form-select form-select-sm rounded-3">
             {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div className="flex-grow-1 rounded-3 p-3 d-flex align-items-center gap-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
           <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:44, height:44, fontSize:16 }}>{initials(student.name)}</div>
-          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} � {student.track} Grade {student.grade}</div></div>
+          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} • {student.track} Grade {student.grade}</div></div>
           <div className="text-end"><div className="fw-black fs-3 text-primary">{avg}%</div><div className="text-muted small">General Average</div></div>
         </div>
       </div>
-      <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Subject</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Teacher</th>
-                <th className="small text-muted fw-semibold text-uppercase text-center" style={{ letterSpacing:"0.05em" }}>Units</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Score</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Grade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grades.map((g, i) => (
-                <tr key={i}>
-                  <td className="ps-4 small fw-medium text-dark">{g.subject}</td>
-                  <td className="d-none d-sm-table-cell text-muted small">{g.teacher}</td>
-                  <td className="text-center text-muted small">{g.units}</td>
-                  <td className="text-end">
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                      <div className="progress flex-shrink-0" style={{ width:60, height:6 }}>
-                        <div className="progress-bar bg-primary" style={{ width:`${g.pct}%` }} />
-                      </div>
-                      <span className="small fw-semibold text-dark">{g.pct}%</span>
-                    </div>
-                  </td>
-                  <td className={`text-end pe-4 fw-black small ${g.pct >= 90 ? "text-success" : g.pct >= 80 ? "text-primary" : "text-warning"}`}>{g.grade}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {grades.length === 0 ? (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted small">No grade records yet for this student.</div>
         </div>
-      </div>
+      ) : (
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table table-hover mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Subject</th>
+                  <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Teacher</th>
+                  <th className="small text-muted fw-semibold text-uppercase text-center" style={{ letterSpacing:"0.05em" }}>Units</th>
+                  <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Score</th>
+                  <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grades.map((g, i) => (
+                  <tr key={i}>
+                    <td className="ps-4 small fw-medium text-dark">{g.subject}</td>
+                    <td className="d-none d-sm-table-cell text-muted small">{g.teacher}</td>
+                    <td className="text-center text-muted small">{g.units}</td>
+                    <td className="text-end">
+                      <div className="d-flex align-items-center justify-content-end gap-2">
+                        <div className="progress flex-shrink-0" style={{ width:60, height:6 }}>
+                          <div className="progress-bar bg-primary" style={{ width:`${g.pct}%` }} />
+                        </div>
+                        <span className="small fw-semibold text-dark">{g.pct}%</span>
+                      </div>
+                    </td>
+                    <td className={`text-end pe-4 fw-black small ${g.pct >= 90 ? "text-success" : g.pct >= 80 ? "text-primary" : "text-warning"}`}>{g.grade}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1527,8 +1530,7 @@ function TuitionPanel() {
       .catch(() => {});
   }, []);
 
-  // Fall back to mock data if API returns nothing
-  const allRecords = apiPayments.length > 0
+  const allRecords: DashboardRecord[] = apiPayments.length > 0
     ? apiPayments.map(p => ({
         id: p.student_id,
         name: p.student_name,
@@ -1543,13 +1545,28 @@ function TuitionPanel() {
         balance: p.status === "verified" ? 0 : Number(p.amount),
         paymentId: p.id,
       }))
-    : students.map(s => ({ ...s, total: 22050, paid: s.tuition === "Paid" ? 22050 : 18500, balance: s.tuition === "Paid" ? 0 : 3550, paymentId: 0 }));
+    : students.map(s => ({
+        id: s.id,
+        name: s.name,
+        track: s.track,
+        grade: s.grade,
+        gwa: s.gwa,
+        room: s.room,
+        status: s.status,
+        tuition: s.tuition,
+        total: 22050,
+        paid: s.tuition === "Paid" ? 22050 : 18500,
+        balance: s.tuition === "Paid" ? 0 : 3550,
+        paymentId: 0,
+      }));
 
   const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
 
   const filtered = allRecords.filter(r => {
-    const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
-    const matchTrack  = filterTrack === "All" || r.track === filterTrack;
+    const name = String(r.name).toLowerCase();
+    const idValue = String(r.id).toLowerCase();
+    const matchSearch = name.includes(search.toLowerCase()) || idValue.includes(search.toLowerCase());
+    const matchTrack = filterTrack === "All" || r.track === filterTrack;
     const matchStatus = filterStatus === "All" || r.tuition === filterStatus;
     return matchSearch && matchTrack && matchStatus;
   });
@@ -1735,8 +1752,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
   // Build per-teacher pending request count from allGradeRequests
   const pendingByTeacher = allGradeRequests.reduce<Record<string, number>>((acc, r) => {
     if (r.status === "pending") {
-      // match by last name heuristic (e.g. "Mr. Dela Cruz"  "Dela Cruz")
-      const key = r.teacher.replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "");
+      const key = String(r.teacher).replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "");
       acc[key] = (acc[key] ?? 0) + 1;
     }
     return acc;
@@ -1983,9 +1999,9 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                       <div className="small fw-semibold text-danger mb-2"> Pending student grade requests:</div>
                       <div className="d-flex flex-column gap-1">
                         {allGradeRequests
-                          .filter(r => r.status === "pending" && r.teacher.replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "") === t.name.split(" ").slice(1).join(" "))
+                          .filter(r => r.status === "pending" && String(r.teacher).replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "") === t.name.split(" ").slice(1).join(" "))
                           .map(r => (
-                            <div key={r.id} className="d-flex align-items-center gap-2 p-2 rounded-2 bg-white border" style={{ fontSize: 12 }}>
+                            <div key={String(r.id)} className="d-flex align-items-center gap-2 p-2 rounded-2 bg-white border" style={{ fontSize: 12 }}>
                               <span></span>
                               <span className="fw-semibold text-dark">{r.student}</span>
                               <span className="text-muted">�</span>
@@ -2001,7 +2017,7 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
                   {/* Subject Schedule */}
                   <p className="text-muted text-uppercase fw-semibold mb-2" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Subject Schedule</p>
                   <div className="d-flex flex-column gap-2">
-                    {t.subjects.map((s, idx) => (
+                    {t.subjects.map((s: TeacherSubject, idx: number) => (
                       <div key={idx} className="d-flex align-items-center gap-3 p-3 rounded-3 bg-white border">
                         <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 16 }}></div>
                         <div className="flex-grow-1">
@@ -2557,14 +2573,14 @@ function AdminDocumentsPanel() {
             </thead>
             <tbody>
               {docs.map(doc => (
-                <React.Fragment key={doc.id}>
-                  <tr key={doc.id}>
-                    <td className="ps-4 small fw-medium text-dark">{doc.student}</td>
-                    <td className="d-none d-sm-table-cell text-muted small">{doc.type}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{doc.teacher}</td>
+                <React.Fragment key={String(doc.id)}>
+                  <tr key={String(doc.id)}>
+                    <td className="ps-4 small fw-medium text-dark">{String(doc.student)}</td>
+                    <td className="d-none d-sm-table-cell text-muted small">{String(doc.type)}</td>
+                    <td className="d-none d-lg-table-cell text-muted small">{String(doc.teacher)}</td>
                     <td className="d-none d-lg-table-cell">
                       <span className="badge bg-primary-subtle text-primary border border-primary-subtle" style={{ fontSize: 11 }}>
-                        {doc.track}  Grade {doc.grade}
+                        {String(doc.track)}  Grade {String(doc.grade)}
                       </span>
                     </td>
                     <td>
@@ -2835,134 +2851,6 @@ function ReportsPanel() {
   );
 }
 
-/*  Teacher Time Log Panel (Admin)  */
-function AdminTimeLogPanel() {
-  const TIMELOG_KEY = "inform_teacher_timelog";
-  const [logs, setLogs] = useState<{id:number;teacherId:string;teacherName:string;date:string;timeIn:string;timeOut:string|null;status:string}[]>([]);
-  const [filterTeacher, setFilterTeacher] = useState("All");
-  const [filterDate, setFilterDate] = useState("");
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(TIMELOG_KEY);
-      setLogs(raw ? JSON.parse(raw) : []);
-    } catch { setLogs([]); }
-  }, []);
-
-  function reload() {
-    try {
-      const raw = localStorage.getItem(TIMELOG_KEY);
-      setLogs(raw ? JSON.parse(raw) : []);
-    } catch { setLogs([]); }
-  }
-
-  const teacherNames = ["All", ...Array.from(new Set(logs.map(l => l.teacherName)))];
-
-  const filtered = logs.filter(l => {
-    const matchTeacher = filterTeacher === "All" || l.teacherName === filterTeacher;
-    const matchDate = !filterDate || l.date.includes(filterDate);
-    return matchTeacher && matchDate;
-  });
-
-  const onCampus = logs.filter(l => l.status === "in");
-
-  return (
-    <div className="d-flex flex-column gap-4">
-      <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Teacher Time Logs</h2><p className="text-muted small mb-0">Monitor teacher campus attendance in real time</p></div>
-        <button onClick={reload} className="btn btn-outline-secondary btn-sm"> Refresh</button>
-      </div>
-
-      {/* On-campus now */}
-      <div className="card border-0 rounded-3" style={{ background: "linear-gradient(135deg,#059669,#10b981)", boxShadow: "0 8px 24px rgba(5,150,105,0.2)" }}>
-        <div className="card-body p-4 text-white">
-          <div className="fw-black fs-5 mb-1"> Currently On Campus</div>
-          {onCampus.length === 0
-            ? <div className="text-white-50 small">No teachers are currently timed in.</div>
-            : <div className="d-flex flex-wrap gap-2 mt-2">
-                {onCampus.map(l => (
-                  <span key={l.id} className="badge bg-white text-success fw-bold px-3 py-2 rounded-pill" style={{ fontSize: 12 }}>
-                     {l.teacherName}  In: {l.timeIn}
-                  </span>
-                ))}
-              </div>
-          }
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="row g-3">
-        {[
-          { label: "Total Entries", value: logs.length, cls: "bg-primary-subtle border-primary-subtle text-primary" },
-          { label: "On Campus Now", value: onCampus.length, cls: "bg-success-subtle border-success-subtle text-success" },
-          { label: "Completed Today", value: logs.filter(l => l.status === "out" && l.date === new Date().toLocaleDateString("en-PH", { year:"numeric", month:"long", day:"numeric" })).length, cls: "bg-info-subtle border-info-subtle text-info" },
-        ].map(s => (
-          <div key={s.label} className="col-4">
-            <div className={`card border rounded-3 ${s.cls}`}>
-              <div className="card-body p-3 text-center">
-                <div className="small mb-1">{s.label}</div>
-                <div className="fw-black fs-3">{s.value}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="d-flex gap-3 flex-wrap align-items-end">
-        <div style={{ minWidth: 200 }}>
-          <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Filter by Teacher</label>
-          <select value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} className="form-select form-select-sm rounded-3">
-            {teacherNames.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Filter by Date</label>
-          <input type="text" value={filterDate} onChange={e => setFilterDate(e.target.value)} placeholder="e.g., June 2026" className="form-control form-control-sm rounded-3" style={{ width: 160 }} />
-        </div>
-        {(filterTeacher !== "All" || filterDate) && (
-          <button onClick={() => { setFilterTeacher("All"); setFilterDate(""); }} className="btn btn-outline-secondary btn-sm">Clear Filters</button>
-        )}
-      </div>
-
-      {/* Log table */}
-      <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Teacher</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Date</th>
-                <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Time In</th>
-                <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Time Out</th>
-                <th className="small text-muted fw-semibold text-uppercase pe-4" style={{ letterSpacing: "0.05em" }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0
-                ? <tr><td colSpan={5} className="text-center py-4 small text-muted">No time log entries found.</td></tr>
-                : [...filtered].reverse().map(l => (
-                  <tr key={l.id}>
-                    <td className="ps-4 small fw-medium text-dark">{l.teacherName}</td>
-                    <td className="d-none d-sm-table-cell small text-muted">{l.date}</td>
-                    <td className="small text-success fw-semibold">{l.timeIn}</td>
-                    <td className="small text-danger fw-semibold">{l.timeOut ?? <span className="text-muted fst-italic">Still on campus</span>}</td>
-                    <td className="pe-4">
-                      <span className={`badge ${l.status === "in" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
-                        {l.status === "in" ? " On Campus" : " Completed"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /*  Page  */
 export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role, bannerHeight }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string; bannerHeight?: number } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
@@ -3086,7 +2974,6 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "announcements": return <AnnouncementsPanel />;
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
-      case "timelog":       return <AdminTimeLogPanel />;
       default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} />;
     }
   }

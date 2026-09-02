@@ -3,6 +3,11 @@ const router  = express.Router();
 
 const { adminLogin, adminLogout, getAuditLog } = require("./adminAuthController");
 const {
+  createAdminAccount,
+  listAdminAccounts,
+  updateAdminAccount,
+  archiveAdminAccount,
+  deleteAdminAccount,
   getDashboard,
   searchStudents,
   getPendingEnrollments,
@@ -24,6 +29,12 @@ router.post("/logout", adminLogout);
 
 // ── All routes below require a valid admin JWT ─────────────────────────────
 router.use(authenticateAdmin);
+
+router.post("/create-admin", createAdminAccount);
+router.get("/admins", listAdminAccounts);
+router.patch("/admins/:id", updateAdminAccount);
+router.patch("/admins/:id/archive", archiveAdminAccount);
+router.delete("/admins/:id", deleteAdminAccount);
 
 // Dashboard & search
 router.get("/dashboard",       getDashboard);

@@ -8,28 +8,23 @@ const mysql  = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
+const dotenv = require("dotenv");
 
-// Read .env file directly
-function loadEnvFile() {
-  const envPath = path.join(__dirname, '../.env');
-  const envConfig = {};
-  
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    envContent.split('\n').forEach(line => {
-      const [key, ...valueParts] = line.split('=');
-      if (key && valueParts.length > 0) {
-        const value = valueParts.join('=').trim();
-        // Remove quotes if present
-        envConfig[key.trim()] = value.replace(/^["']|["']$/g, '');
-      }
-    });
-  }
-  
-  return envConfig;
+const envPath = path.join(__dirname, "../.env");
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
 }
 
-const env = loadEnvFile();
+const env = {
+  ...process.env,
+  DB_HOST: process.env.DB_HOST || 'localhost',
+  DB_PORT: process.env.DB_PORT || 3306,
+  DB_USER: process.env.DB_USER || 'root',
+  DB_PASSWORD: process.env.DB_PASSWORD,
+  DB_NAME: process.env.DB_NAME || 'smart_student_service',
+  SUPER_ADMIN_ID: process.env.SUPER_ADMIN_ID || 'SUPERADMIN',
+  SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin@2026',
+};
 
 async function migrate() {
   // Connect without a database first so we can CREATE it
@@ -92,7 +87,9 @@ async function migrate() {
       full_name  VARCHAR(100) NOT NULL,
       role       VARCHAR(20)  NOT NULL DEFAULT 'admin',
       email      VARCHAR(100) NOT NULL,
-      created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+      is_archived TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
 
@@ -306,225 +303,29 @@ await conn.query(`
 console.log("✅  Staff notifications table created");
 
 
-  const teachers = [
-    ["T001", await bcrypt.hash("teacher001", 10), "Dr. Rosa Mendoza",   "Computer Science", "r.mendoza@inform.edu"],
-    ["T002", await bcrypt.hash("teacher002", 10), "Prof. Ben Aquino",   "General Mathworld",      "b.aquino@inform.edu"],
-    ["T003", await bcrypt.hash("teacher003", 10), "Ms. Clara Tan",      "English 101",          "c.tan@inform.edu"],
-    ["T004", await bcrypt.hash("teacher004", 10), "Mr. Carlos Reyes",   "Science",          "c.reyes@inform.edu"],
-  ];
-  for (const t of teachers) {
-    await conn.query(
-      `INSERT INTO teachers (teacher_id, password, full_name, department, email)
-       VALUES (?, ?, ?, ?, ?)`, t
-    );
-  }
-  console.log("✅  Teachers seeded");
+  // ── Seed: Super Admin Only ─────────────────────────────────────
+  const superAdminId = env.SUPER_ADMIN_ID || "SUPERADMIN";
+  const superAdminPassword = env.SUPER_ADMIN_PASSWORD || "SuperAdmin@2026";
 
-  // ── Seed: Admins ─────────────────────────────────────────────
-  const admins = [
-    ["ADMIN001", await bcrypt.hash("principal2026",  10), "School Principal",  "principal",  "principal@cfei.edu"],
-    ["ADMIN002", await bcrypt.hash("registrar2026",  10), "Registrar Office",  "registrar",  "registrar@cfei.edu"],
-    ["ADMIN003", await bcrypt.hash("accounting2026", 10), "Accounting Office", "accounting", "accounting@cfei.edu"],
-  ];
-  for (const a of admins) {
+  const [existingSuperAdmin] = await conn.query(
+    "SELECT id FROM admins WHERE admin_id = ? LIMIT 1",
+    [superAdminId]
+  );
+
+  if (!existingSuperAdmin.length) {
     await conn.query(
       `INSERT INTO admins (admin_id, password, full_name, role, email)
-       VALUES (?, ?, ?, ?, ?)`, a
+       VALUES (?, ?, ?, ?, ?)`,
+      [superAdminId, await bcrypt.hash(superAdminPassword, 10), "System Super Administrator", "super_admin", "superadmin@cfei.edu"]
     );
+    console.log("✅  Super administrator seeded");
+  } else {
+    console.log("✅  Super administrator already exists");
   }
-  console.log("✅  Admins seeded");
 
-  // ── Seed: Students ───────────────────────────────────────────
-  const TERM = "2nd Semester SY 2025-2026";
-  const students = [
-    ["202500001", await bcrypt.hash("jamie123",  10), "Jamie Santos",    "STEM",        11, TERM, "jamie@student.inform.edu"],
-    ["202500002", await bcrypt.hash("maria456",  10), "Maria Reyes",     "HUMMS",       11, TERM, "maria@student.inform.edu"],
-    ["202500003", await bcrypt.hash("carlo789",  10), "Carlo Dela Cruz", "ABM",         12, TERM, "carlo@student.inform.edu"],
-    ["202500004", await bcrypt.hash("ana2025",   10), "Ana Villanueva",  "TVL-TechPro", 11, TERM, "ana@student.inform.edu"],
-    ["202500005", await bcrypt.hash("luis2025",  10), "Luis Fernandez",  "STEM",        12, TERM, "luis@student.inform.edu"],
-    ["202500006", await bcrypt.hash("craig2025", 10), "Craig Cabahug O", "TVL-TechPro", 12, TERM, "craig@student.inform.edu"], 
-  ];
-  for (const s of students) {
-    await conn.query(
-      `INSERT INTO students
-         (student_id, password, full_name, pathway, grade_level, term, email, account_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'active')`, s
-    );
-  }
-  console.log("✅  Students seeded");
-
-  // ── Seed: Subjects (teacher PKs are 1-4) ─────────────────────
-  const subjects = [
-    ["CS401",   "Software Engineering",   3, 1, 40, 38],
-    ["CS402",   "Database Systems",       3, 1, 40, 40],
-    ["MATH301", "Discrete Mathematics",   3, 2, 35, 20],
-    ["ENG201",  "Technical Writing",      3, 3, 30, 15],
-    ["CS403",   "Operating Systems",      3, 1, 40, 10],
-    ["SCI301",  "General Biology",        3, 4, 35,  8],
-  ];
-  for (const s of subjects) {
-    await conn.query(
-      `INSERT INTO subjects (code, name, units, teacher_id, max_capacity, enrolled_count)
-       VALUES (?, ?, ?, ?, ?, ?)`, s
-    );
-  }
-  console.log("✅  Subjects seeded");
-
-  // ── Seed: Schedule ────────────────────────────────────────────
-const scheduleEntries = [
-  // subject pk 1 = CS401 (Dr. Rosa Mendoza)
-  [1, "Monday",    "07:30:00", "09:00:00", "Room 301"],
-  [1, "Wednesday", "07:30:00", "09:00:00", "Room 301"],
-  [1, "Friday",    "07:30:00", "09:00:00", "Room 301"],
-  // subject pk 2 = CS402
-  [2, "Tuesday",   "09:00:00", "10:30:00", "Room 302"],
-  [2, "Thursday",  "09:00:00", "10:30:00", "Room 302"],
-  // subject pk 3 = MATH301
-  [3, "Monday",    "10:00:00", "11:30:00", "Room 205"],
-  [3, "Wednesday", "10:00:00", "11:30:00", "Room 205"],
-  // subject pk 4 = ENG201
-  [4, "Tuesday",   "13:00:00", "14:30:00", "Room 108"],
-  [4, "Thursday",  "13:00:00", "14:30:00", "Room 108"],
-  // subject pk 5 = CS403
-  [5, "Friday",    "10:00:00", "11:30:00", "ICT Lab"],
-  // subject pk 6 = SCI301
-  [6, "Monday",    "14:00:00", "15:30:00", "Sci. Lab"],
-  [6, "Wednesday", "14:00:00", "15:30:00", "Sci. Lab"],
-];
-for (const [subject_id, day, time_start, time_end, room] of scheduleEntries) {
-  await conn.query(
-    `INSERT INTO schedule (subject_id, day, time_start, time_end, room) VALUES (?, ?, ?, ?, ?)`,
-    [subject_id, day, time_start, time_end, room]
-  );
-}
-console.log("✅  Schedule seeded");
-
-
-  // ── Seed: Enrollments ────────────────────────────────────────
-  // Student 202500001 — approved
-  await conn.query(
-    `INSERT INTO enrollments (id, student_id, term, status, admin_id, admin_timestamp, created_at)
-     VALUES (1, '202500001', ?, 'approved', 'ADMIN001', '2026-01-10 08:00:00', '2026-01-05 10:00:00')`,
-    [TERM]
-  );
-  await conn.query(`INSERT INTO enrollment_subjects VALUES (1,1),(1,3),(1,4)`);
-
-  // Student 202500002 — pending
-  await conn.query(
-    `INSERT INTO enrollments (id, student_id, term, status, created_at)
-     VALUES (2, '202500002', ?, 'pending', '2026-01-06 09:30:00')`,
-    [TERM]
-  );
-  await conn.query(`INSERT INTO enrollment_subjects VALUES (2,3),(2,4)`);
-
-  // Student 202500003 — approved
-  await conn.query(
-    `INSERT INTO enrollments (id, student_id, term, status, admin_id, admin_timestamp, created_at)
-     VALUES (3, '202500003', ?, 'approved', 'ADMIN001', '2026-01-11 08:00:00', '2026-01-07 11:00:00')`,
-    [TERM]
-  );
-  await conn.query(`INSERT INTO enrollment_subjects VALUES (3,1),(3,5)`);
-  console.log("✅  Enrollments seeded");
-
-  // ── Seed: Grades ─────────────────────────────────────────────
-  const grades = [
-    ["202500001", 1, 1, 92.00, TERM],
-    ["202500001", 3, 2, 85.00, TERM],
-    ["202500001", 4, 3, 78.00, TERM],
-    ["202500003", 1, 1, 70.00, TERM],
-    ["202500003", 5, 1, 95.00, TERM],
-  ];
-  for (const g of grades) {
-    await conn.query(
-      `INSERT INTO grades (student_id, subject_id, teacher_id, percentage, term)
-       VALUES (?, ?, ?, ?, ?)`, g
-    );
-  }
-  console.log("✅  Grades seeded");
-
-  // ── Seed: Attendance ─────────────────────────────────────────
-  const attendance = [
-    ["202500001", 1, 20, 18, TERM],
-    ["202500001", 3, 20, 14, TERM],
-    ["202500001", 4, 20, 20, TERM],
-    ["202500003", 1, 20, 10, TERM],
-    ["202500003", 5, 20, 19, TERM],
-  ];
-  for (const a of attendance) {
-    await conn.query(
-      `INSERT INTO attendance (student_id, subject_id, total_meetings, days_present, term)
-       VALUES (?, ?, ?, ?, ?)`, a
-    );
-  }
-  console.log("✅  Attendance seeded");
-
-  // ── Seed: Payments ───────────────────────────────────────────
-  const payments = [
-    ["202500001", "Tuition Fee",       15000, "verified", "2026-01-08 10:00:00", "ADMIN002", "2026-01-09 08:00:00"],
-    ["202500001", "Miscellaneous Fee",  2500, "verified", "2026-01-08 10:05:00", "ADMIN002", "2026-01-09 08:05:00"],
-    ["202500001", "Laboratory Fee",     1500, "pending",  "2026-05-20 14:00:00", null, null],
-    ["202500003", "Tuition Fee",       15000, "pending",  "2026-05-19 09:00:00", null, null],
-  ];
-  for (const p of payments) {
-    await conn.query(
-      `INSERT INTO payments (student_id, fee_item, amount, status, paid_at, admin_id, admin_timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`, p
-    );
-  }
-  console.log("✅  Payments seeded");
-
-  // ── Seed: Documents ──────────────────────────────────────────
-  await conn.query(`
-    INSERT INTO documents
-      (reference_number, student_id, document_type, purpose, copies,
-       status, expected_release_date, admin_id, admin_timestamp, created_at)
-    VALUES
-      ('DOC-20260101-0001', '202500001', 'Certificate of Enrollment',
-       'For scholarship application', 2, 'approved', '2026-01-15',
-       'ADMIN001', '2026-01-12 10:00:00', '2026-01-10 09:00:00'),
-      ('DOC-20260520-0002', '202500001', 'Transcript of Records',
-       'For job application', 1, 'pending', NULL,
-       NULL, NULL, '2026-05-20 11:00:00')
-  `);
-  console.log("✅  Documents seeded");
-
-  // ── Seed: Notifications ──────────────────────────────────────
-  await conn.query(`
-    INSERT INTO notifications (student_id, message, type, is_read, created_at)
-    VALUES
-      ('202500001', 'Your enrollment for 2nd Semester SY 2025-2026 has been approved.',
-       'enrollment', 1, '2026-01-10 08:01:00'),
-      ('202500001', 'Your payment of 15,000 (Tuition Fee) has been verified.',
-       'payment', 1, '2026-01-09 08:01:00'),
-      ('202500001', 'Your document request (Certificate of Enrollment) has been approved. Expected release: January 15, 2026.',
-       'document', 0, '2026-01-12 10:01:00')
-  `);
-  console.log("✅  Notifications seeded");
-
-  // ── Seed: Audit log ──────────────────────────────────────────
-  await conn.query(`
-    INSERT INTO audit_log (admin_id, action, target_request_id, created_at)
-    VALUES
-      ('ADMIN001', 'APPROVE_ENROLLMENT', 1, '2026-01-10 08:00:00'),
-      ('ADMIN002', 'VERIFY_PAYMENT',     1, '2026-01-09 08:00:00')
-  `);
-  console.log("✅  Audit log seeded");
-
-  // ── Seed: Enrollment config ──────────────────────────────────
-  await conn.query(
-    `INSERT INTO enrollment_config (active_term, deadline)
-     VALUES (?, '2026-08-15 23:59:59')`,
-    [TERM]
-  );
-  console.log("✅  Enrollment config seeded");
-
-  await conn.query(`
-  INSERT INTO grade_request_config (term, is_open) VALUES
-  ('Term 1', 0),
-  ('Term 2', 0),
-  ('Term 3', 0)
-`);
-console.log("✅  Grade request config seeded");
+  console.log("\n🔐  Super admin login:");
+  console.log(`   ${superAdminId} / ${superAdminPassword}`);
+  console.log("   Keep these values in your server .env file and rotate them before production use.");
 
   // ── Enrollment Applications table ─────────────────────────
   await conn.query(`
@@ -577,11 +378,8 @@ console.log("✅  Grade request config seeded");
 
 
   console.log("\n🎉  Migration complete — database is ready!");
-  console.log("\n📋  Demo credentials:");
-  console.log("   Students  : 202500001 / jamie123  |  202500002 / maria456  |  202500003 / carlo789");
-  console.log("   Students  : 202500004 / ana2025   |  202500005 / luis2025  |  202500006 / craig2025");
-  console.log("   Teachers  : T001 / teacher001  |  T002 / teacher002  |  T003 / teacher003  |  T004 / teacher004");
-  console.log("   Admins    : ADMIN001 / principal2026  |  ADMIN002 / registrar2026 | ADMIN003 / accounting2026");
+  console.log("\n✅  Ready for real client setup.");
+  console.log("   Use the super admin credentials from your server .env file to create principal, registrar, and accounting accounts.");
 
   await conn.end();
 }

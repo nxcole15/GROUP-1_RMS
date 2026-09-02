@@ -76,73 +76,21 @@ function saveTimeLogs(logs: TimeLogEntry[]) {
 
 /* -- Data -- */
 const teacherData = {
-  teacher_id: "T001",
-  full_name: "Maria Santos",
-  department: "Mathematics",
-  email: "maria.santos@cfei.edu",
+  teacher_id: "",
+  full_name: "Teacher",
+  department: "",
+  email: "",
 };
 
-const subjects = [
-  { id: 1, code: "MATH101", name: "Algebra I",  units: 3, enrolled: 35, max: 40 },
-  { id: 2, code: "MATH102", name: "Geometry",   units: 3, enrolled: 32, max: 40 },
-  { id: 3, code: "MATH201", name: "Calculus I", units: 4, enrolled: 28, max: 35 },
-];
-
-const teacherSchedule = [
-  { day: "Monday",    time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Monday",    time: "08:30-09:30", subject: "Geometry",   room: "Room 205", enter: "08:25", leave: "09:35" },
-  { day: "Tuesday",   time: "07:30-09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Wednesday", time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-  { day: "Thursday",  time: "07:30-09:00", subject: "Calculus I", room: "Sci. Lab", enter: "07:20", leave: "09:05" },
-  { day: "Friday",    time: "07:30-08:30", subject: "Algebra I",  room: "Room 301", enter: "07:25", leave: "08:35" },
-];
-
-const students = [
-  { id: "STU-2024-001", name: "Jamie Santos",    pathway: "Academic", grade: 11, status: "Active" },
-  { id: "STU-2024-002", name: "Maria Reyes",     pathway: "Academic", grade: 11, status: "Active" },
-  { id: "STU-2024-003", name: "Carlo Dela Cruz", pathway: "Academic", grade: 12, status: "Active" },
-  { id: "STU-2024-005", name: "Luis Fernandez",  pathway: "Academic", grade: 12, status: "Active" },
-  { id: "STU-2024-008", name: "Lena Cruz",       pathway: "Academic", grade: 11, status: "Active" },
-];
-
-const grades = [
-  { student_id: "STU-2024-001", name: "Jamie Santos",    subject: "Algebra I",  percentage: 92, term: "Term 1" },
-  { student_id: "STU-2024-002", name: "Maria Reyes",     subject: "Algebra I",  percentage: 87, term: "Term 1" },
-  { student_id: "STU-2024-003", name: "Carlo Dela Cruz", subject: "Calculus I", percentage: 95, term: "Term 1" },
-  { student_id: "STU-2024-005", name: "Luis Fernandez",  subject: "Calculus I", percentage: 88, term: "Term 1" },
-];
-
-const gradeRequestsTeacher = [
-  { id: 1, student: "Jamie Santos",    subject: "Algebra I",  status: "pending",  requestedAt: "2h ago" },
-  { id: 2, student: "Maria Reyes",     subject: "Algebra I",  status: "pending",  requestedAt: "1h ago" },
-  { id: 3, student: "Carlo Dela Cruz", subject: "Calculus I", status: "approved", requestedAt: "30m ago" },
-];
-
-const attendance = [
-  { student_id: "STU-2024-001", name: "Jamie Santos",    subject: "Algebra I",  present: 18, total: 20, percentage: 90 },
-  { student_id: "STU-2024-002", name: "Maria Reyes",     subject: "Algebra I",  present: 19, total: 20, percentage: 95 },
-  { student_id: "STU-2024-003", name: "Carlo Dela Cruz", subject: "Calculus I", present: 17, total: 20, percentage: 85 },
-  { student_id: "STU-2024-005", name: "Luis Fernandez",  subject: "Calculus I", present: 20, total: 20, percentage: 100 },
-];
-
-const recentActivity = [
-  { action: "Grade Submitted",    name: "Jamie Santos",    time: "2h ago",   icon: "chart" },
-  { action: "Attendance Updated", name: "Maria Reyes",     time: "3h ago",   icon: "calendar" },
-  { action: "Grade Submitted",    name: "Carlo Dela Cruz", time: "5h ago",   icon: "chart" },
-  { action: "Attendance Updated", name: "Luis Fernandez",  time: "Yesterday",icon: "calendar" },
-];
-
-const teacherNotifications = [
-  { id: 1, type: "document",   title: "Document Request",   message: "Jamie Santos requested a TOR",                        time: "1h ago", read: false, icon: "file" },
-  { id: 2, type: "grade",      title: "Grade Submitted",    message: "Your grades for Algebra I have been submitted",       time: "2h ago", read: false, icon: "check" },
-  { id: 3, type: "enrollment", title: "New Student Enrolled",message: "Rosa Bautista enrolled in your Geometry class",     time: "1d ago", read: true,  icon: "students" },
-];
-
-const documentApprovals = [
-  { id: 1, student: "Jamie Santos",    type: "TOR",         status: "pending",  requestedAt: "May 18, 2026", approvedAt: "",            icon: "file" },
-  { id: 2, student: "Maria Reyes",     type: "Certificate", status: "pending",  requestedAt: "May 17, 2026", approvedAt: "",            icon: "file" },
-  { id: 3, student: "Carlo Dela Cruz", type: "TOR",         status: "approved", requestedAt: "May 15, 2026", approvedAt: "May 16, 2026",icon: "checkCircle" },
-];
+const subjects: Array<Record<string, any>> = [];
+const teacherSchedule: Array<Record<string, any>> = [];
+const students: Array<Record<string, any>> = [];
+const grades: Array<Record<string, any>> = [];
+const gradeRequestsTeacher: Array<Record<string, any>> = [];
+const attendance: Array<Record<string, any>> = [];
+const recentActivity: Array<Record<string, any>> = [];
+const teacherNotifications: Array<Record<string, any>> = [];
+const documentApprovals: Array<Record<string, any>> = [];
 
 /* -- Trimester deadline logic -- */
 const TEACHER_TERM_DEADLINES: Record<string, Date> = {

@@ -10,13 +10,16 @@ function normalizeId(value: string) {
 
 function detectRole(id: string): string {
   const value = normalizeId(id);
+
   if (!value) return "";
+
   if (/^[0-9]{8,12}$/.test(value)) return "Student";
   if (/^T\d+/i.test(value)) return "Teacher";
-  if (value === "ADMIN001") return "Principal";
-  if (value === "ADMIN002") return "Registrar";
-  if (value === "ADMIN003") return "Accounting";
-  if (/^ADMIN/i.test(value)) return "Admin";
+  if (/^SA\d+/i.test(value)) return "Super Admin";
+  if (/^PRINCIPAL\d+/i.test(value)) return "Principal";
+  if (/^REGISTRAR\d+/i.test(value)) return "Registrar";
+  if (/^ACCOUNTING\d+/i.test(value)) return "Accounting";
+
   return "";
 }
 
@@ -97,7 +100,7 @@ function LoginContent() {
       ));
 
       // Also save role-specific token to prevent tab collisions
-      const adminRoles = ["principal", "registrar", "accounting", "admin"];
+      const adminRoles = ["principal", "registrar", "accounting", "admin", "super_admin"];
       if (adminRoles.includes(data.role)) {
         localStorage.setItem("inform_admin_token", data.token);
       } else if (data.role === "teacher") {
@@ -106,7 +109,8 @@ function LoginContent() {
 
 
       // Redirect based on role returned from backend
-      if (data.role === "principal") router.push("/admin/principal/dashboard");
+      if (data.role === "super_admin") router.push("/admin/super-admin/create");
+      else if (data.role === "principal") router.push("/admin/principal/dashboard");
       else if (data.role === "registrar") router.push("/admin/registrar/dashboard");
       else if (data.role === "accounting") router.push("/accounting/dashboard");
       else if (data.role === "admin") router.push("/admin/dashboard");
@@ -346,7 +350,7 @@ function LoginContent() {
                   <div className="mb-4">
                     <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>Verification Code</label>
                     <input type="text" value={forgotPasswordForm.code} onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, code: e.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="000000" className="form-control form-control-lg text-center font-monospace" style={{ borderColor: "#f97316", fontSize: "24px", letterSpacing: "0.5em" }} maxLength={6} required />
-                    <div className="form-text text-center mt-2"><small className="text-muted">Demo: Your code is <strong className="text-success">{generatedCode}</strong></small></div>
+                    <div className="form-text text-center mt-2"><small className="text-muted">Use the code sent to your email address.</small></div>
                   </div>
                   {forgotPasswordError && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#fef2f2", borderColor: "#dc2626", color: "#dc2626" }}>{forgotPasswordError}</div>}
                   {forgotPasswordSuccess && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#f0fdf4", borderColor: "#10b981", color: "#059669" }}>{forgotPasswordSuccess}</div>}

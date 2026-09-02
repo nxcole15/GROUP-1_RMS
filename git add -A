@@ -1,0 +1,17 @@
+ app/accounting/dashboard/page.tsx       |  63 [32m++[m[31m---[m
+ app/api/auth/universal-login/route.ts   |   2 [32m+[m[31m-[m
+ app/api/jobert/route.ts                 |  13 [32m+[m[31m-[m
+ app/components/AdminDashboardShell.tsx  | 431 [32m++++++++++++[m[31m--------------------[m
+ app/dashboard/page.tsx                  |  99 [32m++[m[31m------[m
+ app/lib/gradeRequests.ts                |  63 [32m+[m[31m----[m
+ app/login/page.tsx                      |  18 [32m+[m[31m-[m
+ app/profile/page.tsx                    |  80 [32m+++[m[31m---[m
+ app/teacher/dashboard/page.tsx          |  78 [32m+[m[31m-----[m
+ server/database/migrate.js              | 272 [32m+++[m[31m-----------------[m
+ server/database/schema.sql              |  16 [32m+[m[31m-[m
+ server/modules/admin/adminController.js | 185 [32m++++++++++++++[m
+ server/modules/admin/adminMiddleware.js |   2 [32m+[m[31m-[m
+ server/modules/admin/adminModel.js      |  68 [32m+++++[m
+ server/modules/admin/adminRoutes.js     |  11 [32m+[m
+ server/modules/auth/authController.js   |  25 [32m+[m[31m-[m
+ 16 files changed, 595 insertions(+), 831 deletions(-)

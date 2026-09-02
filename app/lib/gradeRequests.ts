@@ -1,5 +1,4 @@
 // Shared grade request store using localStorage
-// This simulates a shared backend across all three portals in this demo.
 
 export type GradeRequestStatus =
   | "student_requested"   // Student submitted the request
@@ -37,71 +36,19 @@ export interface GradeRequest {
 
 const STORAGE_KEY = "inform_grade_requests";
 
-const SEED_DATA: GradeRequest[] = [
-  {
-    id: 1,
-    student: "Jamie Santos",
-    studentId: "STU-2024-001",
-    subject: "Algebra I",
-    teacher: "Mr. Dela Cruz",
-    term: "Term 3",
-    status: "student_requested",
-    requestedAt: "June 6, 2026",
-  },
-  {
-    id: 2,
-    student: "Maria Reyes",
-    studentId: "STU-2024-002",
-    subject: "Algebra I",
-    teacher: "Mr. Dela Cruz",
-    term: "Term 3",
-    status: "student_requested",
-    requestedAt: "June 6, 2026",
-  },
-  {
-    id: 3,
-    student: "Carlo Dela Cruz",
-    studentId: "STU-2024-003",
-    subject: "Calculus I",
-    teacher: "Mr. Fernandez",
-    term: "Term 3",
-    status: "submitted_to_admin",
-    requestedAt: "June 5, 2026",
-    score: 91,
-    letterGrade: "A",
-    remarks: "Excellent performance in final exam.",
-    submittedToAdminAt: "June 6, 2026",
-  },
-  {
-    id: 4,
-    student: "Luis Fernandez",
-    studentId: "STU-2024-005",
-    subject: "Physics",
-    teacher: "Ms. Villanueva",
-    term: "Term 3",
-    status: "admin_verified",
-    requestedAt: "June 4, 2026",
-    score: 88,
-    letterGrade: "B+",
-    remarks: "Good improvement.",
-    submittedToAdminAt: "June 5, 2026",
-    adminVerifiedAt: "June 6, 2026",
-    adminVerifiedBy: "Admin",
-    adminNote: "Verified. Consistent with class average.",
-  },
-];
+const INITIAL_DATA: GradeRequest[] = [];
 
 export function loadRequests(): GradeRequest[] {
-  if (typeof window === "undefined") return SEED_DATA;
+  if (typeof window === "undefined") return INITIAL_DATA;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DATA));
-      return SEED_DATA;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DATA));
+      return INITIAL_DATA;
     }
     return JSON.parse(raw) as GradeRequest[];
   } catch {
-    return SEED_DATA;
+    return INITIAL_DATA;
   }
 }
 

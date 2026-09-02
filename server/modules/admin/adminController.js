@@ -2,13 +2,193 @@
  * modules/admin/adminController.js
  * All admin-facing operations.
  */
+const bcrypt           = require("bcryptjs");
 const db               = require("../../config/db");
+const AdminModel       = require("./adminModel");
 const EnrollmentModel  = require("../student/enrollmentModel");
 const PaymentModel     = require("../payments/paymentModel");
 const DocumentModel    = require("../documents/documentModel");
 const AuditModel       = require("./auditModel");
 const ConfigModel      = require("../shared/configModel");
 const { sendNotification } = require("../../utils/notify");
+
+async function createAdminAccount(req, res, next) {
+  try {
+    if (req.admin.role !== "super_admin") {
+      return res.status(403).json({ error: "Only the super admin can create admin accounts." });
+    }
+
+    const { admin_id, full_name, email, password, role } = req.body || {};
+    const allowedRoles = ["principal", "registrar", "accounting"];
+
+    if (!admin_id || !full_name || !email || !password || !role) {
+      return res.status(400).json({ error: "Admin ID, full name, email, password, and role are required." });
+    }
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: "Role must be principal, registrar, or accounting." });
+    }
+
+    const normalizedAdminId = String(admin_id).trim();
+    const normalizedName = String(full_name).trim();
+    const normalizedEmail = String(email).trim();
+
+    if (normalizedAdminId.length < 4 || normalizedName.length < 2 || normalizedEmail.length < 6 || password.length < 8) {
+      return res.status(400).json({ error: "Please provide valid values. Password must be at least 8 characters long." });
+    }
+
+    if (await AdminModel.findByAdminId(normalizedAdminId)) {
+      return res.status(409).json({ error: "An admin with this ID already exists." });
+    }
+
+    if (await AdminModel.findByEmail(normalizedEmail)) {
+      return res.status(409).json({ error: "An admin with this email already exists." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await AdminModel.createAdmin({
+      admin_id: normalizedAdminId,
+      password: hashedPassword,
+      full_name: normalizedName,
+      role,
+      email: normalizedEmail,
+    });
+
+    res.status(201).json({
+      message: `${role} admin account created successfully.`,
+      admin,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listAdminAccounts(req, res, next) {
+  try {
+    if (req.admin.role !== "super_admin") {
+      return res.status(403).json({ error: "Only the super admin can manage admin accounts." });
+    }
+
+    const admins = await AdminModel.getAll();
+    res.json({ admins });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateAdminAccount(req, res, next) {
+  try {
+    if (req.admin.role !== "super_admin") {
+      return res.status(403).json({ error: "Only the super admin can manage admin accounts." });
+    }
+
+    const id = Number(req.params.id);
+    const { full_name, email, role } = req.body || {};
+    const allowedRoles = ["principal", "registrar", "accounting"];
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "A valid admin ID is required." });
+    }
+
+    if (!full_name || !email || !role) {
+      return res.status(400).json({ error: "Full name, email, and role are required." });
+    }
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: "Role must be principal, registrar, or accounting." });
+    }
+
+    const normalizedName = String(full_name).trim();
+    const normalizedEmail = String(email).trim();
+    if (normalizedName.length < 2 || normalizedEmail.length < 6) {
+      return res.status(400).json({ error: "Please provide valid name and email values." });
+    }
+
+    const existing = await AdminModel.findById(id);
+    if (!existing) {
+      return res.status(404).json({ error: "Admin account not found." });
+    }
+
+    const duplicate = await AdminModel.findByEmailExcludingId(normalizedEmail, id);
+    if (duplicate) {
+      return res.status(409).json({ error: "Another admin account is already using this email." });
+    }
+
+    const updated = await AdminModel.updateAdmin(id, {
+      full_name: normalizedName,
+      email: normalizedEmail,
+      role,
+    });
+
+    if (!updated) {
+      return res.status(500).json({ error: "Unable to update the admin account." });
+    }
+
+    res.json({ message: "Admin account updated successfully." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function archiveAdminAccount(req, res, next) {
+  try {
+    if (req.admin.role !== "super_admin") {
+      return res.status(403).json({ error: "Only the super admin can manage admin accounts." });
+    }
+
+    const id = Number(req.params.id);
+    const { archived } = req.body || {};
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "A valid admin ID is required." });
+    }
+
+    const existing = await AdminModel.findById(id);
+    if (!existing) {
+      return res.status(404).json({ error: "Admin account not found." });
+    }
+
+    const updated = await AdminModel.archiveAdmin(id, Boolean(archived));
+    if (!updated) {
+      return res.status(500).json({ error: "Unable to update archive status." });
+    }
+
+    res.json({ message: Boolean(archived) ? "Admin account archived." : "Admin account restored." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteAdminAccount(req, res, next) {
+  try {
+    if (req.admin.role !== "super_admin") {
+      return res.status(403).json({ error: "Only the super admin can manage admin accounts." });
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "A valid admin ID is required." });
+    }
+
+    const existing = await AdminModel.findById(id);
+    if (!existing) {
+      return res.status(404).json({ error: "Admin account not found." });
+    }
+
+    if (existing.admin_id === process.env.SUPER_ADMIN_ID) {
+      return res.status(400).json({ error: "The super admin account cannot be deleted." });
+    }
+
+    const deleted = await AdminModel.deleteAdmin(id);
+    if (!deleted) {
+      return res.status(500).json({ error: "Unable to delete the admin account." });
+    }
+
+    res.json({ message: "Admin account deleted successfully." });
+  } catch (err) {
+    next(err);
+  }
+}
 
 /* ── Dashboard ─────────────────────────────────────────────── */
 async function getDashboard(req, res, next) {
@@ -220,6 +400,11 @@ async function reactivateStudent(req, res, next) {
 
 
 module.exports = {
+  createAdminAccount,
+  listAdminAccounts,
+  updateAdminAccount,
+  archiveAdminAccount,
+  deleteAdminAccount,
   getDashboard, searchStudents,
   reactivateStudent,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,

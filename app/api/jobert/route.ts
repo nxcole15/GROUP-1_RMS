@@ -26,12 +26,7 @@ Your role is to help students with questions about:
 - IT Help Desk: helpdesk@inform.edu, Room 010 Admin Bldg
 - Cashier: Room 102 Admin Bldg, Mon-Fri 8AM-4PM
 
-Demo student accounts for testing:
-- ID: 202400001, password: jamie123 (Jamie Santos, BSCS Year 2)
-- ID: 202400002, password: maria456 (Maria Reyes, BSED Year 1)
-- ID: 202400003, password: carlo789 (Carlo Dela Cruz, BSBA Year 3)
-- ID: 202400004, password: ana2024 (Ana Villanueva, BSN Year 2)
-- ID: 202400005, password: luis2024 (Luis Fernandez, BSCS Year 4)
+Use your institution-issued student or staff credentials to sign in.
 
 Benedicto College offers:
 - Academic Track and Technical Professional Track (SHS)
@@ -55,10 +50,10 @@ function getFallbackReply(message: string): string {
   const msg = message.toLowerCase();
 
   if (msg.includes("log in") || msg.includes("login") || msg.includes("sign in")) {
-    return "To log in to INFORM:\n\n1. Go to the login page\n2. Enter your Student ID (9-digit number, e.g. 202400001)\n3. Enter your password\n4. Click \"Access Portal\"\n\nDemo accounts:\n• 202400001 / jamie123\n• 202400002 / maria456\n• 202400003 / carlo789\n\nNeed more help? Contact IT Help Desk at helpdesk@inform.edu or Room 010 Admin Bldg.";
+    return "To log in to INFORM:\n\n1. Go to the login page\n2. Enter your Student ID, teacher ID, or admin ID\n3. Enter your password\n4. Click \"Access Portal\"\n\nNeed more help? Contact IT Help Desk at helpdesk@inform.edu or Room 010 Admin Bldg.";
   }
   if (msg.includes("password") || msg.includes("forgot")) {
-    return "If you forgot your password:\n\n1. Contact the IT Help Desk at helpdesk@inform.edu\n2. Visit Room 010, Admin Building (Mon-Fri, 8AM-5PM)\n3. Bring your school ID for verification\n\nFor demo accounts, passwords are: jamie123, maria456, carlo789, ana2024, luis2024.";
+    return "If you forgot your password:\n\n1. Contact the IT Help Desk at helpdesk@inform.edu\n2. Visit Room 010, Admin Building (Mon-Fri, 8AM-5PM)\n3. Bring your school ID or employee ID for verification";
   }
   if (msg.includes("grade") || msg.includes("gwa") || msg.includes("average")) {
     return "Philippine Grading Scale at Benedicto College:\n\n• 1.00 = 99-100% (Highest)\n• 1.25 = 96-98%\n• 1.50 = 93-95%\n• 1.75 = 90-92%\n• 2.00 = 87-89%\n• 2.25 = 84-86%\n• 2.50 = 81-83%\n• 2.75 = 78-80%\n• 3.00 = 75-77% (Passing)\n• 5.00 = Below 75% (Failed)\n\nYour GWA is the average of all your subject grades.";
@@ -88,7 +83,7 @@ function getFallbackReply(message: string): string {
     return "Lost ID Replacement:\n\n1. Go to the Registrar's Office (Room 101, Admin Bldg)\n2. Fill out a lost ID form\n3. Pay the replacement fee: ₱150 at the Cashier\n4. Present your receipt to the Registrar\n5. New ID will be ready in 3-5 working days";
   }
   if (msg.includes("demo") || msg.includes("account") || msg.includes("test")) {
-    return "Demo Student Accounts for Testing:\n\n• 202400001 / jamie123 — Jamie Santos, BSCS Year 2\n• 202400002 / maria456 — Maria Reyes, BSED Year 1\n• 202400003 / carlo789 — Carlo Dela Cruz, BSBA Year 3\n• 202400004 / ana2024 — Ana Villanueva, BSN Year 2\n• 202400005 / luis2024 — Luis Fernandez, BSCS Year 4";
+    return "This system is configured for real institutional accounts. Please use your assigned ID and password to access the portal.";
   }
 
   return "I'm JOBERT, your INFORM assistant at Benedicto College! I can help you with:\n\n• Logging in to INFORM\n• Grades and GWA\n• Class schedule\n• Tuition fees and payments\n• Library services\n• Enrollment\n• Document requests\n• Scholarships\n• Contact information\n\nWhat would you like to know?";

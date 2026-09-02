@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Set the right cookie based on role
     const isProd = process.env.NODE_ENV === "production";
-    const adminRoles = ["admin", "principal", "registrar", "accounting"];
+    const adminRoles = ["admin", "super_admin", "principal", "registrar", "accounting"];
 
     if (data.role === "student") {
       response.cookies.set("token", data.token, { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 24 * 60 * 60 });
