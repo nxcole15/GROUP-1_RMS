@@ -371,6 +371,59 @@ async function getTeachers(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function createTeacherAccount(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can create teacher accounts." });
+    }
+
+    const { first_name, last_name, email, password } = req.body || {};
+    const firstName = String(first_name || "").trim();
+    const lastName = String(last_name || "").trim();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    if (!firstName || !lastName || !normalizedEmail || !password) {
+      return res.status(400).json({ error: "First name, last name, email, and password are required." });
+    }
+
+    if (firstName.length < 2 || lastName.length < 2 || normalizedEmail.length < 6 || password.length < 8) {
+      return res.status(400).json({ error: "Please provide valid values. Password must be at least 8 characters long." });
+    }
+
+    const [existing] = await db.query(
+      "SELECT id FROM teachers WHERE email = ? LIMIT 1",
+      [normalizedEmail]
+    );
+    if (existing.length) {
+      return res.status(409).json({ error: "A teacher with this email already exists." });
+    }
+
+    const [teacherRows] = await db.query(
+      "SELECT teacher_id FROM teachers WHERE teacher_id LIKE 'T%'"
+    );
+    const highestNumber = teacherRows.reduce((highest, row) => {
+      const match = /^T(\d+)$/i.exec(String(row.teacher_id || ""));
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0);
+    const teacherId = `T${String(highestNumber + 1).padStart(3, "0")}`;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const fullName = `${firstName} ${lastName}`;
+
+    const [result] = await db.query(
+      `INSERT INTO teachers (teacher_id, password, full_name, department, email)
+       VALUES (?, ?, ?, ?, ?)`,
+      [teacherId, hashedPassword, fullName, "Unassigned", normalizedEmail]
+    );
+
+    res.status(201).json({
+      message: "Teacher account created successfully.",
+      teacher: { id: result.insertId, teacher_id: teacherId, full_name: fullName, email: normalizedEmail },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function reactivateStudent(req, res, next) {
   try {
     const studentId = req.params.student_id;
@@ -410,5 +463,5 @@ module.exports = {
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
-  getTeachers,
+  getTeachers, createTeacherAccount,
 };

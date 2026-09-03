@@ -19,6 +19,7 @@ const {
   approveDocument,
   rejectDocument,
   getTeachers,
+  createTeacherAccount,
   reactivateStudent,
 } = require("./adminController");
 const { authenticateAdmin } = require("./adminMiddleware");
@@ -42,6 +43,7 @@ router.get("/students/search", searchStudents);
 router.patch("/students/:student_id/reactivate",reactivateStudent);
 router.get("/audit-log",       getAuditLog);
 router.get("/teachers", getTeachers);
+router.post("/teachers", createTeacherAccount);
 
 // Enrollments
 router.get("/enrollments",               getPendingEnrollments);

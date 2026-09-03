@@ -1704,12 +1704,15 @@ function daysUntil(d: Date): number {
   return Math.ceil((d.getTime() - Date.now()) / 86400000);
 }
 
-function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; registrarView?: boolean } = {}) {
+function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; registrarView?: boolean; role?: string } = {}) {
   const [search, setSearch] = useState("");
 
-    const [apiTeachers, setApiTeachers] = useState<typeof teachers | null>(null);
+  const [apiTeachers, setApiTeachers] = useState<typeof teachers | null>(null);
+  const [showAddTeacher, setShowAddTeacher] = useState(false);
+  const [teacherForm, setTeacherForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [creatingTeacher, setCreatingTeacher] = useState(false);
 
-  useEffect(() => {
+  function loadTeachers() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
     fetch(`${API_BASE}/api/admin/teachers`, {
@@ -1718,8 +1721,8 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data?.teachers?.length) {
-          setApiTeachers(data.teachers.map((t: {
+        if (Array.isArray(data?.teachers)) {
+          const mappedTeachers = data.teachers.map((t: {
             id: number; teacher_id: string; full_name: string; department: string; email: string;
           }) => ({
             id: t.teacher_id,
@@ -1728,10 +1731,15 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
             section: t.department,
             subjects: [],
             room: 0,
-          })));
+          }));
+          setApiTeachers(mappedTeachers);
         }
       })
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadTeachers();
   }, []);
 
   const sourceTeachers = apiTeachers ?? teachers;
@@ -1766,6 +1774,38 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
   function showToast(msg: string) {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  }
+
+  async function createTeacher(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) { showToast("Session expired. Please log in again."); return; }
+
+    setCreatingTeacher(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/teachers`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          first_name: teacherForm.firstName,
+          last_name: teacherForm.lastName,
+          email: teacherForm.email,
+          password: teacherForm.password,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to create teacher account.");
+
+      setTeacherForm({ firstName: "", lastName: "", email: "", password: "" });
+      setShowAddTeacher(false);
+      loadTeachers();
+      showToast(`Teacher account created: ${data.teacher.teacher_id}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Unable to create teacher account.");
+    } finally {
+      setCreatingTeacher(false);
+    }
   }
 
   function sendReminder(teacherId: string, teacherName: string) {
@@ -1825,6 +1865,11 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
           <h2 className="fw-black fs-4 text-dark mb-0">Teachers</h2>
           <p className="text-muted small mb-0">{filtered.length} faculty member{filtered.length !== 1 ? "s" : ""}</p>
         </div>
+        {role === "principal" && (
+          <button onClick={() => setShowAddTeacher(true)} className="btn btn-primary btn-sm fw-semibold">
+            + Add Teacher
+          </button>
+        )}
         {/* Term selector */}
         <div className="d-flex gap-2 align-items-center">
           <span className="text-muted small fw-semibold">Trimester:</span>
@@ -2040,6 +2085,49 @@ function TeachersPanel({ readOnly, registrarView }: { readOnly?: boolean; regist
           })
         }
       </div>
+
+      {showAddTeacher && role === "principal" && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setShowAddTeacher(false)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <form onSubmit={createTeacher}>
+                <div className="modal-header">
+                  <div>
+                    <h5 className="modal-title fw-bold">Add Teacher</h5>
+                    <p className="text-muted small mb-0">Create a teacher login account</p>
+                  </div>
+                  <button type="button" className="btn-close" aria-label="Close" onClick={() => setShowAddTeacher(false)} />
+                </div>
+                <div className="modal-body d-flex flex-column gap-3">
+                  <div className="row g-3">
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">First name</label>
+                      <input required minLength={2} value={teacherForm.firstName} onChange={e => setTeacherForm({ ...teacherForm, firstName: e.target.value })} className="form-control" />
+                    </div>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">Last name</label>
+                      <input required minLength={2} value={teacherForm.lastName} onChange={e => setTeacherForm({ ...teacherForm, lastName: e.target.value })} className="form-control" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Email</label>
+                    <input required type="email" value={teacherForm.email} onChange={e => setTeacherForm({ ...teacherForm, email: e.target.value })} className="form-control" />
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Temporary password</label>
+                    <input required minLength={8} type="password" value={teacherForm.password} onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} className="form-control" />
+                    <div className="form-text">The teacher ID will be generated automatically.</div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setShowAddTeacher(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={creatingTeacher}>{creatingTeacher ? "Creating..." : "Create Account"}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2965,7 +3053,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   function renderPanel() {
     switch (activeNav) {
       case "students":      return <StudentsPanel />;
-      case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} />;
+      case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} role={role} />;
       case "grades":        return <GradesPanel />;
       case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
       case "documents":     return <AdminDocumentsPanel />;

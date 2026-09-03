@@ -82,7 +82,16 @@ const teacherData = {
   email: "",
 };
 
-const subjects: Array<Record<string, any>> = [];
+type TeacherSubjectRecord = {
+  id: number;
+  code: string;
+  name: string;
+  units: number;
+  enrolled: number;
+  max: number;
+};
+
+const subjects: TeacherSubjectRecord[] = [];
 const teacherSchedule: Array<Record<string, any>> = [];
 const students: Array<Record<string, any>> = [];
 const grades: Array<Record<string, any>> = [];
@@ -117,9 +126,7 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "students",       label: "My Students",      icon: "students" },
   { id: "grades",         label: "Submit Grades",    icon: "chart" },
   { id: "requests",       label: "Grade Requests",   icon: "requests" },
-  { id: "attendance",     label: "Attendance",       icon: "activity" },
   { id: "documents",      label: "Documents",        icon: "documents" },
-  { id: "timelog" as Panel, label: "Time Log", icon: "clock" },
 ];
 
 /* -- Sidebar -- */
@@ -417,13 +424,14 @@ function StudentsPanel({ students: propStudents }: { students?: typeof students 
 }
 
 /* -- Grades Panel -- */
-function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
-  const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
+function GradesPanel({ isGradeLocked, activeTerm, teacherSubjects = subjects }: { isGradeLocked: boolean; activeTerm: string; teacherSubjects?: Array<{ id: number; name: string }> }) {
+  const [selectedSubject, setSelectedSubject] = useState<number | null>(teacherSubjects[0]?.id ?? null);
   const [apiGrades, setApiGrades] = useState<{student_id:string;full_name:string;percentage:number;term:string}[]>([]);
   const [gradesLoading, setGradesLoading] = useState(false);
   const [gradesError, setGradesError] = useState(false);
 
   useEffect(() => {
+    if (selectedSubject === null) return;
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
     setGradesLoading(true);
@@ -442,8 +450,8 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   }, [selectedSubject]);
 
   const displayGrades = apiGrades.length > 0
-    ? apiGrades.map(g => ({ student_id: g.student_id, name: g.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", percentage: g.percentage, term: g.term }))
-    : grades.filter(g => g.subject === subjects.find(s => s.id === selectedSubject)?.name);
+    ? apiGrades.map(g => ({ student_id: g.student_id, name: g.full_name, subject: teacherSubjects.find(s=>s.id===selectedSubject)?.name ?? "", percentage: g.percentage, term: g.term }))
+    : grades.filter(g => g.subject === teacherSubjects.find(s => s.id === selectedSubject)?.name);
 
   const avg = displayGrades.length > 0 ? Math.round(displayGrades.reduce((a, g) => a + g.percentage, 0) / displayGrades.length) : 0;
   return (
@@ -461,14 +469,14 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
       <div className="d-flex gap-3 flex-wrap align-items-center">
         <div style={{ width: 220 }}>
           <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Select Subject</label>
-          <select value={selectedSubject} onChange={e => setSelectedSubject(Number(e.target.value))} className="form-select form-select-sm rounded-3">
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <select value={selectedSubject ?? ""} onChange={e => setSelectedSubject(e.target.value ? Number(e.target.value) : null)} className="form-select form-select-sm rounded-3">
+            {teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <Icon name="chart" size={24} className="text-success" />
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{teacherSubjects.find(s => s.id === selectedSubject)?.name ?? "No subject assigned"}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
             <div className="fw-black fs-3 text-success">{avg}%</div>
           </div>
         </div>
@@ -508,6 +516,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
           </table>
         </div>
       </div>
+      {teacherSubjects.length === 0 && <div className="alert alert-info small">No subjects are assigned to your account yet.</div>}
       {gradesError && <div className="alert alert-warning small mt-3">Could not load grades from server. Showing cached data.</div>}
     </div>
   );
@@ -1012,8 +1021,8 @@ function NotificationsPanel() {
 }
 
 /* -- Attendance Panel -- */
-function AttendancePanel() {
-  const [selectedSubject, setSelectedSubject] = useState(subjects[0].id);
+function AttendancePanel({ teacherSubjects = subjects }: { teacherSubjects?: Array<{ id: number; name: string }> }) {
+  const [selectedSubject, setSelectedSubject] = useState<number | null>(teacherSubjects[0]?.id ?? null);
   const [apiAttendance, setApiAttendance] = useState<{student_id:string;full_name:string;total_meetings:number;days_present:number}[]>([]);
   const [attLoading, setAttLoading] = useState(false);
   const [attError, setAttError] = useState(false);
@@ -1022,6 +1031,7 @@ function AttendancePanel() {
   function showAttToast(msg: string) { setAttToast(msg); setTimeout(() => setAttToast(null), 3000); }
 
   useEffect(() => {
+    if (selectedSubject === null) return;
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
     setAttLoading(true);
@@ -1041,7 +1051,7 @@ function AttendancePanel() {
 
   function markAttendance(studentId: string, present: boolean) {
     const token = localStorage.getItem("inform_token");
-    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === subjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
+    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === teacherSubjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
       .find(a => a.student_id === studentId);
     const newPresent = present
       ? Math.min((record?.days_present ?? 0) + 1, record?.total_meetings ?? 20)
@@ -1062,7 +1072,7 @@ function AttendancePanel() {
 
   const displayAttendance = apiAttendance.length > 0
     ? apiAttendance.map(a => ({ student_id: a.student_id, name: a.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", present: a.days_present, total: a.total_meetings, percentage: a.total_meetings > 0 ? Math.round((a.days_present/a.total_meetings)*100) : 0 }))
-    : attendance.filter(a => a.subject === subjects.find(s => s.id === selectedSubject)?.name);
+    : attendance.filter(a => a.subject === teacherSubjects.find(s => s.id === selectedSubject)?.name);
 
   const avgAttendance = displayAttendance.length > 0 ? Math.round(displayAttendance.reduce((a, att) => a + att.percentage, 0) / displayAttendance.length) : 0;
   return (
@@ -1072,18 +1082,19 @@ function AttendancePanel() {
       <div className="d-flex gap-3 flex-wrap align-items-center">
         <div style={{ width: 220 }}>
           <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Select Subject</label>
-          <select value={selectedSubject} onChange={e => setSelectedSubject(Number(e.target.value))} className="form-select form-select-sm rounded-3">
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <select value={selectedSubject ?? ""} onChange={e => setSelectedSubject(e.target.value ? Number(e.target.value) : null)} className="form-select form-select-sm rounded-3">
+            {teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
           <div className="card-body p-3 d-flex align-items-center gap-3">
             <span style={{ fontSize: 24 }}></span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{subjects.find(s => s.id === selectedSubject)?.name}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
+            <div className="flex-grow-1"><div className="fw-bold text-dark small">{teacherSubjects.find(s => s.id === selectedSubject)?.name ?? "No subject assigned"}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
             <div className="fw-black fs-3 text-success">{avgAttendance}%</div>
           </div>
         </div>
       </div>
+      {teacherSubjects.length === 0 && <div className="alert alert-info small">No subjects are assigned to your account yet.</div>}
       {attError && <div className="alert alert-warning small">Could not load attendance from server. Showing cached data.</div>}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
@@ -1370,12 +1381,10 @@ export default function TeacherDashboardPage() {
       case "subjects":      return <SubjectsPanel subjects={apiSubjects.length ? apiSubjects.map(s => ({ id: s.id, code: s.code, name: s.name, units: s.units, enrolled: s.enrolled_count, max: s.max_capacity })) : undefined} />;
       case "schedule":      return <SchedulePanel />;
       case "students":      return <StudentsPanel students={apiStudents.length ? apiStudents.map(s => ({ id: s.student_id, name: s.full_name, pathway: "Academic", grade: 0, status: "Active" })) : undefined} />;
-      case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
+      case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacherSubjects={apiSubjects.map(s => ({ id: s.id, name: s.name }))} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
-      case "attendance":    return <AttendancePanel />;
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;
-      case "timelog":       return <TimeLogPanel />;
       default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} />;
     }
   }
