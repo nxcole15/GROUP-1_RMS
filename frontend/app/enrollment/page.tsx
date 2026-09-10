@@ -20,6 +20,27 @@ const STEPS = [
   { n: 4, label: "Review & Confirm"   },
 ];
 
+// ── Name fields that should only accept letters, spaces, hyphens, and apostrophes ──
+const NAME_FIELDS = [
+  "firstName", "lastName", "middleName",
+  "fatherName", "motherName", "guardianName", "guardianRelation",
+  "nationality", "religion",
+  "fatherOccupation", "motherOccupation"
+];
+
+// ── Phone fields that should only accept numbers, spaces, hyphens, and plus sign ──
+const PHONE_FIELDS = ["phone", "guardianPhone"];
+
+// ── Helper: Filter name input (allow only letters, spaces, hyphens, apostrophes) ──
+function sanitizeNameInput(value: string): string {
+  return value.replace(/[^a-zA-Z\s\-']/g, '');
+}
+
+// ── Helper: Filter phone input (allow only numbers, spaces, hyphens, and plus sign) ──
+function sanitizePhoneInput(value: string): string {
+  return value.replace(/[^0-9\s\-+]/g, '');
+}
+
 // ── Step progress bar ───────────────────────────────────────
 function StepBar({ step }: { step: Step }) {
   if (step === 5) return null;
@@ -61,6 +82,7 @@ export default function EnrollmentPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     lrn: "",
@@ -86,7 +108,14 @@ export default function EnrollmentPage() {
       if (files && files[0]) setFormData(prev => ({ ...prev, idPhoto: files[0] }));
     } else {
       const { name, value } = target;
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // Apply name validation for name fields
+      let sanitizedValue = value;
+      if (NAME_FIELDS.includes(name)) {
+        sanitizedValue = sanitizeNameInput(value);
+      } else if (PHONE_FIELDS.includes(name)) {
+        sanitizedValue = sanitizePhoneInput(value);
+      }
+      setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
     }
   };
 
@@ -267,7 +296,7 @@ export default function EnrollmentPage() {
         {step === 1 && (
           <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
             <div className="p-4 text-white text-center" style={{ background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>
-              <h2 className="fw-black fs-5 mb-1">📜 Terms and Conditions</h2>
+              <h2 className="fw-black fs-5 mb-1">Terms and Conditions</h2>
               <p className="text-white-50 small mb-0">Please read all terms carefully before proceeding</p>
             </div>
 
@@ -350,7 +379,7 @@ export default function EnrollmentPage() {
         {step === 2 && (
           <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
             <div className="p-4 text-white text-center" style={{ background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>
-              <h2 className="fw-black fs-5 mb-1">📋 Enrollment Form</h2>
+              <h2 className="fw-black fs-5 mb-1">Enrollment Form</h2>
               <p className="text-white-50 small mb-0">Fill in all required fields marked with *</p>
             </div>
 
@@ -506,7 +535,6 @@ export default function EnrollmentPage() {
                     <option value="">Select learning modality</option>
                     <option value="Face-to-Face">Face-to-Face</option>
                     <option value="Modular">Modular (Distance Learning)</option>
-                    <option value="Blended">Blended Learning</option>
                   </select>
                 </div>
 
@@ -641,7 +669,7 @@ export default function EnrollmentPage() {
           <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
             <div className="p-4 text-white text-center" style={{ background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>
               <h2 className="fw-black fs-5 mb-1">🔍 Review Your Information</h2>
-              <p className="text-white-50 small mb-0">Check everything carefully. Click "Edit" to go back and make changes.</p>
+              <p className="text-white-50 small mb-0">Check everything carefully. Click "Edit" to modify any fields below.</p>
             </div>
 
             <div className="card-body p-4">
@@ -702,15 +730,47 @@ export default function EnrollmentPage() {
                 <div key={section.title} className="mb-4">
                   <div className="d-flex align-items-center justify-content-between mb-2">
                     <div className="fw-bold small text-dark">{section.title}</div>
-                    <button type="button" onClick={() => { setStep(2); window.scrollTo({ top:0, behavior:"smooth" }); }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>✏️ Edit</button>
+                    <button type="button" onClick={() => setEditingSection(editingSection === section.title ? null : section.title)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>✏️ {editingSection === section.title ? "Done Editing" : "Edit"}</button>
                   </div>
                   <div className="rounded-3 overflow-hidden border">
-                    {section.fields.map(([label, value], i) => (
-                      <div key={label} className={`d-flex gap-3 px-3 py-2 ${i % 2 === 0 ? "bg-light" : "bg-white"}`}>
-                        <span className="text-muted small flex-shrink-0" style={{ minWidth:160 }}>{label}</span>
-                        <span className="small fw-semibold text-dark">{value || <span className="text-muted fst-italic">Not provided</span>}</span>
-                      </div>
-                    ))}
+                    {section.fields.map(([label, value], i) => {
+                      const isEditing = editingSection === section.title;
+                      const fieldName = Object.keys(formData).find(key => 
+                        (label === "Full Name") ||
+                        (label === "Date of Birth" && key === "dateOfBirth") ||
+                        (label === "Gender" && key === "gender") ||
+                        (label === "Civil Status" && key === "civilStatus") ||
+                        (label === "Nationality" && key === "nationality") ||
+                        (label === "Religion" && key === "religion") ||
+                        (label === "Address" && key === "address") ||
+                        (label === "Email" && key === "email") ||
+                        (label === "Phone" && key === "phone") ||
+                        (label === "Learners Reference No. (LRN)" && key === "lrn") ||
+                        (label === "Student Status" && key === "studentStatus") ||
+                        (label === "Student ID" && key === "studentId") ||
+                        (label === "Track" && key === "pathway") ||
+                        (label === "Strand" && key === "track") ||
+                        (label === "Grade Level" && key === "year") ||
+                        (label === "Learning Modality" && key === "learningModality") ||
+                        (label === "Father's Name" && key === "fatherName") ||
+                        (label === "Father's Occupation" && key === "fatherOccupation") ||
+                        (label === "Mother's Name" && key === "motherName") ||
+                        (label === "Mother's Occupation" && key === "motherOccupation") ||
+                        (label === "Guardian Phone" && key === "guardianPhone")
+                      );
+                      
+                      return (
+                        <div key={label} className={`d-flex gap-3 px-3 py-2 ${i % 2 === 0 ? "bg-light" : "bg-white"}`}>
+                          <span className="text-muted small flex-shrink-0" style={{ minWidth:160 }}>{label}</span>
+                          {isEditing && fieldName && (
+                            <input type="text" value={formData[fieldName as keyof typeof formData]?.toString() || ""} onChange={(e) => handleChange({...e, target: {...e.target, name: fieldName}} as any)} className="form-control form-control-sm" style={{ flex:1, maxWidth:"300px" }} />
+                          )}
+                          {!isEditing && (
+                            <span className="small fw-semibold text-dark">{value || <span className="text-muted fst-italic">Not provided</span>}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -722,8 +782,14 @@ export default function EnrollmentPage() {
                   <div className="d-flex align-items-center gap-3 p-3 rounded-3 border bg-light">
                     <img src={URL.createObjectURL(formData.idPhoto)} alt="ID" className="rounded-2" style={{ width:64, height:64, objectFit:"cover" }} />
                     <div className="small text-muted">{formData.idPhoto.name}</div>
-                    <button type="button" onClick={() => { setStep(2); window.scrollTo({ top:0, behavior:"smooth" }); }} className="btn btn-link btn-sm p-0 text-primary ms-auto" style={{ fontSize:12 }}>✏️ Change</button>
+                    <button type="button" onClick={() => setEditingSection(editingSection === "ID Photo" ? null : "ID Photo")} className="btn btn-link btn-sm p-0 text-primary ms-auto" style={{ fontSize:12 }}>✏️ {editingSection === "ID Photo" ? "Done" : "Change"}</button>
                   </div>
+                  {editingSection === "ID Photo" && (
+                    <div className="mt-2 p-3 bg-white border rounded-2">
+                      <label className="form-label fw-semibold text-muted small">Upload New ID Photo</label>
+                      <input type="file" name="idPhoto" onChange={handleChange} accept="image/*" className="form-control rounded-2" />
+                    </div>
+                  )}
                 </div>
               )}
 

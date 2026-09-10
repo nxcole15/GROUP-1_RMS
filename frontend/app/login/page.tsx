@@ -68,7 +68,7 @@ function LoginContent() {
     setError("");
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.identifier || !form.password) {
       setError("Please enter your ID and password.");
@@ -79,7 +79,8 @@ function LoginContent() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/universal-login", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const res = await fetch(`${API_BASE}/api/auth/universal-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: form.identifier.trim(), password: form.password }),

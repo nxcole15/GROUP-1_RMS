@@ -1865,11 +1865,6 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
           <h2 className="fw-black fs-4 text-dark mb-0">Teachers</h2>
           <p className="text-muted small mb-0">{filtered.length} faculty member{filtered.length !== 1 ? "s" : ""}</p>
         </div>
-        {role === "principal" && (
-          <button onClick={() => setShowAddTeacher(true)} className="btn btn-primary btn-sm fw-semibold">
-            + Add Teacher
-          </button>
-        )}
         {/* Term selector */}
         <div className="d-flex gap-2 align-items-center">
           <span className="text-muted small fw-semibold">Trimester:</span>
@@ -1881,6 +1876,15 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
           ))}
         </div>
       </div>
+
+      {/* Add Teacher button below term selector */}
+      {role === "principal" && (
+        <div className="d-flex justify-content-end">
+          <button onClick={() => setShowAddTeacher(true)} className="btn btn-primary btn-sm fw-semibold">
+            + Add Teacher
+          </button>
+        </div>
+      )}
 
       {/* Deadline status bar � admin only */}
       {!registrarView && (
