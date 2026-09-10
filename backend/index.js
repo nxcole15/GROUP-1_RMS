@@ -34,8 +34,13 @@ const allowedOrigins = rawOrigins.split(",").map((o) => o.trim());
 app.use(
   cors({
     origin(requestOrigin, callback) {
-      // Allow server-to-server requests (no Origin header) and listed origins
-      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+      // Allow server-to-server requests (no Origin header)
+      if (!requestOrigin) {
+        callback(null, true);
+        return;
+      }
+      // Allow any .vercel.app domain or listed origins
+      if (requestOrigin.endsWith('.vercel.app') || allowedOrigins.includes(requestOrigin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: origin ${requestOrigin} is not allowed.`));
