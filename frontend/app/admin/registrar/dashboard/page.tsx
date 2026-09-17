@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AdminDashboardPage } from "../../../components/AdminDashboardShell";
 
 export default function RegistrarDashboardPage() {
-  useEffect(() => {
-    window.location.replace("/registrar-dashboard");
-  }, []);
+  const router = useRouter();
 
-  return null;
+  useEffect(() => {
+    const role = localStorage.getItem("inform_role");
+    if (role !== "registrar") {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  return <AdminDashboardPage role="registrar" />;
 }

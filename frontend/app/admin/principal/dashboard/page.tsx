@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AdminDashboardPage } from "../../../components/AdminDashboardShell";
 
 export default function PrincipalDashboardPage() {
-  useEffect(() => {
-    window.location.replace("/principal-dashboard");
-  }, []);
+  const router = useRouter();
 
-  return null;
+  useEffect(() => {
+    const role = localStorage.getItem("inform_role");
+    if (role !== "principal") {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  return <AdminDashboardPage role="principal" />;
 }

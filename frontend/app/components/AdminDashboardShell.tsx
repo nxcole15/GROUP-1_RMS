@@ -82,7 +82,7 @@ const adminNotifications: NotificationRecord[] = [];
 
 type IconName =
   | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
-  | "enrollment" | "tuition" | "announcements" | "timelog"
+  | "enrollment" | "tuition" | "announcements" | "timelog" | "scheduling"
   | "check" | "checkCircle" | "x" | "close" | "calendar" | "clock" | "bell"
   | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user"
   | "shield" | "activity" | "lock" | "unlock" | "arrowRight";
@@ -102,6 +102,7 @@ function Icon({ name, size = 18, className }: { name: IconName; size?: number; c
     case "documents":     return <svg {...props}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
     case "enrollment":    return <svg {...props}><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg>;
     case "tuition":       return <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>;
+    case "scheduling":    return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
     case "announcements": return <svg {...props}><path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/><path d="M12 14v-6"/><path d="M9 11l3-3 3 3"/></svg>;
     case "timelog":       return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case "check":         return <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>;
@@ -137,7 +138,6 @@ const navItems = [
   { id:"requests",      label:"Grade Requests"    },
   { id:"documents",     label:"Documents"         },
   { id:"enrollment",    label:"Enrollment"        },
-  { id:"tuition",       label:"Tuition"           },
   { id:"announcements", label:"Announcements"     },
 ];
 
@@ -161,6 +161,25 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
   };
 
   const config = roleConfig[role as keyof typeof roleConfig] || { title: "Admin Panel", subtitle: "Full Access", initials: "AD", email: "admin@cfei.edu" };
+
+  // Filter navigation items based on role
+  let filteredNavItems = navItems;
+  
+  if (role === "registrar") {
+    // Registrar: Remove students, teachers, tuition; add scheduling
+    filteredNavItems = navItems.filter(item => 
+      !["students", "teachers", "tuition"].includes(item.id)
+    );
+    // Add scheduling item after grades
+    const gradesIndex = filteredNavItems.findIndex(item => item.id === "grades");
+    if (gradesIndex !== -1) {
+      filteredNavItems = [
+        ...filteredNavItems.slice(0, gradesIndex + 1),
+        { id: "scheduling", label: "Scheduling" },
+        ...filteredNavItems.slice(gradesIndex + 1)
+      ];
+    }
+  }
 
   return (
     <>
@@ -186,7 +205,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
-          {navItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
+          {filteredNavItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 ${active === item.id ? "text-white" : ""}`}
               style={{ 
@@ -705,6 +724,10 @@ function StudentsPanel() {
 /*  Grades Panel  */
 function GradesPanel() {
   const [selected, setSelected] = useState("");
+  const [term1Open, setTerm1Open] = useState(false);
+  const [term2Open, setTerm2Open] = useState(false);
+  const [term3Open, setTerm3Open] = useState(false);
+  
   const student = students.find(s => s.id === selected) ?? students[0] ?? null;
   const grades: Array<{ subject: string; grade: string; pct: number; units: number; teacher: string }> = [];
 
@@ -715,6 +738,74 @@ function GradesPanel() {
           <h2 className="fw-black fs-4 text-dark mb-0">Grades Management</h2>
           <p className="text-muted small mb-0">View and manage student grades</p>
         </div>
+        
+        {/* Term Submission Control */}
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4">
+            <h5 className="fw-bold mb-3">Grade Submission Control</h5>
+            <p className="text-muted small mb-3">Enable or disable grade submission for each term</p>
+            
+            <div className="d-flex flex-column gap-3">
+              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
+                <div>
+                  <div className="fw-semibold">Term 1</div>
+                  <div className="text-muted small">Teachers {term1Open ? "can" : "cannot"} submit grades</div>
+                </div>
+                <div className="form-check form-switch">
+                  <input 
+                    className="form-check-input" 
+                    type="checkbox" 
+                    checked={term1Open}
+                    onChange={(e) => setTerm1Open(e.target.checked)}
+                    style={{ width: "3rem", height: "1.5rem" }}
+                  />
+                  <label className="form-check-label fw-semibold ms-2">
+                    {term1Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
+                  </label>
+                </div>
+              </div>
+
+              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
+                <div>
+                  <div className="fw-semibold">Term 2</div>
+                  <div className="text-muted small">Teachers {term2Open ? "can" : "cannot"} submit grades</div>
+                </div>
+                <div className="form-check form-switch">
+                  <input 
+                    className="form-check-input" 
+                    type="checkbox" 
+                    checked={term2Open}
+                    onChange={(e) => setTerm2Open(e.target.checked)}
+                    style={{ width: "3rem", height: "1.5rem" }}
+                  />
+                  <label className="form-check-label fw-semibold ms-2">
+                    {term2Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
+                  </label>
+                </div>
+              </div>
+
+              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
+                <div>
+                  <div className="fw-semibold">Term 3</div>
+                  <div className="text-muted small">Teachers {term3Open ? "can" : "cannot"} submit grades</div>
+                </div>
+                <div className="form-check form-switch">
+                  <input 
+                    className="form-check-input" 
+                    type="checkbox" 
+                    checked={term3Open}
+                    onChange={(e) => setTerm3Open(e.target.checked)}
+                    style={{ width: "3rem", height: "1.5rem" }}
+                  />
+                  <label className="form-check-label fw-semibold ms-2">
+                    {term3Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4 text-center text-muted small">
             No student grade data is available yet.
@@ -1886,45 +1977,6 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
         </div>
       )}
 
-      {/* Deadline status bar � admin only */}
-      {!registrarView && (
-      <div className="rounded-3 p-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3"
-        style={{
-          background: isPastDeadline ? "#fef2f2" : daysLeft <= 7 ? "#fffbeb" : "#eff6ff",
-          border: `1px solid ${isPastDeadline ? "#fecaca" : daysLeft <= 7 ? "#fde68a" : "#bfdbfe"}`,
-          borderRadius: 12,
-        }}>
-        <div>
-          <div className="fw-semibold small" style={{ color: isPastDeadline ? "#b91c1c" : daysLeft <= 7 ? "#92400e" : "#1e40af" }}>
-            {isPastDeadline
-              ? `${currentTerm} deadline passed ${Math.abs(daysLeft)} day(s) ago`
-              : `${currentTerm} deadline: ${deadline.deadline.toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })} � ${daysLeft} day(s) left`}
-          </div>
-          <div className="text-muted small mt-1">
-            {totalPending > 0
-              ? `${totalPending} pending grade request(s) awaiting teacher response`
-              : "All grade requests resolved"}
-          </div>
-        </div>
-        {totalPending > 0 && (
-          <div className="d-flex gap-2 flex-shrink-0">
-            <button onClick={sendAllReminders}
-              className="btn btn-sm fw-semibold"
-              style={{ background: "#f59e0b", color: "white", borderRadius: 8, fontSize: 12, border: "none" }}>
-              Remind All
-            </button>
-            {isPastDeadline && (
-              <button onClick={lockAll}
-                className="btn btn-sm fw-semibold"
-                style={{ background: "#dc2626", color: "white", borderRadius: 8, fontSize: 12, border: "none" }}>
-                Lock All
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-      )}
-
       {/* Filters */}
       <div className="d-flex flex-column flex-sm-row gap-3">
         <div className="input-group shadow-sm flex-grow-1">
@@ -2751,6 +2803,616 @@ function AdminDocumentsPanel() {
   );
 }
 
+/*  Scheduling Panel  */
+function SchedulingPanel() {
+  const [activeTab, setActiveTab] = useState<"teacher" | "student">("teacher");
+  
+  // Teacher Schedule State
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [showAddTeacherSchedule, setShowAddTeacherSchedule] = useState(false);
+  const [showEditTeacherSchedule, setShowEditTeacherSchedule] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [teacherScheduleForm, setTeacherScheduleForm] = useState({
+    subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: ""
+  });
+
+  // Student Schedule State
+  const [students, setStudents] = useState<any[]>([]);
+  const [studentFilter, setStudentFilter] = useState<"all" | "scheduled" | "unscheduled">("all");
+  const [showEnrollSchedule, setShowEnrollSchedule] = useState(false);
+  const [showEditStudentSchedule, setShowEditStudentSchedule] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [studentScheduleForm, setStudentScheduleForm] = useState({
+    teacher: "", subject: "", schedule: "", term: "", schoolYear: ""
+  });
+
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const strands = ["STEM", "HUMMS", "ABM", "GAS", "TVL", "ARTS"];
+  const terms = ["Term 1", "Term 2", "Term 3"];
+
+  useEffect(() => {
+    // Load teachers and students (placeholder - replace with actual API calls)
+    setTeachers([
+      { id: 1, name: "Dr. Rosa Mendoza", department: "Science", hasSchedule: true },
+      { id: 2, name: "Mr. Carlos Reyes", department: "Mathematics", hasSchedule: false },
+      { id: 3, name: "Ms. Clara Tan", department: "English", hasSchedule: true },
+    ]);
+    setStudents([
+      { id: 1, name: "Juan Dela Cruz", student_id: "2026001234", strand: "STEM", track: "Science", term: "Term 1", hasSchedule: true },
+      { id: 2, name: "Maria Santos", student_id: "2026001235", strand: "HUMMS", track: "Humanities", term: "Term 1", hasSchedule: false },
+      { id: 3, name: "Pedro Garcia", student_id: "2026001236", strand: "ABM", track: "Business", term: "Term 2", hasSchedule: true },
+    ]);
+  }, []);
+
+  const handleAddTeacherSchedule = () => {
+    console.log("Adding teacher schedule:", teacherScheduleForm);
+    setShowAddTeacherSchedule(false);
+    setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: "" });
+  };
+
+  const handleEditTeacherSchedule = () => {
+    console.log("Editing teacher schedule:", teacherScheduleForm);
+    setShowEditTeacherSchedule(false);
+    setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: "" });
+  };
+
+  const handleEnrollSchedule = () => {
+    console.log("Enrolling student schedule:", studentScheduleForm);
+    setShowEnrollSchedule(false);
+    setStudentScheduleForm({ teacher: "", subject: "", schedule: "", term: "", schoolYear: "" });
+  };
+
+  const handleEditStudentSchedule = () => {
+    console.log("Editing student schedule:", studentScheduleForm);
+    setShowEditStudentSchedule(false);
+    setStudentScheduleForm({ teacher: "", subject: "", schedule: "", term: "", schoolYear: "" });
+  };
+
+  const filteredStudents = students.filter(s => {
+    if (studentFilter === "scheduled") return s.hasSchedule;
+    if (studentFilter === "unscheduled") return !s.hasSchedule;
+    return true;
+  });
+
+  return (
+    <div className="d-flex flex-column gap-4">
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-0">Class Scheduling</h2>
+        <p className="text-muted small mb-0">Manage class schedules and timetables</p>
+      </div>
+
+      {/* Tab Selector */}
+      <div className="btn-group" role="group">
+        <button 
+          className={`btn ${activeTab === "teacher" ? "btn-primary" : "btn-outline-primary"}`}
+          onClick={() => setActiveTab("teacher")}
+        >
+          Teacher Schedule
+        </button>
+        <button 
+          className={`btn ${activeTab === "student" ? "btn-primary" : "btn-outline-primary"}`}
+          onClick={() => setActiveTab("student")}
+        >
+          Student Schedule
+        </button>
+      </div>
+      
+      {/* Teacher Schedule */}
+      {activeTab === "teacher" && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4">
+            <h5 className="fw-bold mb-3">Teacher List</h5>
+            <div className="d-flex flex-column gap-3">
+              {teachers.map(teacher => (
+                <div key={teacher.id} className="d-flex align-items-center justify-content-between p-3 border rounded-3">
+                  <div>
+                    <div className="fw-semibold">{teacher.name}</div>
+                    <div className="text-muted small">{teacher.department}</div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button 
+                      className="btn btn-sm btn-success"
+                      onClick={() => {
+                        setSelectedTeacher(teacher);
+                        setShowAddTeacherSchedule(true);
+                      }}
+                    >
+                      Add Schedule
+                    </button>
+                    <button 
+                      className="btn btn-sm btn-primary"
+                      onClick={() => {
+                        setSelectedTeacher(teacher);
+                        setShowEditTeacherSchedule(true);
+                      }}
+                    >
+                      Edit Schedule
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Schedule */}
+      {activeTab === "student" && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="fw-bold mb-0">Enrolled Students</h5>
+              <div className="btn-group btn-group-sm" role="group">
+                <button 
+                  className={`btn ${studentFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setStudentFilter("all")}
+                >
+                  All
+                </button>
+                <button 
+                  className={`btn ${studentFilter === "scheduled" ? "btn-success" : "btn-outline-success"}`}
+                  onClick={() => setStudentFilter("scheduled")}
+                >
+                  With Schedule
+                </button>
+                <button 
+                  className={`btn ${studentFilter === "unscheduled" ? "btn-warning" : "btn-outline-warning"}`}
+                  onClick={() => setStudentFilter("unscheduled")}
+                >
+                  No Schedule
+                </button>
+              </div>
+            </div>
+            
+            <div className="d-flex flex-column gap-3">
+              {filteredStudents.map(student => (
+                <div key={student.id} className="d-flex align-items-center justify-content-between p-3 border rounded-3">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold">{student.name}</div>
+                    <div className="text-muted small">
+                      {student.student_id} • {student.strand}/{student.track} • {student.term}
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button 
+                      className="btn btn-sm btn-success"
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setShowEnrollSchedule(true);
+                      }}
+                    >
+                      Enroll Schedule
+                    </button>
+                    <button 
+                      className="btn btn-sm btn-primary"
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setShowEditStudentSchedule(true);
+                      }}
+                    >
+                      Edit Schedule
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Teacher Schedule Modal */}
+      {showAddTeacherSchedule && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowAddTeacherSchedule(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Add Schedule - {selectedTeacher?.name}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowAddTeacherSchedule(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Subject</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Mathematics"
+                        value={teacherScheduleForm.subject}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, subject: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Room</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Room 101"
+                        value={teacherScheduleForm.room}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, room: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Day</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.day}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, day: e.target.value})}
+                      >
+                        <option value="">Select Day</option>
+                        {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Time Start</label>
+                      <input 
+                        type="time" 
+                        className="form-control"
+                        value={teacherScheduleForm.timeStart}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeStart: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Time End</label>
+                      <input 
+                        type="time" 
+                        className="form-control"
+                        value={teacherScheduleForm.timeEnd}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeEnd: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Strand</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.strand}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
+                      >
+                        <option value="">Select Strand</option>
+                        {strands.map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Track</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Science"
+                        value={teacherScheduleForm.track}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, track: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Term</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.term}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, term: e.target.value})}
+                      >
+                        <option value="">Select Term</option>
+                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">School Year</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. 2025-2026"
+                        value={teacherScheduleForm.schoolYear}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, schoolYear: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowAddTeacherSchedule(false)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleAddTeacherSchedule}>Add Schedule</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Teacher Schedule Modal */}
+      {showEditTeacherSchedule && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowEditTeacherSchedule(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit Schedule - {selectedTeacher?.name}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEditTeacherSchedule(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Subject</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Mathematics"
+                        value={teacherScheduleForm.subject}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, subject: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Room</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Room 101"
+                        value={teacherScheduleForm.room}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, room: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Day</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.day}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, day: e.target.value})}
+                      >
+                        <option value="">Select Day</option>
+                        {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Time Start</label>
+                      <input 
+                        type="time" 
+                        className="form-control"
+                        value={teacherScheduleForm.timeStart}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeStart: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Time End</label>
+                      <input 
+                        type="time" 
+                        className="form-control"
+                        value={teacherScheduleForm.timeEnd}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeEnd: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Strand</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.strand}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
+                      >
+                        <option value="">Select Strand</option>
+                        {strands.map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Track</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. Science"
+                        value={teacherScheduleForm.track}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, track: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Term</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.term}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, term: e.target.value})}
+                      >
+                        <option value="">Select Term</option>
+                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">School Year</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. 2025-2026"
+                        value={teacherScheduleForm.schoolYear}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, schoolYear: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditTeacherSchedule(false)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleEditTeacherSchedule}>Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Enroll Student Schedule Modal */}
+      {showEnrollSchedule && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowEnrollSchedule(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Enroll Schedule - {selectedStudent?.name}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEnrollSchedule(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3 p-3 bg-light rounded">
+                    <div className="small text-muted">Student Info</div>
+                    <div className="fw-semibold">{selectedStudent?.student_id}</div>
+                    <div className="small">{selectedStudent?.strand}/{selectedStudent?.track} • {selectedStudent?.term}</div>
+                  </div>
+                  
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Teacher</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.teacher}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, teacher: e.target.value})}
+                      >
+                        <option value="">Select Teacher</option>
+                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Subject</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.subject}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, subject: e.target.value})}
+                      >
+                        <option value="">Select Subject</option>
+                        <option value="math">Mathematics</option>
+                        <option value="english">English</option>
+                        <option value="science">Science</option>
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Schedule (Day & Time)</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.schedule}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schedule: e.target.value})}
+                      >
+                        <option value="">Select Schedule</option>
+                        <option value="mon-8-10">Monday 8:00 AM - 10:00 AM</option>
+                        <option value="tue-10-12">Tuesday 10:00 AM - 12:00 PM</option>
+                        <option value="wed-1-3">Wednesday 1:00 PM - 3:00 PM</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Term</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.term}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, term: e.target.value})}
+                      >
+                        <option value="">Select Term</option>
+                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">School Year</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. 2025-2026"
+                        value={studentScheduleForm.schoolYear}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schoolYear: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEnrollSchedule(false)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleEnrollSchedule}>Enroll Schedule</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Student Schedule Modal */}
+      {showEditStudentSchedule && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowEditStudentSchedule(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit Schedule - {selectedStudent?.name}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEditStudentSchedule(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3 p-3 bg-light rounded">
+                    <div className="small text-muted">Student Info</div>
+                    <div className="fw-semibold">{selectedStudent?.student_id}</div>
+                    <div className="small">{selectedStudent?.strand}/{selectedStudent?.track} • {selectedStudent?.term}</div>
+                  </div>
+                  
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Teacher</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.teacher}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, teacher: e.target.value})}
+                      >
+                        <option value="">Select Teacher</option>
+                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Subject</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.subject}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, subject: e.target.value})}
+                      >
+                        <option value="">Select Subject</option>
+                        <option value="math">Mathematics</option>
+                        <option value="english">English</option>
+                        <option value="science">Science</option>
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Schedule (Day & Time)</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.schedule}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schedule: e.target.value})}
+                      >
+                        <option value="">Select Schedule</option>
+                        <option value="mon-8-10">Monday 8:00 AM - 10:00 AM</option>
+                        <option value="tue-10-12">Tuesday 10:00 AM - 12:00 PM</option>
+                        <option value="wed-1-3">Wednesday 1:00 PM - 3:00 PM</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Term</label>
+                      <select 
+                        className="form-select"
+                        value={studentScheduleForm.term}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, term: e.target.value})}
+                      >
+                        <option value="">Select Term</option>
+                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">School Year</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="e.g. 2025-2026"
+                        value={studentScheduleForm.schoolYear}
+                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schoolYear: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditStudentSchedule(false)}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={handleEditStudentSchedule}>Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /*  Announcements Panel  */
 function AnnouncementsPanel() {
   const [items, setItems] = useState(announcements);
@@ -3062,7 +3724,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
       case "documents":     return <AdminDocumentsPanel />;
       case "enrollment":    return <EnrollmentPanel role={role} />;
-      case "tuition":       return <TuitionPanel />;
+      case "scheduling":    return <SchedulingPanel />;
       case "announcements": return <AnnouncementsPanel />;
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;

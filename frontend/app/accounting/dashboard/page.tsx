@@ -1,428 +1,267 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-type AccountingActive = { id: string; name: string } | null;
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type PaymentRecord = {
   id: number;
-  studentId: string;
-  student: string;
-  feeItem: string;
+  student_id: string;
+  student_name: string;
+  fee_item: string;
   amount: number;
-  status: "For Verification" | "Verified";
+  status: string;
+  paid_at: string;
+  admin_id?: string;
+  admin_timestamp?: string;
 };
-
-type StudentTuition = {
-  id: string;
-  name: string;
-  track: string;
-  level: string;
-  total: number;
-  paid: number;
-  balance?: number;
-};
-
-const LS_ACTIVE_KEY = "inform_accounting_active";
-const LS_PAYMENT_LOG_KEY = "inform_accounting_payment_log";
-
-const STUDENT_TUITION: StudentTuition[] = [];
-const PAYMENT_LOG_SEED: PaymentRecord[] = [];
-
-function formatCurrencyPHP(amount: number) {
-  return `₱${amount.toLocaleString("en-PH")}`;
-}
 
 export default function AccountingDashboardPage() {
-  const [active, setActive] = useState<AccountingActive>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [paymentLog, setPaymentLog] = useState<PaymentRecord[]>(PAYMENT_LOG_SEED);
-  const [panel, setPanel] = useState<"tuition" | "payments" | "students">("tuition");
-  const [mobileOpen, setMobileOpen] = useState(false);
-
+  const router = useRouter();
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "pending" | "verified">("all");
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"All" | "For Verification" | "Verified">("All");
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   useEffect(() => {
-    // Route protection
-    const token = localStorage.getItem("inform_token");
-    const role  = localStorage.getItem("inform_role");
-    if (!token || role !== "accounting") {
-      window.location.replace("/login");
+    const role = localStorage.getItem("inform_role");
+    if (role !== "accounting") {
+      router.replace("/login");
       return;
     }
+    loadPayments();
+  }, [router]);
 
+  async function loadPayments() {
     try {
-      const raw = localStorage.getItem(LS_ACTIVE_KEY);
-      if (raw) {
-        setActive(JSON.parse(raw) as AccountingActive);
-      } else {
-        // Fall back to the logged-in admin's info
-        const userRaw = localStorage.getItem("inform_user");
-        const userObj = userRaw ? JSON.parse(userRaw) : null;
-        if (userObj) {
-          setActive({ id: userObj.admin_id || "", name: userObj.full_name || "Accounting Office" });
-        }
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      const res = await fetch(`${API_BASE}/api/payments`, {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPayments(data.payments || []);
       }
-    } catch {
-      setActive(null);
+    } catch (err) {
+      console.error("Failed to load payments:", err);
+    } finally {
+      setLoading(false);
     }
+  }
 
+  async function handleVerifyPayment(paymentId: number) {
     try {
-      const rawLog = localStorage.getItem(LS_PAYMENT_LOG_KEY);
-      if (rawLog) setPaymentLog(JSON.parse(rawLog) as PaymentRecord[]);
-    } catch {
-      setPaymentLog(PAYMENT_LOG_SEED);
-    }
-
-    setAuthLoading(false);
-
-    fetch("https://group-1rms-production-a4d8.up.railway.app/api/admin/payments", {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.payments?.length) {
-          setPaymentLog(data.payments.map((p: {id: number; student_id: string; fee_item: string; amount: number; status: string}) => ({
-            id:        p.id,
-            studentId: p.student_id,
-            student:   p.student_id,
-            feeItem:   p.fee_item,
-            amount:    Number(p.amount),
-            status:    p.status === "verified" ? "Verified" : "For Verification",
-          })));
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      const res = await fetch(`${API_BASE}/api/payments/${paymentId}/verify`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
         }
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    try {
-      localStorage.setItem(LS_PAYMENT_LOG_KEY, JSON.stringify(paymentLog));
-    } catch {
-      // ignore
+      });
+      if (res.ok) {
+        await loadPayments();
+      }
+    } catch (err) {
+      console.error("Failed to verify payment:", err);
     }
-  }, [paymentLog, active]);
-
-  const enrichedStudents = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const list = !q
-      ? STUDENT_TUITION
-      : STUDENT_TUITION.filter(s => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
-
-    return list.map(s => ({
-      ...s,
-      balance: Math.max(0, s.total - s.paid),
-    }));
-  }, [search]);
-
-  const totals = useMemo(() => {
-    const totalAssessment = STUDENT_TUITION.reduce((a, s) => a + s.total, 0);
-    const totalCollected = STUDENT_TUITION.reduce((a, s) => a + s.paid, 0);
-    const totalBalance = totalAssessment - totalCollected;
-    return { totalAssessment, totalCollected, totalBalance };
-  }, []);
-
-  const filteredPayments = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return paymentLog.filter(p => {
-      const matchSearch = !q || p.student.toLowerCase().includes(q) || p.studentId.toLowerCase().includes(q);
-      const matchStatus = filterStatus === "All" || p.status === filterStatus;
-      return matchSearch && matchStatus;
-    });
-  }, [paymentLog, search, filterStatus]);
-
-  function verifyPayment(id: number) {
-    setPaymentLog(prev => prev.map(p => (p.id === id ? { ...p, status: "Verified" } : p)));
   }
 
-  function rejectPayment(id: number) {
-    setPaymentLog(prev => prev.filter(p => p.id !== id));
-  }
+  const filteredPayments = payments.filter(p => {
+    const matchesFilter = filter === "all" || p.status === filter;
+    const matchesSearch = !search || 
+      p.student_id.toLowerCase().includes(search.toLowerCase()) ||
+      p.student_name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.fee_item.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  async function logout() {
-    try {
-      localStorage.removeItem(LS_ACTIVE_KEY);
-    } catch {
-      // ignore
-    }
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
-  }
-
-  if (authLoading) return null;
-
-  if (!active) {
-    return (
-      <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: "#f0f4ff" }}>
-        <div className="card shadow-sm p-4" style={{ maxWidth: 520, width: "100%" }}>
-          <div className="fw-bold" style={{ color: "#dc2626" }}>Accounting session not found</div>
-          <p className="text-muted small mb-3">Please login again.</p>
-          <a href="/login" className="btn" style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white" }}>
-            Go to Login
-          </a>
-        </div>
-      </div>
-    );
-  }
+  const pendingCount = payments.filter(p => p.status === "pending").length;
+  const verifiedCount = payments.filter(p => p.status === "verified").length;
+  const totalAmount = payments.filter(p => p.status === "verified").reduce((sum, p) => sum + Number(p.amount), 0);
 
   return (
-    <div className="accounting-dashboard-layout" style={{ minHeight: "100vh", background: "#0b1020" }} suppressHydrationWarning>
-      {mobileOpen && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setMobileOpen(false)} />}
-      <aside
-        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 ${mobileOpen ? "" : "d-none d-lg-flex"}`}
-        style={{ width: 280, background: "linear-gradient(180deg,#111827,#1f2937)", borderRight: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div className="px-4 py-4 d-flex flex-column align-items-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-2" style={{ width: 52, height: 52, objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
-          <div className="fw-bold" style={{ color: "#fbbf24", fontSize: 15 }}>CFEI</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Accounting</div>
-        </div>
-
-        <div className="px-3 py-3 d-flex flex-column gap-3" style={{ flex: 1, overflow: "auto" }}>
-          <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>Signed in as</div>
-            <div className="fw-bold" style={{ color: "#fbbf24" }}>{active.name}</div>
-          </div>
-
-          <div className="d-flex flex-column gap-2">
-            {[
-              { id: "tuition", label: "Tuition" },
-              { id: "payments", label: "Payments" },
-              { id: "students", label: "Students" },
-            ].map(item => (
-              <button
-                key={item.id}
-                onClick={() => setPanel(item.id as any)}
-                className="btn text-start d-flex align-items-center gap-3 rounded-3"
-                style={{
-                  background: panel === item.id ? "rgba(220,38,38,0.18)" : "transparent",
-                  color: "white",
-                  border: panel === item.id ? "1px solid rgba(220,38,38,0.35)" : "1px solid transparent",
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{}</span>
-                <span className="fw-semibold">{item.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <button onClick={logout} className="btn btn-danger mt-auto fw-semibold d-flex align-items-center justify-content-center gap-2" style={{ borderRadius: 12 }}>
-            <span>↩</span>
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <section className="accounting-dashboard-main d-flex flex-column flex-grow-1 overflow-hidden">
-        <header style={{ flexShrink: 0, borderBottom: "1px solid rgba(0,0,0,0.08)" }} className="bg-white">
-          <div className="d-flex align-items-center gap-3 px-4 py-3">
-            <button className="btn btn-link text-dark p-1 d-lg-none" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
-              <div style={{ width: 20, height: 2, background: "currentColor", marginBottom: 4 }} />
-              <div style={{ width: 20, height: 2, background: "currentColor" }} />
+    <div className="min-vh-100" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)" }}>
+      {/* Header */}
+      <header className="bg-white border-bottom shadow-sm">
+        <div className="container-fluid px-4 py-3">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center gap-3">
+              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: 40, height: 40, objectFit: "cover" }} />
+              <div>
+                <h5 className="mb-0 fw-bold" style={{ color: "#0369a1" }}>Accounting Dashboard</h5>
+                <p className="mb-0 text-muted small">Tuition & Payment Management</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                router.push("/login");
+              }}
+              className="btn btn-outline-danger btn-sm"
+            >
+              Logout
             </button>
-            <h4 className="mb-0" style={{ color: "#dc2626" }}>Accounting Dashboard</h4>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="flex-grow-1 overflow-auto" style={{ padding: 16 }}>
-          {panel === "tuition" && (
-            <div className="d-flex flex-column gap-4">
-              <div style={{ padding: 18, borderRadius: 18, background: "linear-gradient(135deg, rgba(220,38,38,0.12), rgba(251,191,36,0.12))", border: "1px solid rgba(220,38,38,0.25)" }}>
-                <div className="fw-bold" style={{ color: "#ecececff" }}>Tuition Summary</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Accounting can review tuition totals and outstanding balances.</div>
-              </div>
-
-              <div className="row g-3">
-                {[
-                  { label: "Total Assessment", value: `₱${totals.totalAssessment.toLocaleString("en-PH")}` },
-                  { label: "Total Collected", value: `₱${totals.totalCollected.toLocaleString("en-PH")}` },
-                  { label: "Total Balance Due", value: `₱${totals.totalBalance.toLocaleString("en-PH")}` },
-                ].map(s => (
-                  <div key={s.label} className="col-12 col-md-4">
-                    <div className="card" style={{ borderRadius: 16, border: "1px solid rgba(0,0,0,0.08)" }}>
-                      <div className="card-body">
-                        <div className="text-muted small">{s.label}</div>
-                        <div className="fw-bold">{s.value}</div>
-                      </div>
-                    </div>
+      <main className="container-fluid px-4 py-4">
+        {/* Stats Cards */}
+        <div className="row g-3 mb-4">
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100" style={{ borderLeft: "4px solid #f59e0b" }}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="text-muted small mb-1">Pending Payments</p>
+                    <h3 className="mb-0 fw-bold">{pendingCount}</h3>
                   </div>
-                ))}
-              </div>
-
-              <div className="card rounded-4 overflow-hidden">
-                <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table table-hover mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                          <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Track</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Total</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Paid</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Balance</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {enrichedStudents.map(s => {
-                          const balance = Math.max(0, s.total - s.paid);
-                          const status = balance === 0 ? "Paid" : "Unpaid";
-                          return (
-                            <tr key={s.id}>
-                              <td className="ps-4">
-                                <div className="fw-semibold">{s.name}</div>
-                                <div className="text-muted small">{s.id}</div>
-                              </td>
-                              <td className="text-muted small">{s.track}</td>
-                              <td className="text-end text-muted small">{formatCurrencyPHP(s.total)}</td>
-                              <td className="text-end fw-semibold" style={{ color: "#16a34a" }}>{formatCurrencyPHP(s.paid)}</td>
-                              <td className="text-end fw-semibold" style={{ color: balance > 0 ? "#dc2626" : "#64748b" }}>{balance > 0 ? formatCurrencyPHP(balance) : "—"}</td>
-                              <td className="text-end pe-4">
-                                <span className={`badge ${status === "Paid" ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"}`}>
-                                  {status}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: 48, height: 48, background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {panel === "payments" && (
-            <div className="d-flex flex-column gap-4">
-              <div style={{ padding: 18, borderRadius: 18, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.18)" }}>
-                <div className="fw-bold" style={{ color: "#ffffffff" }}>Payment Verification</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Review and verify submitted payments.</div>
-              </div>
-
-              <div className="card rounded-4 overflow-hidden">
-                <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table table-hover mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                          <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Fee Item</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Amount</th>
-                          <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Status</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredPayments.length === 0 ? (
-                          <tr><td colSpan={5} className="text-center text-muted py-4">No payment records.</td></tr>
-                        ) : (
-                          filteredPayments.map(p => (
-                            <tr key={p.id}>
-                              <td className="ps-4">
-                                <div className="fw-semibold">{p.student}</div>
-                                <div className="text-muted small">{p.studentId}</div>
-                              </td>
-                              <td className="text-muted small">{p.feeItem}</td>
-                              <td className="text-end pe-4 fw-semibold">{formatCurrencyPHP(p.amount)}</td>
-                              <td>
-                                <span className={`badge ${p.status === "Verified" ? "bg-success-subtle text-success border border-success-subtle" : "bg-warning-subtle text-warning border border-warning-subtle"}`}>
-                                  {p.status}
-                                </span>
-                              </td>
-                              <td className="text-end pe-4">
-                                {p.status !== "Verified" ? (
-                                  <div className="d-flex justify-content-end gap-2">
-                                    <button
-                                      onClick={() => verifyPayment(p.id)}
-                                      className="btn btn-sm"
-                                      style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "white", border: "none" }}
-                                    >
-                                       Verify
-                                    </button>
-                                    <button
-                                      onClick={() => rejectPayment(p.id)}
-                                      className="btn btn-sm"
-                                      style={{ background: "linear-gradient(135deg,#dc2626,#f97316)", color: "white", border: "none" }}
-                                    >
-                                       Reject
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted small">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100" style={{ borderLeft: "4px solid #10b981" }}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="text-muted small mb-1">Verified Payments</p>
+                    <h3 className="mb-0 fw-bold">{verifiedCount}</h3>
+                  </div>
+                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: 48, height: 48, background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {panel === "students" && (
-            <div className="d-flex flex-column gap-4">
-              <div style={{ padding: 18, borderRadius: 18, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)" }}>
-                <div className="fw-bold" style={{ color: "#f7faffff" }}>Students (Tuition Related)</div>
-                <div style={{ color: "#ffffff", fontSize: "0.875rem" }}>Review tuition-related student information.</div>
-              </div>
-
-              <div className="card rounded-4 overflow-hidden">
-                <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table table-hover mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Name</th>
-                          <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Track</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Balance</th>
-                          <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {enrichedStudents.map(s => {
-                          const balance = Math.max(0, s.total - s.paid);
-                          return (
-                            <tr key={s.id}>
-                              <td className="ps-4">
-                                <div className="fw-semibold">{s.name}</div>
-                                <div className="text-muted small">{s.id}</div>
-                              </td>
-                              <td className="text-muted small">{s.track}</td>
-                              <td className="text-end fw-semibold" style={{ color: balance > 0 ? "#dc2626" : "#64748b" }}>
-                                {balance > 0 ? formatCurrencyPHP(balance) : "—"}
-                              </td>
-                              <td className="text-end pe-4">
-                                <div className="d-flex justify-content-end gap-2">
-                                  <button onClick={() => setPanel("tuition")} className="btn btn-sm btn-outline-secondary" style={{ borderRadius: 12 }}>
-                                    View
-                                  </button>
-                                  <button className="btn btn-sm btn-outline-secondary" style={{ borderRadius: 12 }}>
-                                    Notify
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+          <div className="col-md-4">
+            <div className="card border-0 shadow-sm h-100" style={{ borderLeft: "4px solid #0369a1" }}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <p className="text-muted small mb-1">Total Verified</p>
+                    <h3 className="mb-0 fw-bold">₱{totalAmount.toLocaleString()}</h3>
+                  </div>
+                  <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: 48, height: 48, background: "rgba(3,105,161,0.1)", color: "#0369a1" }}>
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-        </main>
-      </section>
+          </div>
+        </div>
+
+        {/* Filters and Table */}
+        <div className="card border-0 shadow-sm">
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+              <div className="btn-group" role="group">
+                <button 
+                  className={`btn ${filter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setFilter("all")}
+                >
+                  All ({payments.length})
+                </button>
+                <button 
+                  className={`btn ${filter === "pending" ? "btn-warning" : "btn-outline-warning"}`}
+                  onClick={() => setFilter("pending")}
+                >
+                  Pending ({pendingCount})
+                </button>
+                <button 
+                  className={`btn ${filter === "verified" ? "btn-success" : "btn-outline-success"}`}
+                  onClick={() => setFilter("verified")}
+                >
+                  Verified ({verifiedCount})
+                </button>
+              </div>
+
+              <input
+                type="search"
+                className="form-control w-auto"
+                style={{ minWidth: 250 }}
+                placeholder="Search student or fee..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {loading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table align-middle">
+                  <thead>
+                    <tr className="border-bottom">
+                      <th>Student ID</th>
+                      <th>Student Name</th>
+                      <th>Fee Item</th>
+                      <th>Amount</th>
+                      <th>Paid Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPayments.length > 0 ? filteredPayments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="fw-semibold">{payment.student_id}</td>
+                        <td>{payment.student_name || "—"}</td>
+                        <td>{payment.fee_item}</td>
+                        <td className="fw-bold">₱{Number(payment.amount).toLocaleString()}</td>
+                        <td className="text-muted small">{new Date(payment.paid_at).toLocaleDateString()}</td>
+                        <td>
+                          {payment.status === "pending" ? (
+                            <span className="badge bg-warning text-dark">Pending</span>
+                          ) : (
+                            <span className="badge bg-success">Verified</span>
+                          )}
+                        </td>
+                        <td>
+                          {payment.status === "pending" && (
+                            <button
+                              onClick={() => handleVerifyPayment(payment.id)}
+                              className="btn btn-sm btn-success"
+                            >
+                              Verify Payment
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={7} className="text-center text-muted py-4">
+                          No payments found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
-
