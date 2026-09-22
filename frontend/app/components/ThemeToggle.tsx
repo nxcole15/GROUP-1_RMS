@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
 
-  const applyTheme = (newTheme: "light" | "dark") => {
+  const applyTheme = useCallback((newTheme: "light" | "dark") => {
     const html = document.documentElement;
     if (newTheme === "dark") {
       html.setAttribute("data-theme", "dark");
@@ -14,7 +15,7 @@ export function ThemeToggle() {
       html.removeAttribute("data-theme");
     }
     localStorage.setItem("theme", newTheme);
-  };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -75,11 +76,8 @@ export function ThemeToggle() {
   );
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
+export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    setMounted(true);
 
     // Apply saved theme on mount
     try {
@@ -101,7 +99,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else {
         html.removeAttribute("data-effects");
       }
-    } catch (e) {
+    } catch {
       // localStorage might not be available during SSR
     }
   }, []);

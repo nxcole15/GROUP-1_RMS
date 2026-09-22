@@ -8,7 +8,7 @@ const ApplicationModel = {
 
   async create(data) {
     const fields = [
-      "first_name","last_name","middle_name","extension_name",
+      "first_name","last_name","middle_name","extension_name","lrn",
       "email","phone","date_of_birth","gender","civil_status",
       "nationality","religion","address",
       "student_status","existing_student_id",
@@ -17,6 +17,7 @@ const ApplicationModel = {
       "guardian_name","guardian_relation","guardian_phone",
       "previous_school","previous_school_address","years_attended",
       "generated_student_id","temp_password","credentials_sent_at",
+      "photo_url",
     ];
     const values = fields.map(f => data[f] ?? null);
     const placeholders = fields.map(() => "?").join(", ");

@@ -6,19 +6,10 @@ const nextConfig: NextConfig = {
   // Fixes workspace root detection when multiple lockfiles exist
   outputFileTracingRoot: path.resolve(__dirname),
 
-  // ── Server-side runtime env vars ────────────────────────────────────────────
-  // BACKEND_URL is used by Next.js API routes (server-side only) to reach
-  // the Express backend. It is NOT exposed to the browser.
-  serverRuntimeConfig: {
-    BACKEND_URL: process.env.BACKEND_URL || "http://localhost:4000",
-  },
-
-  // ── Public env vars (available in the browser) ───────────────────────────
-  publicRuntimeConfig: {
-    API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
-  },
-
   // ── API proxy rewrites ───────────────────────────────────────────────────
+  // BACKEND_URL is read server-side only (API routes / rewrites).
+  // Public browser code must use NEXT_PUBLIC_API_URL instead.
+  // (Removed deprecated serverRuntimeConfig / publicRuntimeConfig.)
   // In production the Next.js app and the Express backend run on separate
   // URLs. These rewrites let the browser call /proxy/* and Next.js will
   // forward those requests to the backend — avoiding CORS issues from the

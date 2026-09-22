@@ -16,21 +16,24 @@ const router  = express.Router();
 const {
   submitApplication,
   listApplications,
+  getApplicationDetail,
   forwardToPrincipal,
   listForPrincipal,
   approveApplication,
   rejectApplication,
 } = require("./applicationController");
 const { authenticateAdmin } = require("../admin/adminMiddleware");
+const { upload } = require("../../config/cloudinary");
 
 // ── Public ────────────────────────────────────────────────────
-router.post("/", submitApplication);
+router.post("/", upload.single("idPhoto"), submitApplication);
 
 // ── Admin-protected ───────────────────────────────────────────
 router.use(authenticateAdmin);
 
 router.get("/",                         listApplications);
 router.get("/principal",                listForPrincipal);
+router.get("/:id",                      getApplicationDetail);
 router.patch("/:id/forward",            forwardToPrincipal);
 router.patch("/:id/approve",            approveApplication);
 router.patch("/:id/reject",             rejectApplication);

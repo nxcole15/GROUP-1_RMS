@@ -9,6 +9,7 @@ const {
   archiveAdminAccount,
   deleteAdminAccount,
   getDashboard,
+  listStudents,
   searchStudents,
   getPendingEnrollments,
   approveEnrollment,
@@ -39,7 +40,8 @@ router.delete("/admins/:id", deleteAdminAccount);
 
 // Dashboard & search
 router.get("/dashboard",       getDashboard);
-router.get("/students/search", searchStudents);
+router.get("/students",         listStudents);
+router.get("/students/search",  searchStudents);
 router.patch("/students/:student_id/reactivate",reactivateStudent);
 router.get("/audit-log",       getAuditLog);
 router.get("/teachers", getTeachers);

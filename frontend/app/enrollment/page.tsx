@@ -187,10 +187,25 @@ export default function EnrollmentPage() {
         years_attended:          formData.yearsAttended || null,
       };
 
+      // Use FormData for file upload
+      const formDataToSend = new FormData();
+      
+      // Add all text fields
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formDataToSend.append(key, String(value));
+        }
+      });
+
+      // Add photo file if exists
+      if (formData.idPhoto) {
+        formDataToSend.append("idPhoto", formData.idPhoto);
+      }
+
       const res = await fetch(`${API_BASE}/api/applications`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        // Don't set Content-Type header - browser will set it automatically with boundary
+        body:    formDataToSend,
       });
 
       const data = await res.json();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
 /**
  * Mouse tracking effect for cards
@@ -77,10 +78,10 @@ export function useParallax() {
 /**
  * Ripple effect on click
  */
-export function RippleEffect({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+export function RippleEffect({ children, className = "" }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: ReactMouseEvent) => {
     const element = ref.current;
     if (!element) return;
 
@@ -125,7 +126,7 @@ export function FloatingActionButton({
   onClick,
   color = "primary",
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
   color?: string;

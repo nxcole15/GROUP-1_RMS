@@ -10,10 +10,10 @@
  * uncomment the middleware function below.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /* ── Middleware is disabled ──────────────────────────────────── */
-export function middleware(req: NextRequest) {
+export function middleware() {
   // Allow all requests through - auth is handled by frontend useEffect checks
   return NextResponse.next();
 }
