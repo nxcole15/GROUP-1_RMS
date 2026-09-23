@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import InteractiveMap from "../components/InteractiveMap";
 
 export default function VisitUsPage() {
@@ -10,7 +11,7 @@ export default function VisitUsPage() {
         <div className="container py-3">
           <div className="d-flex align-items-center justify-content-between">
             <Link href="/" className="d-flex align-items-center gap-3 text-decoration-none text-dark">
-              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid #dc2626" }} />
+              <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" width={40} height={40} style={{ objectFit: "cover", border: "2px solid #dc2626" }} />
               <div>
                 <h5 className="mb-0 fw-bold" style={{ color: "#dc2626" }}>Cebu Far East Institute</h5>
                 <p className="mb-0 text-muted small">Student Information System</p>
@@ -67,7 +68,7 @@ export default function VisitUsPage() {
         <div className="container">
           <div className="d-flex flex-column flex-md-row align-items-start justify-content-between gap-4 mb-4">
             <div className="d-flex align-items-center gap-3">
-              <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid white" }} />
+              <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" width={56} height={56} style={{ objectFit: "cover", border: "2px solid white" }} />
               <div>
                 <h5 className="mb-0 fw-bold">Cebu Far East Institute</h5>
                 <p className="mb-0 small" style={{ color: "#fef3c7" }}>Student Information System</p>

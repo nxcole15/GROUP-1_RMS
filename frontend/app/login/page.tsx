@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function normalizeId(value: string) {
@@ -193,7 +194,7 @@ async function handleSubmit(e: React.FormEvent) {
       <header className="bg-white bg-opacity-90 backdrop-blur border-bottom border-light shadow-sm">
         <div className="container py-3">
           <Link href="/" className="d-flex align-items-center gap-3 text-decoration-none text-dark">
-            <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid #dc2626" }} />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" width={40} height={40} style={{ objectFit: "cover", border: "2px solid #dc2626" }} />
             <div>
               <h5 className="mb-0 fw-bold" style={{ color: "#dc2626" }}>Cebu Far East Institute</h5>
               <p className="mb-0 text-muted small">Student Information System</p>
@@ -215,7 +216,7 @@ async function handleSubmit(e: React.FormEvent) {
 
               <div className="bg-white rounded-4 shadow-lg p-5" style={{ border: "1px solid #fbbf24" }}>
                 <div className="d-flex flex-column align-items-center mb-5">
-                  <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-4" style={{ width: "56px", height: "56px", objectFit: "cover", border: "2px solid #dc2626" }} />
+                  <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-4" width={56} height={56} style={{ objectFit: "cover", border: "2px solid #dc2626" }} />
                   <h2 className="fw-bold mb-4" style={{ color: "#dc2626" }}>Login</h2>
                   <p className="text-muted text-center mb-0" style={{ fontSize: "14px" }}>Enter your User ID and password. The portal detects your role automatically.</p>
                 </div>

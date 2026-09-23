@@ -311,7 +311,7 @@ CREATE TABLE IF NOT EXISTS enrollment_applications (
   temp_password           VARCHAR(20)  NULL,
   credentials_sent_at     DATETIME     NULL,
 
-  -- Student photo
+  -- Student photo (Cloudinary URL)
   photo_url               TEXT         NULL,
 
   created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

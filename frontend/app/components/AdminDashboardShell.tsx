@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { API_BASE } from "../lib/auth";
 
 type StudentRecord = {
@@ -199,7 +200,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         {/* Logo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
               <div className="sidebar-brand-title">{config.title}</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
@@ -1224,11 +1225,13 @@ function EnrollmentPanel({ role }: { role?: string }) {
                         <div className="d-flex align-items-center gap-3">
                           {/* Student Photo - now with photo_url from backend */}
                           {e.photo ? (
-                            <img
+                            <Image
                               src={e.photo}
                               alt={e.name}
                               className="rounded-circle flex-shrink-0"
-                              style={{ width:40, height:40, objectFit:"cover", border:"2px solid #e2e8f0" }}
+                              width={40}
+                              height={40}
+                              style={{ objectFit:"cover", border:"2px solid #e2e8f0" }}
                             />
                           ) : (
                             <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:40, height:40, fontSize:12 }}>
@@ -1408,13 +1411,13 @@ function EnrollmentPanel({ role }: { role?: string }) {
                       <div className="text-center mb-4">
                         {selectedApplication.photo_url ? (
                           <div className="position-relative d-inline-block">
-                            <img
+                            <Image
                               src={selectedApplication.photo_url}
                               alt="Student Photo"
                               className="rounded-4 shadow-sm"
+                              width={200}
+                              height={200}
                               style={{
-                                width: 200,
-                                height: 200,
                                 objectFit: "cover",
                                 border: "4px solid #e5e7eb"
                               }}
