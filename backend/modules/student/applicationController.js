@@ -12,6 +12,7 @@ const bcrypt          = require("bcryptjs");
 const db              = require("../../config/db");
 const ApplicationModel = require("./applicationModel");
 const { sendRequirementsEmail, sendCredentials, } = require("../../utils/mailer");
+const { cloudinary } = require("../../config/cloudinary");
 
 /* ── helpers ── */
 function generateStudentId() {
@@ -38,6 +39,11 @@ function generateTempPassword() {
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
+    // Map 'strand' to 'pathway' for compatibility — must run BEFORE required-field validation
+    if (req.body.strand && !req.body.pathway) {
+      req.body.pathway = req.body.strand;
+    }
+
     const required = [
       "first_name","last_name","email","phone","date_of_birth",
       "gender","nationality","address","pathway","grade_level","learning_modality",
@@ -46,13 +52,6 @@ async function submitApplication(req, res, next) {
       if (!req.body[field]?.toString().trim()) {
         return res.status(400).json({ error: `${field.replace(/_/g," ")} is required.` });
       }
-    
-    
-    // Map 'strand' to 'pathway' for compatibility
-    if (req.body.strand && !req.body.pathway) {
-      req.body.pathway = req.body.strand;
-    }
-
     }
 
     // Prevent duplicate pending applications for same email
@@ -72,11 +71,15 @@ async function submitApplication(req, res, next) {
                        .filter(v => v?.trim())
                        .join(" ");
 
+    // Get photo URL if uploaded
+    const photoUrl = req.file ? req.file.path : null;
+
     const app = await ApplicationModel.create({
       first_name:              req.body.first_name?.trim(),
       last_name:               req.body.last_name?.trim(),
       middle_name:             req.body.middle_name?.trim() || null,
       extension_name:          req.body.extension_name?.trim() || null,
+      lrn:                     req.body.lrn?.trim() || null,
       email:                   req.body.email?.trim().toLowerCase(),
       phone:                   req.body.phone?.trim(),
       date_of_birth:           req.body.date_of_birth,
@@ -100,7 +103,8 @@ async function submitApplication(req, res, next) {
       previous_school:         req.body.previous_school?.trim() || null,
       previous_school_address: req.body.previous_school_address?.trim() || null,
       years_attended:          req.body.years_attended?.trim() || null,
-      status:                  "submitted", 
+      status:                  "submitted",
+      photo_url:               photoUrl,
     });
 
     const [configRows] = await db.query(
@@ -144,6 +148,25 @@ async function listApplications(req, res, next) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+ * REGISTRAR / PRINCIPAL — Get one application detail for review modal
+ * GET /api/applications/:id
+ * ───────────────────────────────────────────────────────────── */
+async function getApplicationDetail(req, res, next) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const app = await ApplicationModel.findById(id);
+
+    if (!app) {
+      return res.status(404).json({ error: "Application not found." });
+    }
+
+    res.json({ application: app });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
  * REGISTRAR — Forward to principal for approval
  * PATCH /api/applications/:id/forward
  * ───────────────────────────────────────────────────────────── */
@@ -156,10 +179,15 @@ async function forwardToPrincipal(req, res, next) {
       return res.status(409).json({ error: "Application is not in a forwardable state." });
     }
 
+    const notePayload = {
+      notes: req.body.registrar_note?.trim() || "",
+      checklist: req.body.review_checklist || {},
+    };
+
     const updated = await ApplicationModel.updateStatus(id, "principal_review", {
       reviewed_by_registrar: req.admin.admin_id,
       registrar_reviewed_at: new Date(),
-      registrar_note:        req.body.registrar_note?.trim() || null,
+      registrar_note: JSON.stringify(notePayload),
     });
 
     res.json({ message: "Application forwarded to the Principal.", application: updated });
@@ -301,6 +329,7 @@ async function rejectApplication(req, res, next) {
 module.exports = {
   submitApplication,
   listApplications,
+  getApplicationDetail,
   forwardToPrincipal,
   listForPrincipal,
   approveApplication,

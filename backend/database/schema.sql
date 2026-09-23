@@ -264,6 +264,7 @@ CREATE TABLE IF NOT EXISTS enrollment_applications (
   last_name               VARCHAR(60)  NOT NULL,
   middle_name             VARCHAR(60)  NULL,
   extension_name          VARCHAR(10)  NULL,
+  lrn                     VARCHAR(12)  NULL COMMENT 'Learners Reference Number',
   email                   VARCHAR(100) NOT NULL,
   phone                   VARCHAR(30)  NOT NULL,
   date_of_birth           DATE         NOT NULL,
@@ -309,6 +310,9 @@ CREATE TABLE IF NOT EXISTS enrollment_applications (
   generated_student_id    VARCHAR(20)  NULL,
   temp_password           VARCHAR(20)  NULL,
   credentials_sent_at     DATETIME     NULL,
+
+  -- Student photo
+  photo_url               TEXT         NULL,
 
   created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

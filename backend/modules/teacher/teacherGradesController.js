@@ -19,7 +19,9 @@ async function getSubjectGrades(req, res, next) {
 
 async function submitGrade(req, res, next) {
   try {
-    const { teacher_id } = req.teacher;
+    // req.teacher contains both `id` (numeric PK for FK) and `teacher_id` (string code like T001).
+    // grades.teacher_id is INT UNSIGNED REFERENCES teachers(id), so use the numeric id.
+    const teacherDbId = req.teacher?.id;
     const { student_id, subject_id, percentage } = req.body;
     const config = await ConfigModel.getEnrollmentConfig();
 
@@ -31,9 +33,12 @@ async function submitGrade(req, res, next) {
     if (percentage < 0 || percentage > 100) {
       return res.status(400).json({ error: "Percentage must be between 0 and 100." });
     }
+    if (!teacherDbId) {
+      return res.status(401).json({ error: "Teacher identity missing numeric id." });
+    }
 
     const grade = await TeacherModel.submitGrade(
-      student_id, subject_id, teacher_id, percentage, config.active_term
+      student_id, subject_id, teacherDbId, percentage, config.active_term
     );
 
     res.status(201).json({ message: "Grade submitted successfully.", grade });

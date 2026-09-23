@@ -222,7 +222,7 @@ async function handleSubmit(e: React.FormEvent) {
 
                 {detectedRole && (
                   <div className="mb-4 text-center">
-                    <span className="d-inline-flex align-items-center gap-2 roundddded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
+                    <span className="d-inline-flex align-items-center gap-2 rounded-pill small fw-medium" style={{ background: "rgba(220,38,38,0.1)", color: "#dc2626", padding: "8px 18px" }}>
                       Detected role: <strong>{detectedRole}</strong>
                     </span>
                   </div>

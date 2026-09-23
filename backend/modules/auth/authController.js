@@ -45,7 +45,7 @@ async function universalLogin(req, res, next) {
     const normalizedId = String(id || "").trim().toUpperCase();
     const adminById = await AdminModel.findByAdminId(normalizedId);
     if (adminById && await bcrypt.compare(password, adminById.password)) {
-      const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key';
+      const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'admin-secret-key-change-this';
       const token = jwt.sign(
         { id: adminById.id, admin_id: adminById.admin_id, full_name: adminById.full_name, role: adminById.role },
         ADMIN_JWT_SECRET, { expiresIn: "8h" }
@@ -55,13 +55,14 @@ async function universalLogin(req, res, next) {
     }
 
     // ── Try Teacher ────────────────────────────────────────
-    if (id.toUpperCase().startsWith("T")) {
-      const TEACHER_JWT_SECRET = process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET || 'teacher-secret-key';
+    const idStr = String(id || "");
+    if (idStr.toUpperCase().startsWith("T")) {
+      const TEACHER_JWT_SECRET = process.env.TEACHER_JWT_SECRET || process.env.JWT_SECRET || 'teacher-secret-key-change-this';
       const db = require("../../config/db");
 
       const [rows] = await db.query(
         "SELECT * FROM teachers WHERE teacher_id = ? LIMIT 1",
-        [id.toUpperCase()]
+        [idStr.toUpperCase()]
       );
       const teacher = rows[0];
 
@@ -76,7 +77,7 @@ async function universalLogin(req, res, next) {
     }
 
     // ── Try Student ────────────────────────────────────────
-    if (/^\d+$/.test(id)) {
+    if (/^\d+$/.test(idStr)) {
       const student = await StudentModel.findByStudentId(id);
       if (student?.locked_until && new Date() < new Date(student.locked_until)) {
         return res.status(403).json({ error: "Account locked. Please try again later." });

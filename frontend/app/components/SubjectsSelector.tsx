@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Track, Subject } from "@/app/data/subjects";
 

@@ -203,14 +203,30 @@ async function getDashboard(req, res, next) {
   } catch (err) { next(err); }
 }
 
-/* ── Student search ────────────────────────────────────────── */
+/* ── Student listing & search ────────────────────────────── */
+async function listStudents(req, res, next) {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, student_id, full_name, pathway, grade_level, term,
+              pathway AS course, grade_level AS year_level, term AS semester,
+              email, account_status
+       FROM students
+       ORDER BY full_name`
+    );
+
+    res.json({ students: rows });
+  } catch (err) { next(err); }
+}
+
 async function searchStudents(req, res, next) {
   try {
     const query = (req.query.q || "").trim();
-    if (!query) return res.status(400).json({ error: "Search query is required." });
+    if (!query) return listStudents(req, res, next);
 
     const [rows] = await db.query(
-      `SELECT id, student_id, full_name, course, year_level, semester, email, account_status
+      `SELECT id, student_id, full_name, pathway, grade_level, term,
+              pathway AS course, grade_level AS year_level, term AS semester,
+              email, account_status
        FROM students
        WHERE full_name LIKE ? OR student_id LIKE ?
        ORDER BY full_name`,
@@ -231,7 +247,7 @@ async function getPendingEnrollments(req, res, next) {
     const result  = await Promise.all(
       pending.map(async (e) => {
         const [students] = await db.query(
-          "SELECT full_name, course FROM students WHERE student_id = ? LIMIT 1",
+          "SELECT full_name, pathway FROM students WHERE student_id = ? LIMIT 1",
           [e.student_id]
         );
         const subjects = await Promise.all(
@@ -240,7 +256,7 @@ async function getPendingEnrollments(req, res, next) {
         return {
           ...e,
           student_name: students[0]?.full_name || "Unknown",
-          course:       students[0]?.course    || "Unknown",
+          course:       students[0]?.pathway    || "Unknown",
           subjects:     subjects.filter(Boolean).map(({ id, code, name, units }) => ({ id, code, name, units })),
         };
       })
@@ -458,7 +474,7 @@ module.exports = {
   updateAdminAccount,
   archiveAdminAccount,
   deleteAdminAccount,
-  getDashboard, searchStudents,
+  getDashboard, searchStudents, listStudents,
   reactivateStudent,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,

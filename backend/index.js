@@ -31,8 +31,7 @@ const app = express();
 const rawOrigins = process.env.CLIENT_ORIGIN || "http://localhost:3000";
 const allowedOrigins = rawOrigins.split(",").map((o) => o.trim());
 
-app.use(
-  cors({
+const corsOptions = {
     origin(requestOrigin, callback) {
       // Allow server-to-server requests (no Origin header)
       if (!requestOrigin) {
@@ -49,11 +48,14 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+  };
+
+app.use(cors(corsOptions));
 
 // Respond 200 to all OPTIONS preflight requests immediately
-app.options("*", cors());
+// NOTE: Express 5 / path-to-regexp v8 does not accept "*" — use a RegExp instead,
+// and reuse the same configured CORS options so preflight keeps Allow-Origin/Credentials.
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
