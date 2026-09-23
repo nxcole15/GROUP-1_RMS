@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 
 interface TeacherProfileData {
   id: string;
@@ -102,7 +103,7 @@ export default function TeacherProfilePage() {
                     <div className="position-absolute top-50 start-50 translate-middle" style={{ marginTop: "40px" }}>
                       <div className="position-relative">
                         <div className="rounded-circle border border-4 border-white bg-white overflow-hidden" style={{ width: "120px", height: "120px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
-                          <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <Image src={profilePicture} alt="Profile" width={120} height={120} style={{ objectFit: "cover" }} />
                         </div>
                         {editMode && (
                           <>

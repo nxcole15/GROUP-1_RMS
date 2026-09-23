@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { API_BASE } from "../../lib/auth";
 
@@ -92,14 +93,14 @@ type TeacherSubjectRecord = {
 };
 
 const subjects: TeacherSubjectRecord[] = [];
-const teacherSchedule: Array<Record<string, any>> = [];
-const students: Array<Record<string, any>> = [];
-const grades: Array<Record<string, any>> = [];
-const gradeRequestsTeacher: Array<Record<string, any>> = [];
-const attendance: Array<Record<string, any>> = [];
-const recentActivity: Array<Record<string, any>> = [];
-const teacherNotifications: Array<Record<string, any>> = [];
-const documentApprovals: Array<Record<string, any>> = [];
+const teacherSchedule: Array<{day: string; subject: string; room: string; time: string; enter: string; leave: string}> = [];
+const students: Array<{id: string; name: string; pathway: string; grade: number; status: string}> = [];
+const grades: Array<{student_id: string; name: string; subject: string; percentage: number; term: string}> = [];
+const gradeRequestsTeacher: Array<{id: number; student: string; subject: string; status: string; requestedAt: string}> = [];
+const attendance: Array<{student_id: string; name: string; subject: string; total: number; present: number; percentage: number}> = [];
+const recentActivity: Array<{action: string; name: string; time: string; icon: string}> = [];
+const teacherNotifications: Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}> = [];
+const documentApprovals: Array<{id: number; student: string; type: string; status: string; requestedAt?: string; approvedAt?: string}> = [];
 
 /* -- Trimester deadline logic -- */
 const TEACHER_TERM_DEADLINES: Record<string, Date> = {
@@ -145,7 +146,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         {/* Logo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
               <div className="sidebar-brand-title">Teacher Portal</div>
             </div>
@@ -200,7 +201,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* -- Overview -- */
-function Overview({ setActive, isGradeLocked, activeTerm, teacher }: { setActive: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
+function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
   const displayTeacher = teacher ?? teacherData;
   const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
   const avgGrade = Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length);
@@ -339,7 +340,7 @@ function SchedulePanel() {
 
 /* -- Subjects Panel -- */
 function SubjectsPanel({ subjects: propSubjects }: { subjects?: typeof subjects } = {}) {
-  const displaySubjects = propSubjects ?? subjects;
+  // Using propSubjects or fallback to subjects
   return (
     <div className="d-flex flex-column gap-4">
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Classes</h2><p className="text-muted small mb-0">{subjects.length} classes assigned</p></div>
@@ -524,7 +525,24 @@ function GradesPanel({ isGradeLocked, activeTerm, teacherSubjects = subjects }: 
 
 /* -- Grade Requests Panel -- */
 function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<Array<{
+    id: number;
+    status: string;
+    student_id: string;
+    full_name: string;
+    subject_code: string;
+    subject_title: string;
+    current_grade?: string;
+    requestedAt?: string;
+    score?: number;
+    letterGrade?: string;
+    submittedToAdminAt?: string;
+    adminVerifiedBy?: string;
+    adminVerifiedAt?: string;
+    adminNote?: string;
+    releasedAt?: string;
+    rejectedBy?: string;
+  }>>([]);
   const [grading, setGrading] = useState<Record<number, { score: string; remarks: string }>>({});
   const [toast, setToast] = useState<string | null>(null);
 
@@ -567,10 +585,11 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     const g = grading[id];
     if (!g?.score || isNaN(Number(g.score))) { showToast("?? Enter a valid score first"); return; }
     const score = Number(g.score);
-    const letterGrade = score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-"
-      : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-"
-      : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-"
-      : score >= 65 ? "D" : "F";
+    // Calculate letter grade (not used in API but kept for reference)
+    // const letterGrade = score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-"
+    //   : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-"
+    //   : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-"
+    //   : score >= 65 ? "D" : "F";
       
     const token = localStorage.getItem("inform_token");
       if (token) {
@@ -605,7 +624,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   }
 
 
-  function rejectRequest(id: number) {
+  function rejectRequest(_id: number) {
     if (isGradeLocked) return;
     reload();
     showToast("? Request rejected");
@@ -639,8 +658,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   const released        = requests.filter(r => r.status === "released_to_student");
   const rejected        = requests.filter(r => r.status === "rejected");
 
-  // Lock check: if deadline passed and teacher still has unsubmitted requests
-  const unsubmitted = requests.filter(r => ["student_requested", "teacher_calculating"].includes(r.status));
+  // Lock check (tracked but not displayed currently)
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -700,8 +718,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                     <div>
-                      <div className="fw-bold text-dark small">{req.student}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} � {req.term} � {req.requestedAt}</div>
+                      <div className="fw-bold text-dark small">{req.full_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_title} · {activeTerm} · {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'N/A'}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
@@ -729,8 +747,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                     <div>
-                      <div className="fw-bold text-dark small">{req.student}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject} � {req.term}</div>
+                      <div className="fw-bold text-dark small">{req.full_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_title} · {activeTerm}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
@@ -780,8 +798,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-primary" style={{ width: 40, height: 40 }}><Icon name="requests" size={20} /></div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student} � {req.subject}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) � Submitted: {req.submittedToAdminAt}</div>
+                    <div className="fw-bold small text-dark">{req.full_name} · {req.subject_title}</div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Submitted: {req.submittedToAdminAt}</div>
                   </div>
                   <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                 </div>
@@ -801,8 +819,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
                     <div>
-                      <div className="fw-bold text-dark small">{req.student} � {req.subject}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) � Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}</div>
+                      <div className="fw-bold text-dark small">{req.full_name} · {req.subject_title}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}</div>
                       {req.adminNote && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Admin note: {req.adminNote}</div>}
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
@@ -828,7 +846,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 40, height: 40 }}><Icon name="checkCircle" size={20} /></div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student} – {req.subject}</div>
+                    <div className="fw-bold small text-dark">{req.full_name} – {req.subject_title}</div>
                     <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}</div>
                   </div>
                   <span className="badge bg-success text-white" style={{ fontSize: 10 }}><Icon name="check" size={12} className="me-1" /> Released</span>
@@ -847,7 +865,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
             {rejected.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{req.student} � {req.subject}</div><div className="text-muted" style={{ fontSize: 11 }}>Rejected by {req.rejectedBy}</div></div>
+                  <div><div className="fw-bold small text-dark">{req.full_name} · {req.subject_title}</div><div className="text-muted" style={{ fontSize: 11 }}>Rejected by {req.rejectedBy}</div></div>
                   <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 10 }}>? Rejected</span>
                 </div>
               </div>
@@ -1294,7 +1312,6 @@ function TimeLogPanel() {
 export default function TeacherDashboardPage() {
   const [panel, setPanel]           = useState<Panel>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotif, setShowNotif]   = useState(false);
   const [notifs, setNotifs]         = useState(teacherNotifications);
   const [pendingCount, setPendingCount] = useState(0);
@@ -1391,7 +1408,7 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="teacher-dashboard-layout" style={{ minHeight: "100vh", background: "#f0f4ff" }} suppressHydrationWarning>
-      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} />
+      <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} />
 
       <div className="teacher-dashboard-main" style={{ marginLeft: 256 }}>
         {/* Topbar */}
@@ -1450,9 +1467,9 @@ export default function TeacherDashboardPage() {
               ? <div className="px-4 py-5 text-center text-muted"><div className="mb-2"><Icon name="bell" size={32} className="text-muted opacity-50" /></div><small>No notifications</small></div>
               : notifs.map(n => (
                 <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={n.icon as IconName} size={18} /></div>
+                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={(n.icon || 'bell') as IconName} size={18} /></div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{n.title}</div>
+                    <div className="fw-bold small text-dark">{n.title || 'Notification'}</div>
                     <div className="text-muted" style={{ fontSize: 12, lineHeight: 1.4 }}>{n.message}</div>
                     <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>{n.time}</div>
                   </div>
