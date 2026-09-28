@@ -193,13 +193,118 @@ async function deleteAdminAccount(req, res, next) {
 /* ── Dashboard ─────────────────────────────────────────────── */
 async function getDashboard(req, res, next) {
   try {
+    // get admin info
+    const adminInfo = {
+      full_name: req.admin.full_name || 'Admin', 
+      role: req.admin.role || 'admin'
+    };
+
+    // Pending counts
     const pending = {
-      enrollments: (await EnrollmentModel.findAllPending()).length,
+      enrollments: 0,
       payments:    (await PaymentModel.findAllPending()).length,
       documents:   (await DocumentModel.findAllPending()).length,
     };
+    
+    // Count pending enrollment applications (not approved/rejected)
+    const [pendingAppsResult] = await db.query(
+      `SELECT COUNT(*) as count 
+       FROM enrollment_applications 
+       WHERE status IN ('submitted', 'registrar_review', 'principal_review')`
+    );
+    pending.enrollments = pendingAppsResult[0]?.count || 0;
     pending.total = pending.enrollments + pending.payments + pending.documents;
-    res.json({ pending });
+
+    // Active students count
+    const [activeStudentsResult] = await db.query(
+      "SELECT COUNT(*) as count FROM students WHERE account_status = 'active'"
+    );
+    const activeStudents = activeStudentsResult[0]?.count || 0;
+
+    // Average GWA - calculate from grades table
+    const [avgGwaResult] = await db.query(
+      `SELECT AVG(percentage) as avg_gwa 
+       FROM grades 
+       WHERE percentage IS NOT NULL`
+    );
+    const avgGwa = avgGwaResult[0]?.avg_gwa 
+      ? parseFloat(avgGwaResult[0].avg_gwa).toFixed(2) 
+      : "0.00";
+
+    // Students by track and grade level for enrollment insights
+    const [studentsByTrack] = await db.query(
+      `SELECT 
+        s.pathway as track,
+        s.grade_level,
+        ea.gender,
+        COUNT(*) as count
+       FROM students s
+       LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
+       WHERE s.account_status = 'active'
+       GROUP BY s.pathway, s.grade_level, ea.gender
+       ORDER BY s.pathway, s.grade_level, ea.gender`
+    );
+
+    // Recent activity - enrollments and payments
+    const [recentEnrollments] = await db.query(
+      `SELECT 
+        ea.id,
+        ea.generated_student_id as student_id, CONCAT(ea.first_name, ' ', ea.last_name) as full_name,
+        ea.school_year as term,
+        ea.status,
+        ea.created_at
+       FROM enrollment_applications ea
+       WHERE ea.status IN ('pending', 'approved', 'rejected')
+       ORDER BY ea.created_at DESC
+       LIMIT 5`
+    );
+
+    const [recentPayments] = await db.query(
+      `SELECT 
+        p.id,
+        p.student_id,
+        s.full_name,
+        p.amount,
+        p.fee_item,
+        p.status,
+        p.paid_at as created_at
+       FROM payments p
+       JOIN students s ON p.student_id = s.student_id
+       ORDER BY p.paid_at DESC
+       LIMIT 5`
+    );
+
+    // Combine and format recent activity
+    const recentActivity = [
+      ...recentEnrollments.map(e => ({
+        type: 'enrollment',
+        action: `Enrollment ${e.status}`,
+        name: e.full_name,
+        time: new Date(e.created_at).toLocaleDateString('en-PH'),
+        created_at: e.created_at
+      })),
+      ...recentPayments.map(p => ({
+        type: 'payment',
+        action: `Payment ${p.status} - ₱${Number(p.amount).toLocaleString()}`,
+        name: p.full_name,
+        time: new Date(p.created_at).toLocaleDateString('en-PH'),
+        created_at: p.created_at
+      }))
+    ]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10)
+    .map(({ created_at, ...rest }) => rest); // Remove created_at from response
+
+    res.json({ 
+      pending,
+      stats: {
+        activeStudents,
+        avgGwa,
+      },
+      enrollmentInsights: studentsByTrack,
+      recentActivity,
+      adminInfo
+    });
   } catch (err) { next(err); }
 }
 

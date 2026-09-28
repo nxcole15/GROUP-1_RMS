@@ -172,7 +172,7 @@ const navItems: { id: Panel; label: string; icon: ReactNode }[] = [
 ];
 
 /* -- Sidebar -- */
-function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?:(v:boolean)=>void; student?: { student_id:string; full_name:string; pathway:string; grade_level:number } | null }) {
+function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?:(v:boolean)=>void; student?: { student_id:string; full_name:string; pathway:string; grade_level:number; photo_url?:string } | null }) {
   const expanded = true; // Always expanded
 
   useEffect(() => {
@@ -224,7 +224,18 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
         <div className="px-3 py-4 border-top border-white border-opacity-10">
           <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
             <div className="d-flex align-items-center gap-3">
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{student ? student.full_name.split(" ").map((n:string) => n[0]).join("").slice(0,2): "?"}</div>
+              {student?.photo_url ? (
+                <img 
+                  src={student.photo_url} 
+                  alt={student.full_name}
+                  className="rounded-circle" 
+                  style={{ width:32, height:32, objectFit:"cover" }}
+                />
+              ) : (
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                  {student ? student.full_name.split(" ").map((n:string) => n[0]).join("").slice(0,2): "?"}
+                </div>
+              )}
               <div className="flex-grow-1 overflow-hidden">
                 <div className="text-white small fw-semibold text-truncate">{student?.full_name ?? "Loading..."}</div>
                 <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{student?.student_id}</div>
@@ -241,11 +252,17 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
 }
 
 /* -- Home / Overview -- */
-function HomePanel({ setPanel, onAskJobert, student }: { setPanel:(p:Panel)=>void; onAskJobert:(p:string)=>void; student?: { student_id: string; full_name: string; pathway: string; grade_level: number; term: string; email: string } | null }) {
-  const totalPaid    = fees.filter(f => f.paid).reduce((a,f) => a+f.amount, 0);
-  const totalFees    = fees.reduce((a,f) => a+f.amount, 0);
-  const avgGrade     = Math.round(gradeData.map(g => g.term1.pct).reduce((a,b) => a+b,0)/gradeData.length);
-  const pendingDocs  = documentRequests.filter(d => d.status==="pending").length;
+function HomePanel({ setPanel, onAskJobert, student, dashboardData }: { 
+  setPanel:(p:Panel)=>void; 
+  onAskJobert:(p:string)=>void; 
+  student?: { student_id: string; full_name: string; pathway: string; grade_level: number; term: string; email: string; photo_url?: string } | null;
+  dashboardData?: { stats: { average_grade: number; total_paid: number; total_tuition: number; balance_due: number; pending_docs: number }; recent_grades: any[] } | null;
+}) {
+  const avgGrade = dashboardData?.stats.average_grade || 0;
+  const totalPaid = dashboardData?.stats.total_paid || 0;
+  const totalFees = dashboardData?.stats.total_tuition || 0;
+  const balanceDue = dashboardData?.stats.balance_due || 0;
+  const pendingDocs = dashboardData?.stats.pending_docs || 0;
 
   const quickLinks = [
     { id:"grades"        as Panel, label:"View Grades",  icon:"", bg:"#8b5cf6" },
@@ -271,7 +288,7 @@ function HomePanel({ setPanel, onAskJobert, student }: { setPanel:(p:Panel)=>voi
         {[
           { label:"General Average", value:`${avgGrade}%`,          icon:"chart" as IconName, cls:"border-primary-subtle bg-primary-subtle",   val:"text-primary"  },
           { label:"Tuition Paid",    value:peso(totalPaid),         icon:"peso" as IconName,  cls:"border-success-subtle bg-success-subtle", val:"text-success"  },
-          { label:"Balance Due",     value:peso(totalFees-totalPaid), icon:"clock" as IconName, cls:"border-warning-subtle bg-warning-subtle", val:"text-warning" },
+          { label:"Balance Due",     value:peso(balanceDue),        icon:"clock" as IconName, cls:"border-warning-subtle bg-warning-subtle", val:"text-warning" },
           { label:"Pending Docs",    value:String(pendingDocs),     icon:"file" as IconName,  cls:"border-info-subtle bg-info-subtle",         val:"text-info"     },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
@@ -1263,89 +1280,48 @@ function NotificationsView() {
 }
 
 /* -- Profile Panel -- */
-function ProfilePanel() {
-  interface ProfileData {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    course: string;
-    yearLevel: string;
-    dateOfBirth: string;
-    guardianName: string;
-    guardianContact: string;
-    enrollmentDate: string;
-  }
+function ProfilePanel({ student }: { student?: { 
+  student_id: string; 
+  full_name: string; 
+  pathway: string; 
+  grade_level: number; 
+  term: string; 
+  email: string; 
+  photo_url?: string;
+  lrn?: string;
+} | null }) {
+  const [profileData, setProfileData] = useState<{
+    date_of_birth?: string;
+    phone?: string;
+    address?: string;
+    gender?: string;
+    nationality?: string;
+    guardian_name?: string;
+    guardian_phone?: string;
+    enrollment_date?: string;
+  } | null>(null);
 
-  const INITIAL_PROFILE: ProfileData = {
-    id: "",
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    course: "",
-    yearLevel: "",
-    dateOfBirth: "",
-    guardianName: "",
-    guardianContact: "",
-    enrollmentDate: "",
-  };
-
-  const [profile, setProfile] = useState(INITIAL_PROFILE);
-  const [editMode, setEditMode] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [profilePicture, setProfilePicture] = useState<string>("/cfei-logo.jpg");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleSave = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setEditMode(false);
-      setToast("Profile updated successfully!");
-      setTimeout(() => setToast(null), 3000);
-    }, 1000);
-  };
-
-  const handleCancel = () => {
-    setEditMode(false);
-    setProfile(INITIAL_PROFILE);
-    setProfilePicture("/cfei-logo.jpg");
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setToast("File size must be less than 5MB");
-        setTimeout(() => setToast(null), 3000);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePicture(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    // Fetch additional profile data from enrollment application
+    fetch(`${API_BASE}/api/student/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setProfileData(data);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="d-flex flex-column gap-4">
-      {/* Toast */}
-      {toast && (
-        <div className="position-fixed top-0 start-50 translate-middle-x mt-4" style={{ zIndex: 9999 }}>
-          <div className="alert shadow-lg rounded-3 px-4 py-3 d-flex align-items-center gap-3" style={{ minWidth: "300px", background: toast.includes("File size") ? "#fef2f2" : "#d1fae5", border: toast.includes("File size") ? "1px solid #fecaca" : "1px solid #86efac" }}>
-            <span className={toast.includes("File size") ? "text-danger" : "text-success"}>{toast.includes("File size") ? <Icon name="alert" size={22} /> : <Icon name="checkCircle" size={22} />}</span>
-            <span className="fw-semibold" style={{ color: toast.includes("File size") ? "#dc2626" : "#059669" }}>{toast}</span>
-          </div>
-        </div>
-      )}
-
       <div>
         <h2 className="fw-black fs-4 text-dark mb-1">My Profile</h2>
-        <p className="text-muted small mb-0">Manage your personal information</p>
+        <p className="text-muted small mb-0">View your personal information</p>
       </div>
 
       <div className="row g-4">
@@ -1358,59 +1334,31 @@ function ProfilePanel() {
                 <div className="position-absolute top-50 start-50 translate-middle" style={{ marginTop: "40px" }}>
                   <div className="position-relative">
                     <div className="rounded-circle border border-4 border-white bg-white overflow-hidden" style={{ width: "120px", height: "120px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
-                      <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      {student?.photo_url ? (
+                        <img src={student.photo_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div className="d-flex align-items-center justify-content-center h-100 w-100 text-white fw-bold" style={{ fontSize: 32, background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                          {student?.full_name.split(" ").map(n => n[0]).join("").slice(0,2) || "??"}
+                        </div>
+                      )}
                     </div>
-                    {editMode && (
-                      <>
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="position-absolute bottom-0 end-0 btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center"
-                          style={{ width: 36, height: 36, padding: 0 }}
-                          title="Change photo"
-                        >
-                          <Icon name="camera" size={16} />
-                        </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="d-none"
-                        />
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
 
               {/* Info */}
-              <div className="pt-5 mt-4 px-4 pb-4 text-center">
-                <h3 className="fw-bold mb-1" style={{ color: "#1e293b" }}>{profile.name}</h3>
-                <p className="text-muted small mb-3">ID: {profile.id}</p>
-                <div className="d-flex justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2" style={{ background: "linear-gradient(135deg, #6366f1, #7c3aed)", color: "white" }}>
-                    {profile.course}
-                  </span>
-                  <span className="badge rounded-pill px-3 py-2 bg-light text-dark border">
-                    {profile.yearLevel}
-                  </span>
-                </div>
-
-                {/* Stats */}
-                <div className="row g-3">
-                  <div className="col-6">
-                    <div className="rounded-3 p-3 bg-light border">
-                      <div className="text-muted small mb-1">Member Since</div>
-                      <div className="fw-bold small text-primary">
-                        {profile.enrollmentDate ? new Date(profile.enrollmentDate).getFullYear() : "N/A"}
-                      </div>
-                    </div>
+              <div className="pt-5 px-4 pb-4 text-center">
+                <h3 className="fw-bold text-dark mb-1">{student?.full_name || "Loading..."}</h3>
+                <p className="text-muted small mb-3">{student?.student_id || ""}</p>
+                <div className="d-flex justify-content-center gap-3 mb-4">
+                  <div className="text-center">
+                    <div className="fw-bold text-dark">Member Since</div>
+                    <div className="text-muted small">{profileData?.enrollment_date ? new Date(profileData.enrollment_date).getFullYear() : "N/A"}</div>
                   </div>
-                  <div className="col-6">
-                    <div className="rounded-3 p-3 bg-light border">
-                      <div className="text-muted small mb-1">Status</div>
-                      <div className="fw-bold small text-success">Active</div>
-                    </div>
+                  <div className="border-start"></div>
+                  <div className="text-center">
+                    <div className="fw-bold text-dark">Status</div>
+                    <div className="text-success small fw-semibold">Active</div>
                   </div>
                 </div>
               </div>
@@ -1418,83 +1366,72 @@ function ProfilePanel() {
           </div>
         </div>
 
-        {/* Profile Details */}
+        {/* Profile Information */}
         <div className="col-12 col-lg-8">
           <div className="card border-0 shadow-sm rounded-4">
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                  <h4 className="fw-bold mb-1" style={{ color: "#1e293b" }}>Profile Information</h4>
-                  <p className="text-muted small mb-0">Update your personal details</p>
+                <h3 className="fw-bold text-dark mb-0">Profile Information</h3>
+                <span className="badge bg-info-subtle text-info border border-info-subtle">Read-Only</span>
+              </div>
+              <p className="text-muted small mb-4">To update your information, please contact the Registrar's Office</p>
+
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Full Name</label>
+                  <input type="text" className="form-control" value={student?.full_name || ""} disabled />
                 </div>
-                {!editMode ? (
-                  <button onClick={() => setEditMode(true)} className="btn btn-primary px-4">
-                     Edit Profile
-                  </button>
-                ) : (
-                  <div className="d-flex gap-2">
-                    <button onClick={handleCancel} className="btn btn-outline-secondary px-3">
-                      Cancel
-                    </button>
-                    <button onClick={handleSave} disabled={loading} className="btn btn-primary px-4">
-                      {loading ? "Saving..." : "Save Changes"}
-                    </button>
-                  </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Student ID</label>
+                  <input type="text" className="form-control" value={student?.student_id || ""} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Email</label>
+                  <input type="email" className="form-control" value={student?.email || ""} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Phone</label>
+                  <input type="text" className="form-control" value={profileData?.phone || "N/A"} disabled />
+                </div>
+                <div className="col-12">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Address</label>
+                  <input type="text" className="form-control" value={profileData?.address || "N/A"} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Course</label>
+                  <input type="text" className="form-control" value={student?.pathway || ""} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Year Level</label>
+                  <input type="text" className="form-control" value={`Grade ${student?.grade_level || ""}` } disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Date of Birth</label>
+                  <input type="text" className="form-control" value={profileData?.date_of_birth ? new Date(profileData.date_of_birth).toLocaleDateString() : "N/A"} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>LRN</label>
+                  <input type="text" className="form-control" value={student?.lrn || "N/A"} disabled />
+                </div>
+                {profileData?.guardian_name && (
+                  <>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Guardian Name</label>
+                      <input type="text" className="form-control" value={profileData.guardian_name} disabled />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Guardian Contact</label>
+                      <input type="text" className="form-control" value={profileData.guardian_phone || "N/A"} disabled />
+                    </div>
+                  </>
                 )}
               </div>
 
-              <div className="row g-4">
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Full Name</label>
-                  <input type="text" className="form-control" value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Student ID</label>
-                  <input type="text" className="form-control" value={profile.id} disabled style={{ background: "#f1f5f9" }} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Email</label>
-                  <input type="email" className="form-control" value={profile.email} onChange={e => setProfile({ ...profile, email: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Phone</label>
-                  <input type="tel" className="form-control" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Address</label>
-                  <input type="text" className="form-control" value={profile.address} onChange={e => setProfile({ ...profile, address: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Course</label>
-                  <select className="form-select" value={profile.course} onChange={e => setProfile({ ...profile, course: e.target.value })} disabled={!editMode}>
-                    <option value="STEM">STEM</option>
-                    <option value="HUMSS">HUMSS</option>
-                    <option value="ABM">ABM</option>
-                    <option value="TVL-TechPro">TVL-TechPro</option>
-                  </select>
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Year Level</label>
-                  <select className="form-select" value={profile.yearLevel} onChange={e => setProfile({ ...profile, yearLevel: e.target.value })} disabled={!editMode}>
-                    <option value="Grade 11">Grade 11</option>
-                    <option value="Grade 12">Grade 12</option>
-                  </select>
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Date of Birth</label>
-                  <input type="date" className="form-control" value={profile.dateOfBirth} onChange={e => setProfile({ ...profile, dateOfBirth: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Enrollment Date</label>
-                  <input type="date" className="form-control" value={profile.enrollmentDate} disabled style={{ background: "#f1f5f9" }} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Guardian Name</label>
-                  <input type="text" className="form-control" value={profile.guardianName} onChange={e => setProfile({ ...profile, guardianName: e.target.value })} disabled={!editMode} />
-                </div>
-                <div className="col-12 col-md-6">
-                  <label className="form-label fw-semibold small text-uppercase text-muted">Guardian Contact</label>
-                  <input type="tel" className="form-control" value={profile.guardianContact} onChange={e => setProfile({ ...profile, guardianContact: e.target.value })} disabled={!editMode} />
+              <div className="alert alert-info mt-4 d-flex align-items-start gap-2" style={{ fontSize: 13 }}>
+                <Icon name="alert" size={18} className="flex-shrink-0 mt-1" />
+                <div>
+                  <strong>Need to update your information?</strong><br />
+                  Please visit the Registrar's Office or email registrar@cfei.edu.ph with your updated details.
                 </div>
               </div>
             </div>
@@ -1505,7 +1442,6 @@ function ProfilePanel() {
   );
 }
 
-/* -- Main Page -- */
 export default function DashboardPage() {
   const [panel, setPanel]         = useState<Panel>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -1521,6 +1457,23 @@ export default function DashboardPage() {
     grade_level: number;
     term: string;
     email: string;
+    photo_url?: string;
+  } | null>(null);
+
+  const [dashboardData, setDashboardData] = useState<{
+    stats: {
+      average_grade: number;
+      total_paid: number;
+      total_tuition: number;
+      balance_due: number;
+      pending_docs: number;
+    };
+    recent_grades: Array<{
+      subject_code: string;
+      subject_title: string;
+      percentage: number;
+      term: string;
+    }>;
   } | null>(null);
 
 
@@ -1572,13 +1525,32 @@ export default function DashboardPage() {
   if (!authChecked) return;
   const token = localStorage.getItem("inform_token");
   if (!token) return;
-  fetch(`${API_BASE}/api/auth/me`, {
+  
+  // Fetch dashboard data which includes student info
+  fetch(`${API_BASE}/api/student/dashboard`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => { if (data) setStudent(data); })
-    .catch(() => {});
+    .then(r => {
+      if (!r.ok) {
+        console.error("Dashboard API failed:", r.status);
+        return null;
+      }
+      return r.json();
+    })
+    .then(data => {
+      if (data) {
+        console.log("Dashboard data received:", data);
+        setStudent(data.student);
+        setDashboardData({
+          stats: data.stats,
+          recent_grades: data.recent_grades
+        });
+      }
+    })
+    .catch(err => {
+      console.error("Dashboard fetch error:", err);
+    });
   }, [authChecked]);
 
 
@@ -1590,13 +1562,13 @@ export default function DashboardPage() {
 
   function renderPanel() {
     switch (panel) {
-      case "profile":       return <ProfilePanel />;
+      case "profile":       return <ProfilePanel student={student} />;
       case "grades":        return <GradesView       onAskJobert={askJobert} />;
       case "schedule":      return <ScheduleView     onAskJobert={askJobert} />;
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
       case "notifications": return <NotificationsView />;
-      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} />;
+      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} dashboardData={dashboardData} />;
     }
   }
 

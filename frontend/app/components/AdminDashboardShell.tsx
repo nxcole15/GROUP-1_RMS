@@ -150,7 +150,7 @@ function initials(name: string) {
 }
 
 /*  Sidebar  */
-function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests, role }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean; role?: string }) {
+function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests, role, adminName }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean; role?: string; adminName?: string | null }) {
   const expanded = true; // Always expanded
 
   useEffect(() => {
@@ -231,7 +231,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
             <div className="d-flex align-items-center gap-3">
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{config.initials}</div>
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} User</div>
+                <div className="text-white small fw-semibold text-truncate">{adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}</div>
                 <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{config.email}</div>
               </div>
             </div>
@@ -248,12 +248,47 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
 
 /*  Overview  */
 function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; hideBanner?: boolean }) {
-  const activeStudents = students.filter(s => s.status === "Active").length;
-  const avgGwa         = (students.reduce((a, s) => a + s.gwa, 0) / students.length).toFixed(2);
+    // Calculate current school year
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startYear = month >= 6 ? year : year - 1;
+    const endYear = startYear + 1;
+    return `${startYear}-${endYear}`;
+  };
 
-    const [pendingStats, setPendingStats] = useState<{
-    enrollments: number; payments: number; documents: number; total: number;
+  const [pendingStats, setPendingStats] = useState<{
+    enrollments: number; 
+    payments: number; 
+    documents: number; 
+    total: number;
   } | null>(null);
+
+  const [dashboardStats, setDashboardStats] = useState<{
+    activeStudents: number;
+    avgGwa: string;
+  } | null>(null);
+
+  const [enrollmentInsights, setEnrollmentInsights] = useState<Array<{
+    track: string;
+    grade_level: number;
+    gender: string | null;
+    count: number;
+  }>>([]);
+
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    type: string;
+    action: string;
+    name: string;
+    time: string;
+  }>>([]);
+
+  const [adminInfo, setAdminInfo] = useState<{
+    full_name: string;
+    role: string;
+  } | null>(null);
+
 
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
@@ -263,7 +298,13 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       credentials: "include",
     })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.pending) setPendingStats(data.pending); })
+      .then(data => { 
+        if (data?.pending) setPendingStats(data.pending);
+        if (data?.stats) setDashboardStats(data.stats);
+        if (data?.enrollmentInsights) setEnrollmentInsights(data.enrollmentInsights);
+        if (data?.recentActivity) setRecentActivity(data.recentActivity);
+        if (data?.adminInfo) setAdminInfo(data.adminInfo); 
+      })
       .catch(() => {});
   }, []);
 
@@ -292,30 +333,25 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
   const [chartGender, setChartGender] = React.useState<(typeof genderOptions)[number]["value"]>("all");
 
 
-
   return (
     <div className="d-flex flex-column gap-4">
       {/* Welcome banner */}
       {!hideBanner && (
       <div className="rounded-3 p-4"
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, Admin</h2>
+        <h2 className="text-white fw-black fs-4 mb-1">
+          Welcome back, {adminInfo?.full_name || 'Admin'}
+        </h2>
         <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
-          Administrator · Full Access · SY 2025-2026
+          {adminInfo?.role === 'principal' ? 'Principal' : 'Administrator'} · Full Access · SY {getCurrentSchoolYear()}
         </p>
-        <div className="d-flex gap-2 flex-wrap">
-          <span className="fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style={{ background:"rgba(255,255,255,0.15)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", fontSize:12 }}>
-            <Icon name="shield" size={12} /> Admin
-          </span>
-          <span className="fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" style={{ background:"#f59e0b", color:"#fff", fontSize:12 }}>
-            <Icon name="activity" size={12} /> System Online
-          </span>
-          {pendingStats && pendingStats.total > 0 && (
+        {pendingStats && pendingStats.total > 0 && (
+          <div className="d-flex gap-2 flex-wrap">
             <span className="fw-semibold px-3 py-2 rounded-3" style={{ background: "#dc2626", color: "#fff", fontSize: 12 }}>
               {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       )}
 
@@ -323,10 +359,10 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       {!hideBanner && (
       <div className="row g-3">
         {[
-          { label:"Active Students",     value: activeStudents,                            icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
-          { label:"Class Avg. GWA",      value: avgGwa,                                    icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
-          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? 0,            icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
-          { label:"Pending Payments",    value: pendingStats?.payments ?? 0,               icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
+          { label:"Active Students",     value: dashboardStats?.activeStudents ?? 0,    icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
+          { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "NaN",        icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
+          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? 0,         icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
+          { label:"Pending Payments",    value: pendingStats?.payments ?? 0,            icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
@@ -350,15 +386,21 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
             <div className="card-body p-4">
               <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="activity" size={14} /> Recent Activity</h3>
               <div className="d-flex flex-column gap-3">
-                {recentActivity.map((a, i) => (
-                  <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="flex-grow-1 overflow-hidden">
-                      <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>{a.name}</div>
-                    </div>
-                    <span className="text-muted flex-shrink-0" style={{ fontSize:11 }}>{a.time}</span>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-4 text-muted" style={{ fontSize: 13 }}>
+                    No recent activity
                   </div>
-                ))}
+                ) : (
+                  recentActivity.map((a, i) => (
+                    <div key={i} className="d-flex align-items-center gap-3">
+                      <div className="flex-grow-1 overflow-hidden">
+                        <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
+                        <div className="text-muted" style={{ fontSize:11 }}>{a.name}</div>
+                      </div>
+                      <span className="text-muted flex-shrink-0" style={{ fontSize:11 }}>{a.time}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -425,23 +467,21 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
               </div>
 
               {(() => {
-                const filteredStudents = students.filter((s) => {
-                  const matchTrack = chartTrack === "all" ? true : s.track === chartTrack;
-                  const matchGrade = chartGrade === "all" ? true : String(s.grade) === chartGrade;
-
-                  const sGender = (s as unknown as { gender?: string }).gender;
-                  const matchGender = chartGender === "all" ? true : (sGender ?? "") === chartGender;
-
+                // Filter enrollmentInsights based on selected filters
+                const filteredData = enrollmentInsights.filter((item) => {
+                  const matchTrack = chartTrack === "all" ? true : item.track === chartTrack;
+                  const matchGrade = chartGrade === "all" ? true : String(item.grade_level) === chartGrade;
+                  const matchGender = chartGender === "all" ? true : (item.gender || "").toLowerCase () === chartGender.toLowerCase ();
                   return matchTrack && matchGrade && matchGender;
                 });
 
-
-
-                // group by track (for x-axis)
+                // Group by track (for x-axis)
                 const countsByTrack = ["STEM", "HUMMS", "ABM", "TVL-TechPro"].map((t) => {
                   return {
                     track: t,
-                    count: filteredStudents.filter((s) => s.track === t).length,
+                    count: filteredData
+                      .filter((item) => item.track === t)
+                      .reduce((sum, item) => sum + item.count, 0),
                   };
                 });
 
@@ -453,7 +493,9 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div>
                         <div className="fw-bold" style={{ color: "#0f172a", fontSize: 13 }}>Enrolled Students by Track</div>
-                        <div className="small" style={{ color: "#94a3b8", marginTop: 2 }}>Academic Year 2025�2026</div>
+                        <div className="small" style={{ color: "#94a3b8", marginTop: 2 }}>
+                          Academic Year {getCurrentSchoolYear()}
+                        </div>
                       </div>
                       <div className="d-flex align-items-center gap-2">
                         <span className="rounded-2 d-inline-block" style={{ width: 10, height: 10, background: "linear-gradient(135deg, #1d4ed8, #60a5fa)" }} />
@@ -891,12 +933,27 @@ function GradesPanel() {
 
 /*  Enrollment Panel  */
 function EnrollmentPanel({ role }: { role?: string }) {
-  const DEADLINE = new Date("2026-06-15");
+  // Calculate current school year dynamically
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startYear = month >= 6 ? year : year - 1;
+    const endYear = startYear + 1;
+    return `${startYear}-${endYear}`;
+  };
+
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterTrack, setFilterTrack] = useState("All");
+  const [filterGrade, setFilterGrade] = useState("All");
+  const [filterSchoolYear, setFilterSchoolYear] = useState(getCurrentSchoolYear());
 
   const [enrollments, setEnrollments] = useState<{
     name: string; id: string; track: string; grade: number;
     date: string; enrollDate: Date; status: string; photo: string | null;
-    appId?: number; generatedStudentId?: string | null;
+    appId?: number; generatedStudentId?: string | null; schoolYear?: string;
   }[]>([]);
 
   const [rejectionDropdownStudentId, setRejectionDropdownStudentId] = useState<string | null>(null);
@@ -991,6 +1048,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
           email: string;
           pathway?: string; 
           grade_level?: number; 
+          school_year?: string;
           status: string; 
           created_at: string;
           generated_student_id?: string | null;
@@ -1024,6 +1082,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
             photo: app.photo_url || null,
             appId: app.id,
             generatedStudentId: app.generated_student_id,
+            schoolYear: app.school_year || getCurrentSchoolYear(),
           };
         }));
       } else {
@@ -1172,29 +1231,209 @@ function EnrollmentPanel({ role }: { role?: string }) {
   };
 
   const confirmed = enrollments.filter(e => e.status === "Confirmed");
-  const pending   = enrollments.filter(e => e.status === "Pending");
-  const late      = enrollments.filter(e => e.enrollDate > DEADLINE);
+  const pending   = enrollments.filter(e => e.status === "Pending" || e.status === "Principal Review");
+
+  // Filter and search logic
+  const filteredEnrollments = enrollments.filter(enrollment => {
+    // Search filter (name, email, student ID)
+    const matchesSearch = searchQuery === "" || 
+      enrollment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      enrollment.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (enrollment.generatedStudentId && enrollment.generatedStudentId.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Status filter
+    const matchesStatus = filterStatus === "All" || enrollment.status === filterStatus;
+
+    // Track filter
+    const matchesTrack = filterTrack === "All" || enrollment.track.includes(filterTrack);
+
+    // Grade filter
+    const matchesGrade = filterGrade === "All" || String(enrollment.grade) === filterGrade;
+
+    // School year filter
+    const matchesSchoolYear = filterSchoolYear === "All" || enrollment.schoolYear === filterSchoolYear;
+
+    return matchesSearch && matchesStatus && matchesTrack && matchesGrade && matchesSchoolYear;
+  });
+
+  // Get unique school years for filter dropdown
+  const uniqueSchoolYears = Array.from(new Set(enrollments.map(e => e.schoolYear).filter(Boolean)));
 
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year 20252026 � Deadline: June 15, 2026</p></div>
+        <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year {getCurrentSchoolYear()}</p></div>
         <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2"> Enrollment period is open</span>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-3">
+          <div className="row g-3">
+            {/* Search */}
+            <div className="col-12 col-md-4">
+              <label className="form-label small fw-semibold text-muted">Search</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by name, email, or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="col-6 col-md-2">
+              <label className="form-label small fw-semibold text-muted">Status</label>
+              <select
+                className="form-select"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="All">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Principal Review">Principal Review</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+
+            {/* Track Filter */}
+            <div className="col-6 col-md-2">
+              <label className="form-label small fw-semibold text-muted">Track</label>
+              <select
+                className="form-select"
+                value={filterTrack}
+                onChange={(e) => setFilterTrack(e.target.value)}
+              >
+                <option value="All">All Tracks</option>
+                <option value="STEM">STEM</option>
+                <option value="ABM">ABM</option>
+                <option value="HUMSS">HUMSS</option>
+                <option value="ICT">ICT</option>
+                <option value="Cookery">Cookery</option>
+              </select>
+            </div>
+
+            {/* Grade Filter */}
+            <div className="col-6 col-md-2">
+              <label className="form-label small fw-semibold text-muted">Grade</label>
+              <select
+                className="form-select"
+                value={filterGrade}
+                onChange={(e) => setFilterGrade(e.target.value)}
+              >
+                <option value="All">All Grades</option>
+                <option value="11">Grade 11</option>
+                <option value="12">Grade 12</option>
+              </select>
+            </div>
+
+            {/* School Year Filter */}
+            <div className="col-6 col-md-2">
+              <label className="form-label small fw-semibold text-muted">School Year</label>
+              <select
+                className="form-select"
+                value={filterSchoolYear}
+                onChange={(e) => setFilterSchoolYear(e.target.value)}
+              >
+                <option value="All">All Years</option>
+                {uniqueSchoolYears.sort().reverse().map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="mt-3 text-muted small">
+            Showing {filteredEnrollments.length} of {enrollments.length} application{enrollments.length !== 1 ? 's' : ''}
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label:"Total Enrolled", value:enrollments.length,  cls:"bg-primary-subtle border-primary-subtle text-primary" },
-          { label:"Confirmed",      value:confirmed.length,    cls:"bg-success-subtle border-success-subtle text-success" },
-          { label:"Pending Review", value:pending.length,      cls:"bg-warning-subtle border-warning-subtle text-warning" },
-          { label:"Late Enrollees", value:late.length,         cls:"bg-danger-subtle border-danger-subtle text-danger"   },
+          { 
+            label: "Total Enrolled", 
+            value: confirmed.length, 
+            icon: "students" as IconName,
+            gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+            bgColor: "rgba(59, 130, 246, 0.1)",
+            textColor: "#2563eb"
+          },
+          { 
+            label: "Confirmed", 
+            value: confirmed.length, 
+            icon: "checkCircle" as IconName,
+            gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            bgColor: "rgba(16, 185, 129, 0.1)",
+            textColor: "#059669"
+          },
+          { 
+            label: "Pending Review", 
+            value: pending.length, 
+            icon: "clock" as IconName,
+            gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+            bgColor: "rgba(245, 158, 11, 0.1)",
+            textColor: "#d97706"
+          },
         ].map(s => (
-          <div key={s.label} className="col-6 col-sm-3">
-            <div className={`card border rounded-3 ${s.cls}`}>
-              <div className="card-body p-3 text-center">
-                <div className="text-muted small mb-1">{s.label}</div>
-                <div className="fw-black fs-2">{s.value}</div>
+          <div key={s.label} className="col-12 col-md-4">
+            <div 
+              className="card border-0 shadow-sm rounded-3 overflow-hidden h-100"
+              style={{ 
+                background: "white",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                cursor: "default"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+              }}
+            >
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <div 
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      background: s.bgColor,
+                      color: s.textColor
+                    }}
+                  >
+                    <Icon name={s.icon} size={28} />
+                  </div>
+                  <div 
+                    className="fw-black" 
+                    style={{ 
+                      fontSize: "2.5rem",
+                      background: s.gradient,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      lineHeight: 1
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+                <div>
+                  <div className="fw-semibold text-dark mb-1" style={{ fontSize: "0.95rem" }}>
+                    {s.label}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    {s.label === "Total Enrolled" && "Successfully enrolled students"}
+                    {s.label === "Confirmed" && "Approved applications"}
+                    {s.label === "Pending Review" && "Awaiting approval"}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1216,11 +1455,21 @@ function EnrollmentPanel({ role }: { role?: string }) {
               </tr>
             </thead>
             <tbody>
-              {enrollments.map((e) => {
-                const isLate = e.enrollDate > DEADLINE;
+              {filteredEnrollments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-5 text-muted">
+                    <div className="d-flex flex-column align-items-center gap-2">
+                      <Icon name="alert" size={32} />
+                      <div>No applications found</div>
+                      <small>Try adjusting your search or filters</small>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredEnrollments.map((e) => {
                 return (
                   <React.Fragment key={e.id}>
-                    <tr style={{ background: isLate ? "rgba(220,38,38,0.03)" : undefined }}>
+                    <tr>
                       <td className="ps-4">
                         <div className="d-flex align-items-center gap-3">
                           {/* Student Photo - now with photo_url from backend */}
@@ -1241,9 +1490,6 @@ function EnrollmentPanel({ role }: { role?: string }) {
                           <div>
                             <div className="small fw-medium text-dark">{e.name}</div>
                             <div className="text-muted" style={{ fontSize: 11 }}>{e.id}</div>
-                            {isLate && (
-                              <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize:9 }}>Late Enrollee</span>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -1354,7 +1600,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                     
                   </React.Fragment>
                 );
-              })}
+              }))
+              }
             </tbody>
           </table>
         </div>
@@ -1457,6 +1704,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
                           </span>
                           <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
                             Grade {selectedApplication.grade_level || "—"}
+                          </span>
+                          <span className="badge bg-info-subtle text-info border border-info-subtle px-3 py-2">
+                            SY {selectedApplication.school_year || "—"}
                           </span>
                         </div>
                       </div>
@@ -1779,6 +2029,16 @@ function EnrollmentPanel({ role }: { role?: string }) {
 
 /*  Tuition Panel  */
 function TuitionPanel() {
+  // Calculate current school year dynamically
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startYear = month >= 6 ? year : year - 1;
+    const endYear = startYear + 1;
+    return `${startYear}-${endYear}`;
+  };
+
   const [search, setSearch] = useState("");
   const [filterTrack, setFilterTrack] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -1845,7 +2105,7 @@ function TuitionPanel() {
 
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Term 1 � Academic Year 20252026</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-0">Tuition Records</h2><p className="text-muted small mb-0">Academic Year {getCurrentSchoolYear()}</p></div>
 
       {/* Stats */}
       <div className="row g-3">
@@ -3789,6 +4049,24 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [adminName, setAdminName] = useState<string | null>(null);
+
+  // Fetch admin name on mount
+  useEffect(() => {
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`${API_BASE}/api/admin/dashboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.adminInfo?.full_name) {
+          setAdminName(data.adminInfo.full_name);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Route protection � only runs when used as standalone page (not wrapped)
   useEffect(() => {
@@ -3912,7 +4190,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
   return (
     <div className="admin-dashboard-layout" suppressHydrationWarning>
-      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} role={role} />
+      <Sidebar active={activeNav} setActive={setActiveNav} show={mobileOpen} setShow={setMobileOpen} onExpandChange={(v) => { setSidebarExpanded(v); onSidebarExpandChange?.(v); }} hideRequests={hideRequests} role={role} adminName={adminName} />
 
       {/* Fixed header bar - above everything */}
       {!hideTopbarControls && (
@@ -3934,7 +4212,6 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
             </svg>
             {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
           </button>
-          <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }}>AD</div>
         </div>
       </header>
       )}

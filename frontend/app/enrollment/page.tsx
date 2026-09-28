@@ -88,7 +88,7 @@ export default function EnrollmentPage() {
     lrn: "",
     firstName: "", lastName: "", middleName: "", extensionName: "",
     email: "", phone: "",
-    pathway: "", track: "", year: "",
+    pathway: "", track: "", year: "", schoolYear: "",
     address: "", dateOfBirth: "",
     studentStatus: "", studentId: "",
     gender: "", civilStatus: "",
@@ -129,6 +129,7 @@ export default function EnrollmentPage() {
       lrn: "Learners Reference No. (LRN)",
       firstName: "First Name", lastName: "Last Name", email: "Email",
       phone: "Phone", pathway: "Track", track: "Strand", year: "Grade Level",
+      schoolYear: "School Year",
       address: "Address", dateOfBirth: "Date of Birth",
       studentStatus: "Student Status", gender: "Gender",
       nationality: "Nationality", religion: "Religion",
@@ -138,6 +139,18 @@ export default function EnrollmentPage() {
       if (!formData[key as keyof typeof formData]?.toString().trim()) return `${label} is required.`;
     }
     if (formData.lrn.length !== 12 || !/^\d{12}$/.test(formData.lrn)) return "LRN must be exactly 12 digits.";
+    
+    // Validate school year format
+    if (!/^\d{4}-\d{4}$/.test(formData.schoolYear)) {
+      return "School Year must be in format YYYY-YYYY (e.g., 2025-2026).";
+    }
+    
+    // Validate that the second year is exactly one year after the first
+    const [startYear, endYear] = formData.schoolYear.split('-').map(Number);
+    if (endYear !== startYear + 1) {
+      return "School Year end year must be exactly one year after start year (e.g., 2025-2026).";
+    }
+    
     if (formData.studentStatus === "old" && !formData.studentId.trim()) return "Student ID is required for returning students.";
     if (!formData.idPhoto) return "Please upload a 2×2 ID photo.";
     return null;
@@ -174,6 +187,7 @@ export default function EnrollmentPage() {
         track:                   formData.pathway,
         strand:                  formData.track,
         grade_level:             formData.year,
+        school_year:             formData.schoolYear,
         learning_modality:       formData.learningModality,
         father_name:             formData.fatherName || null,
         father_occupation:       formData.fatherOccupation || null,
@@ -253,6 +267,7 @@ export default function EnrollmentPage() {
               <div className="mb-2"><strong>Track:</strong> {formData.pathway}</div>
               <div className="mb-2"><strong>Strand:</strong> {formData.track}</div>
               <div className="mb-2"><strong>Grade Level:</strong> Grade {formData.year}</div>
+              <div className="mb-2"><strong>School Year:</strong> {formData.schoolYear}</div>
               <div className="mb-2"><strong>Learning Modality:</strong> {formData.learningModality}</div>
             </div>
 
@@ -544,6 +559,22 @@ export default function EnrollmentPage() {
                   </select>
                 </div>
 
+                <div className="col-md-6">
+                  <label className="form-label fw-semibold text-muted small">School Year *</label>
+                  <input 
+                    type="text" 
+                    name="schoolYear" 
+                    value={formData.schoolYear} 
+                    onChange={handleChange} 
+                    placeholder="e.g., 2025-2026" 
+                    className="form-control rounded-2" 
+                    required 
+                    pattern="\d{4}-\d{4}"
+                    title="Please enter school year in format: YYYY-YYYY (e.g., 2025-2026)"
+                  />
+                  <small className="text-muted">Format: YYYY-YYYY (e.g., 2025-2026)</small>
+                </div>
+
                 <div className="col-12">
                   <label className="form-label fw-semibold text-muted small">Learning Modality *</label>
                   <select name="learningModality" value={formData.learningModality} onChange={handleChange} className="form-select rounded-2" required>
@@ -719,6 +750,7 @@ export default function EnrollmentPage() {
                     ["Track", formData.pathway],
                     ["Strand", formData.track],
                     ["Grade Level", `Grade ${formData.year}`],
+                    ["School Year", formData.schoolYear],
                     ["Learning Modality", formData.learningModality],
                   ],
                 },
