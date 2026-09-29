@@ -10,6 +10,7 @@ const { swaggerUi, swaggerDocument } = require("./config/swagger");
 const authRoutes          = require("./modules/auth/authRoutes");
 const adminRoutes         = require("./modules/admin/adminRoutes");
 const enrollmentRoutes    = require("./modules/student/enrollmentRoutes");
+const studentDashboardRoutes = require("./modules/student/studentDashboardRoutes");
 const gradesRoutes        = require("./modules/grades/gradesRoutes");
 const attendanceRoutes    = require("./modules/attendance/attendanceRoutes");
 const paymentsRoutes      = require("./modules/payments/paymentsRoutes");
@@ -71,6 +72,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 /* ── Student routes ── */
 app.use("/api/auth",          authRoutes);
 app.use("/api/enrollment",    enrollmentRoutes);
+app.use("/api/student",       studentDashboardRoutes);
 app.use("/api/grades",        gradesRoutes);
 app.use("/api/attendance",    attendanceRoutes);
 app.use("/api/payments",      paymentsRoutes);

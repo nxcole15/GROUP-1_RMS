@@ -92,6 +92,7 @@ async function submitApplication(req, res, next) {
       existing_student_id:     req.body.existing_student_id?.trim() || null,
       pathway:                 req.body.pathway,
       grade_level:             parseInt(req.body.grade_level, 10),
+      school_year:             req.body.school_year?.trim() || null,
       learning_modality:       req.body.learning_modality,
       father_name:             req.body.father_name?.trim() || null,
       father_occupation:       req.body.father_occupation?.trim() || null,

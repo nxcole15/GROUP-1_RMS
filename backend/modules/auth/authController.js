@@ -19,8 +19,30 @@ function logout(req, res) {
 
 async function me(req, res, next) {
   try {
-    const student = await StudentModel.findByStudentId(req.student.student_id);
-    if (!student) return res.status(404).json({ error: "Student not found." });
+    const db = require("../../config/db");
+    const studentId = req.student.student_id;
+    
+    // Get student info with photo from enrollment_applications
+    const [rows] = await db.query(`
+      SELECT 
+        s.student_id,
+        s.full_name,
+        s.pathway,
+        s.grade_level,
+        s.term,
+        s.email,
+        ea.photo_url
+      FROM students s
+      LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
+      WHERE s.student_id = ?
+      LIMIT 1
+    `, [studentId]);
+
+    if (!rows[0]) {
+      return res.status(404).json({ error: "Student not found." });
+    }
+
+    const student = rows[0];
     res.json({
       student_id:  student.student_id,
       full_name:   student.full_name,
@@ -28,6 +50,7 @@ async function me(req, res, next) {
       grade_level: student.grade_level,
       term:        student.term,
       email:       student.email,
+      photo_url:   student.photo_url,
     });
   } catch (err) { next(err); }
 }
