@@ -232,8 +232,20 @@ async function getDashboard(req, res, next) {
       : "0.00";
 
     // Students by track and grade level for enrollment insights
+    // Count from enrollment_applications where approved or from active students
     const [studentsByTrack] = await db.query(
       `SELECT 
+        ea.pathway as track,
+        ea.grade_level,
+        ea.gender,
+        COUNT(*) as count
+       FROM enrollment_applications ea
+       WHERE ea.status = 'approved'
+       GROUP BY ea.pathway, ea.grade_level, ea.gender
+       
+       UNION ALL
+       
+       SELECT 
         s.pathway as track,
         s.grade_level,
         ea.gender,
@@ -242,7 +254,8 @@ async function getDashboard(req, res, next) {
        LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
        WHERE s.account_status = 'active'
        GROUP BY s.pathway, s.grade_level, ea.gender
-       ORDER BY s.pathway, s.grade_level, ea.gender`
+       
+       ORDER BY track, grade_level, gender`
     );
 
     // Recent activity - enrollments and payments
