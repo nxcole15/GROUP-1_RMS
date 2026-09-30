@@ -21,6 +21,9 @@ const {
   rejectDocument,
   getTeachers,
   createTeacherAccount,
+  updateTeacher,
+  deactivateTeacher,
+  reactivateTeacher,
   reactivateStudent,
   deactivateStudent,
 } = require("./adminController");
@@ -48,6 +51,9 @@ router.patch("/students/:student_id/deactivate", deactivateStudent);
 router.get("/audit-log",       getAuditLog);
 router.get("/teachers", getTeachers);
 router.post("/teachers", createTeacherAccount);
+router.patch("/teachers/:teacher_id", updateTeacher);
+router.patch("/teachers/:teacher_id/deactivate", deactivateTeacher);
+router.patch("/teachers/:teacher_id/reactivate", reactivateTeacher);
 
 // Enrollments
 router.get("/enrollments",               getPendingEnrollments);

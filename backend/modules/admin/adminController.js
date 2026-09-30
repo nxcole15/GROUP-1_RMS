@@ -523,7 +523,7 @@ async function rejectDocument(req, res, next) {
 async function getTeachers(req, res, next) {
   try {
     const [rows] = await db.query(
-      `SELECT id, teacher_id, full_name, department, email, created_at
+      `SELECT id, teacher_id, full_name, department, email, employment_type, term, account_status, created_at
        FROM teachers
        ORDER BY full_name`
     );
@@ -537,10 +537,12 @@ async function createTeacherAccount(req, res, next) {
       return res.status(403).json({ error: "Only the principal can create teacher accounts." });
     }
 
-    const { first_name, last_name, email, password } = req.body || {};
+    const { first_name, last_name, email, password, employment_type, term } = req.body || {};
     const firstName = String(first_name || "").trim();
     const lastName = String(last_name || "").trim();
     const normalizedEmail = String(email || "").trim().toLowerCase();
+    const employmentType = employment_type || "Full-time";
+    const teacherTerm = term || null;
 
     if (!firstName || !lastName || !normalizedEmail || !password) {
       return res.status(400).json({ error: "First name, last name, email, and password are required." });
@@ -548,6 +550,16 @@ async function createTeacherAccount(req, res, next) {
 
     if (firstName.length < 2 || lastName.length < 2 || normalizedEmail.length < 6 || password.length < 8) {
       return res.status(400).json({ error: "Please provide valid values. Password must be at least 8 characters long." });
+    }
+
+    // Validate employment_type
+    if (!["Part-time", "Full-time"].includes(employmentType)) {
+      return res.status(400).json({ error: "Employment type must be either 'Part-time' or 'Full-time'." });
+    }
+
+    // Validate term if provided
+    if (teacherTerm && !["Term 1", "Term 2", "Term 3"].includes(teacherTerm)) {
+      return res.status(400).json({ error: "Term must be 'Term 1', 'Term 2', or 'Term 3'." });
     }
 
     const [existing] = await db.query(
@@ -570,15 +582,158 @@ async function createTeacherAccount(req, res, next) {
     const fullName = `${firstName} ${lastName}`;
 
     const [result] = await db.query(
-      `INSERT INTO teachers (teacher_id, password, full_name, department, email)
-       VALUES (?, ?, ?, ?, ?)`,
-      [teacherId, hashedPassword, fullName, "Unassigned", normalizedEmail]
+      `INSERT INTO teachers (teacher_id, password, full_name, department, email, employment_type, term, account_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [teacherId, hashedPassword, fullName, "Unassigned", normalizedEmail, employmentType, teacherTerm, "active"]
     );
 
     res.status(201).json({
       message: "Teacher account created successfully.",
-      teacher: { id: result.insertId, teacher_id: teacherId, full_name: fullName, email: normalizedEmail },
+      teacher: { 
+        id: result.insertId, 
+        teacher_id: teacherId, 
+        full_name: fullName, 
+        email: normalizedEmail,
+        employment_type: employmentType,
+        term: teacherTerm,
+        account_status: "active"
+      },
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateTeacher(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can update teacher accounts." });
+    }
+
+    const { teacher_id } = req.params;
+    const { first_name, last_name, email, employment_type, term } = req.body || {};
+
+    // Fetch existing teacher
+    const [existing] = await db.query(
+      "SELECT * FROM teachers WHERE teacher_id = ? LIMIT 1",
+      [teacher_id]
+    );
+
+    if (!existing.length) {
+      return res.status(404).json({ error: "Teacher not found." });
+    }
+
+    const teacher = existing[0];
+    const firstName = first_name ? String(first_name).trim() : teacher.full_name.split(" ")[0];
+    const lastName = last_name ? String(last_name).trim() : teacher.full_name.split(" ").slice(1).join(" ");
+    const normalizedEmail = email ? String(email).trim().toLowerCase() : teacher.email;
+    const employmentType = employment_type || teacher.employment_type;
+    const teacherTerm = term !== undefined ? term : teacher.term;
+
+    // Validate employment_type
+    if (!["Part-time", "Full-time"].includes(employmentType)) {
+      return res.status(400).json({ error: "Employment type must be either 'Part-time' or 'Full-time'." });
+    }
+
+    // Validate term if provided
+    if (teacherTerm && !["Term 1", "Term 2", "Term 3"].includes(teacherTerm)) {
+      return res.status(400).json({ error: "Term must be 'Term 1', 'Term 2', or 'Term 3'." });
+    }
+
+    // Check if email is already taken by another teacher
+    if (normalizedEmail !== teacher.email) {
+      const [emailCheck] = await db.query(
+        "SELECT id FROM teachers WHERE email = ? AND teacher_id != ? LIMIT 1",
+        [normalizedEmail, teacher_id]
+      );
+      if (emailCheck.length) {
+        return res.status(409).json({ error: "Email already in use by another teacher." });
+      }
+    }
+
+    const fullName = `${firstName} ${lastName}`;
+
+    await db.query(
+      `UPDATE teachers 
+       SET full_name = ?, email = ?, employment_type = ?, term = ?
+       WHERE teacher_id = ?`,
+      [fullName, normalizedEmail, employmentType, teacherTerm, teacher_id]
+    );
+
+    res.json({
+      message: "Teacher updated successfully.",
+      teacher: {
+        teacher_id,
+        full_name: fullName,
+        email: normalizedEmail,
+        employment_type: employmentType,
+        term: teacherTerm
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deactivateTeacher(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can deactivate teacher accounts." });
+    }
+
+    const { teacher_id } = req.params;
+
+    const [existing] = await db.query(
+      "SELECT account_status FROM teachers WHERE teacher_id = ? LIMIT 1",
+      [teacher_id]
+    );
+
+    if (!existing.length) {
+      return res.status(404).json({ error: "Teacher not found." });
+    }
+
+    if (existing[0].account_status === "suspended") {
+      return res.status(400).json({ error: "Teacher is already deactivated." });
+    }
+
+    await db.query(
+      "UPDATE teachers SET account_status = 'suspended' WHERE teacher_id = ?",
+      [teacher_id]
+    );
+
+    res.json({ message: "Teacher deactivated successfully." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function reactivateTeacher(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can reactivate teacher accounts." });
+    }
+
+    const { teacher_id } = req.params;
+
+    const [existing] = await db.query(
+      "SELECT account_status FROM teachers WHERE teacher_id = ? LIMIT 1",
+      [teacher_id]
+    );
+
+    if (!existing.length) {
+      return res.status(404).json({ error: "Teacher not found." });
+    }
+
+    if (existing[0].account_status === "active") {
+      return res.status(400).json({ error: "Teacher is already active." });
+    }
+
+    await db.query(
+      "UPDATE teachers SET account_status = 'active' WHERE teacher_id = ?",
+      [teacher_id]
+    );
+
+    res.json({ message: "Teacher reactivated successfully." });
   } catch (err) {
     next(err);
   }
@@ -651,5 +806,5 @@ module.exports = {
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
-  getTeachers, createTeacherAccount,
+  getTeachers, createTeacherAccount, updateTeacher, deactivateTeacher, reactivateTeacher,
 };
