@@ -2469,10 +2469,51 @@ function daysUntil(d: Date): number {
 function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; registrarView?: boolean; role?: string } = {}) {
   const [search, setSearch] = useState("");
 
-  const [apiTeachers, setApiTeachers] = useState<typeof teachers | null>(null);
+  interface Teacher {
+    id: number;
+    teacher_id: string;
+    full_name: string;
+    department: string;
+    email: string;
+    employment_type: "Part-time" | "Full-time";
+    term: "Term 1" | "Term 2" | "Term 3" | null;
+    account_status: "active" | "suspended";
+  }
+
+  const [apiTeachers, setApiTeachers] = useState<Teacher[]>([]);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
-  const [teacherForm, setTeacherForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [teacherForm, setTeacherForm] = useState({ 
+    firstName: "", 
+    lastName: "", 
+    email: "", 
+    password: "",
+    employmentType: "Full-time" as "Full-time" | "Part-time",
+    term: "" as "" | "Term 1" | "Term 2" | "Term 3"
+  });
   const [creatingTeacher, setCreatingTeacher] = useState(false);
+  
+  // Edit modal
+  const [showEditTeacher, setShowEditTeacher] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [editForm, setEditForm] = useState({ 
+    firstName: "", 
+    lastName: "", 
+    email: "", 
+    employmentType: "Full-time" as "Full-time" | "Part-time",
+    term: "" as "" | "Term 1" | "Term 2" | "Term 3"
+  });
+  const [updatingTeacher, setUpdatingTeacher] = useState(false);
+
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<"All" | "Full-time" | "Part-time" | "Inactive">("All");
+  const [termFilter, setTermFilter] = useState<"All Terms" | "Term 1" | "Term 2" | "Term 3">("All Terms");
+
+  // Confirmation modals
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: "deactivate" | "activate", teacher: Teacher } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [processingAction, setProcessingAction] = useState(false);
 
   function loadTeachers() {
     const token = localStorage.getItem("inform_token");
@@ -2484,17 +2525,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (Array.isArray(data?.teachers)) {
-          const mappedTeachers = data.teachers.map((t: {
-            id: number; teacher_id: string; full_name: string; department: string; email: string;
-          }) => ({
-            id: t.teacher_id,
-            name: t.full_name,
-            employmentStatus: "Full Time",
-            section: t.department,
-            subjects: [],
-            room: 0,
-          }));
-          setApiTeachers(mappedTeachers);
+          setApiTeachers(data.teachers);
         }
       })
       .catch(() => {});
@@ -2504,44 +2535,14 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
     loadTeachers();
   }, []);
 
-  const sourceTeachers = apiTeachers ?? teachers;
-
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [currentTerm, setCurrentTerm]   = useState(getCurrentTerm());
-
-  // Per-teacher state: reminder sent, locked status
-  const [reminders, setReminders] = useState<Record<string, { sent: boolean; sentAt: string }>>({});
-  const [locked,    setLocked]    = useState<Record<string, boolean>>({});
-  const [toastMsg,  setToastMsg]  = useState<string | null>(null);
-
-  const deadline    = TRIMESTER_DEADLINES[currentTerm];
-  const daysLeft    = daysUntil(deadline.deadline);
-  const isPastDeadline = daysLeft < 0;
-
-  // Build per-teacher pending request count from allGradeRequests
-  const pendingByTeacher = allGradeRequests.reduce<Record<string, number>>((acc, r) => {
-    if (r.status === "pending") {
-      const key = String(r.teacher).replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "");
-      acc[key] = (acc[key] ?? 0) + 1;
-    }
-    return acc;
-  }, {});
-
-  function getPendingCount(teacherName: string): number {
-    const lastName = teacherName.split(" ").slice(1).join(" ");
-    return pendingByTeacher[lastName] ?? 0;
-  }
-
-  function showToast(msg: string) {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
-  }
-
   async function createTeacher(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-    if (!token) { showToast("Session expired. Please log in again."); return; }
+    if (!token) { 
+      setSuccessMessage("Session expired. Please log in again.");
+      setShowSuccessModal(true);
+      return;
+    }
 
     setCreatingTeacher(true);
     try {
@@ -2554,303 +2555,646 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
           last_name: teacherForm.lastName,
           email: teacherForm.email,
           password: teacherForm.password,
+          employment_type: teacherForm.employmentType,
+          term: teacherForm.term || null,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to create teacher account.");
 
-      setTeacherForm({ firstName: "", lastName: "", email: "", password: "" });
+      setTeacherForm({ firstName: "", lastName: "", email: "", password: "", employmentType: "Full-time", term: "" });
       setShowAddTeacher(false);
       loadTeachers();
-      showToast(`Teacher account created: ${data.teacher.teacher_id}`);
+      setSuccessMessage(`Teacher account created: ${data.teacher.teacher_id}`);
+      setShowSuccessModal(true);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Unable to create teacher account.");
+      setSuccessMessage(error instanceof Error ? error.message : "Unable to create teacher account.");
+      setShowSuccessModal(true);
     } finally {
       setCreatingTeacher(false);
     }
   }
 
-  function sendReminder(teacherId: string, teacherName: string) {
-    setReminders(prev => ({ ...prev, [teacherId]: { sent: true, sentAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) } }));
-    showToast(` Reminder sent to ${teacherName}`);
+  function openEditModal(teacher: Teacher) {
+    setEditingTeacher(teacher);
+    const [firstName, ...lastNameParts] = teacher.full_name.split(" ");
+    setEditForm({
+      firstName,
+      lastName: lastNameParts.join(" "),
+      email: teacher.email,
+      employmentType: teacher.employment_type,
+      term: teacher.term || ""
+    });
+    setShowEditTeacher(true);
   }
 
-  function sendAllReminders() {
-    const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const updates: Record<string, { sent: boolean; sentAt: string }> = {};
-    teachers.forEach(t => { if (getPendingCount(t.name) > 0) updates[t.id] = { sent: true, sentAt: now }; });
-    setReminders(prev => ({ ...prev, ...updates }));
-    showToast(` Reminders sent to all ${Object.keys(updates).length} teacher(s) with pending requests`);
+  async function updateTeacher(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingTeacher) return;
+
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) {
+      setSuccessMessage("Session expired. Please log in again.");
+      setShowSuccessModal(true);
+      return;
+    }
+
+    setUpdatingTeacher(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/teachers/${editingTeacher.teacher_id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          first_name: editForm.firstName,
+          last_name: editForm.lastName,
+          email: editForm.email,
+          employment_type: editForm.employmentType,
+          term: editForm.term || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to update teacher.");
+
+      setShowEditTeacher(false);
+      setEditingTeacher(null);
+      loadTeachers();
+      setSuccessMessage("Teacher updated successfully");
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : "Unable to update teacher.");
+      setShowSuccessModal(true);
+    } finally {
+      setUpdatingTeacher(false);
+    }
   }
 
-  function lockTeacher(teacherId: string, teacherName: string) {
-    setLocked(prev => ({ ...prev, [teacherId]: true }));
-    showToast(` ${teacherName}'s grade submission has been locked`);
+  function openConfirmModal(type: "deactivate" | "activate", teacher: Teacher) {
+    setConfirmAction({ type, teacher });
+    setShowConfirmModal(true);
   }
 
-  function unlockTeacher(teacherId: string, teacherName: string) {
-    setLocked(prev => ({ ...prev, [teacherId]: false }));
-    showToast(` ${teacherName}'s grade submission has been unlocked`);
+  async function handleConfirmAction() {
+    if (!confirmAction) return;
+
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) {
+      setSuccessMessage("Session expired. Please log in again.");
+      setShowSuccessModal(true);
+      setShowConfirmModal(false);
+      return;
+    }
+
+    setProcessingAction(true);
+    try {
+      const endpoint = confirmAction.type === "deactivate" ? "deactivate" : "reactivate";
+      const response = await fetch(`${API_BASE}/api/admin/teachers/${confirmAction.teacher.teacher_id}/${endpoint}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Unable to ${confirmAction.type} teacher.`);
+
+      setShowConfirmModal(false);
+      setConfirmAction(null);
+      loadTeachers();
+      setSuccessMessage(confirmAction.type === "deactivate" ? "Teacher deactivated successfully" : "Teacher reactivated successfully");
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : `Unable to ${confirmAction.type} teacher.`);
+      setShowSuccessModal(true);
+      setShowConfirmModal(false);
+    } finally {
+      setProcessingAction(false);
+    }
   }
 
-  function lockAll() {
-    const updates: Record<string, boolean> = {};
-    teachers.forEach(t => { if (getPendingCount(t.name) > 0) updates[t.id] = true; });
-    setLocked(prev => ({ ...prev, ...updates }));
-    showToast(` ${Object.keys(updates).length} teacher(s) with pending requests have been locked`);
-  }
-
-  const filtered = sourceTeachers.filter(t => {
-    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.id.toLowerCase().includes(search.toLowerCase()) ||
-      t.section.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === "All" || t.employmentStatus === filterStatus;
-    return matchSearch && matchStatus;
+  // Filter teachers
+  const filtered = apiTeachers.filter(t => {
+    const matchSearch = t.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      t.teacher_id.toLowerCase().includes(search.toLowerCase()) ||
+      t.email.toLowerCase().includes(search.toLowerCase());
+    
+    let matchStatus = true;
+    if (statusFilter === "Full-time") {
+      matchStatus = t.account_status === "active" && t.employment_type === "Full-time";
+    } else if (statusFilter === "Part-time") {
+      matchStatus = t.account_status === "active" && t.employment_type === "Part-time";
+    } else if (statusFilter === "Inactive") {
+      matchStatus = t.account_status === "suspended";
+    } else if (statusFilter === "All") {
+      matchStatus = t.account_status === "active";
+    }
+    
+    // Apply term filter
+    let matchTerm = true;
+    if (termFilter !== "All Terms") {
+      matchTerm = t.term === termFilter;
+    }
+    
+    return matchSearch && matchStatus && matchTerm;
   });
 
-  const totalPending = sourceTeachers.reduce((sum, t) => sum + getPendingCount(t.name), 0);
+  // Count statistics
+  const totalActive = apiTeachers.filter(t => t.account_status === "active").length;
+  const totalFullTime = apiTeachers.filter(t => t.account_status === "active" && t.employment_type === "Full-time").length;
+  const totalPartTime = apiTeachers.filter(t => t.account_status === "active" && t.employment_type === "Part-time").length;
+  const totalInactive = apiTeachers.filter(t => t.account_status === "suspended").length;
+  const totalTerm1 = apiTeachers.filter(t => t.account_status === "active" && t.term === "Term 1").length;
+  const totalTerm2 = apiTeachers.filter(t => t.account_status === "active" && t.term === "Term 2").length;
+  const totalTerm3 = apiTeachers.filter(t => t.account_status === "active" && t.term === "Term 3").length;
 
   return (
     <div className="d-flex flex-column gap-4">
 
-      {/* Toast */}
-      {toastMsg && (
-        <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 d-flex align-items-center gap-2 py-2 px-3"
-          style={{ zIndex: 9999, fontSize: 13, animation: "fadeInUp 0.3s ease", minWidth: 260 }}>
-          {toastMsg}
-        </div>
-      )}
-
-      {/* Header */}
+      {/* Header with title and Add Teacher button */}
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
         <div>
-          <h2 className="fw-black fs-4 text-dark mb-0">Teachers</h2>
-          <p className="text-muted small mb-0">{filtered.length} faculty member{filtered.length !== 1 ? "s" : ""}</p>
+          <h2 className="fw-black fs-4 text-dark mb-0">
+            Teachers {statusFilter !== "All" && `(${statusFilter})`}
+          </h2>
         </div>
-        {/* Term selector */}
-        <div className="d-flex gap-2 align-items-center">
-          <span className="text-muted small fw-semibold">Trimester:</span>
-          {Object.keys(TRIMESTER_DEADLINES).map(t => (
-            <button key={t} onClick={() => setCurrentTerm(t)}
-              className={`btn btn-sm ${currentTerm === t ? "btn-primary" : "btn-outline-secondary"}`}>
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Add Teacher button below term selector */}
-      {role === "principal" && (
-        <div className="d-flex justify-content-end">
+        {role === "principal" && (
           <button onClick={() => setShowAddTeacher(true)} className="btn btn-primary btn-sm fw-semibold">
             + Add Teacher
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Filters */}
-      <div className="d-flex flex-column flex-sm-row gap-3">
-        <div className="input-group shadow-sm flex-grow-1">
-          <span className="input-group-text bg-white"></span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, ID, or section..." className="form-control border-start-0" />
+      {/* Search Bar and Term Filter */}
+      <div className="row g-3">
+        <div className="col-12 col-md-8">
+          <div className="input-group shadow-sm">
+            <span className="input-group-text bg-white border-end-0">🔍</span>
+            <input 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              placeholder="Search by name, ID, or email..." 
+              className="form-control border-start-0" 
+            />
+          </div>
         </div>
-        <div className="d-flex gap-2">
-          {["All", "Full Time", "Part Time"].map(f => (
-            <button key={f} onClick={() => setFilterStatus(f)} className={`btn btn-sm ${filterStatus === f ? "btn-primary shadow-sm" : "btn-outline-secondary"}`}>{f}</button>
-          ))}
+        <div className="col-12 col-md-4">
+          <div className="input-group shadow-sm">
+            <span className="input-group-text bg-white border-end-0">📅</span>
+            <select 
+              value={termFilter}
+              onChange={e => setTermFilter(e.target.value as "All Terms" | "Term 1" | "Term 2" | "Term 3")}
+              className="form-select border-start-0"
+              style={{ cursor: "pointer" }}
+            >
+              <option value="All Terms">All Terms</option>
+              <option value="Term 1">Term 1 ({totalTerm1})</option>
+              <option value="Term 2">Term 2 ({totalTerm2})</option>
+              <option value="Term 3">Term 3 ({totalTerm3})</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Teacher Cards */}
-      <div className="d-flex flex-column gap-3">
-        {filtered.length === 0
-          ? <div className="text-center text-muted py-4 small">No teachers found.</div>
-          : filtered.map((t) => {
-            const pending       = getPendingCount(t.name);
-            const isLocked      = locked[t.id] ?? false;
-            const reminderInfo  = reminders[t.id];
-            const autoLocked    = isPastDeadline && pending > 0 && !locked[t.id];
-
-            return (
-            <div key={t.id} className={`card border-0 shadow-sm rounded-3 overflow-hidden ${isLocked || autoLocked ? "border border-danger-subtle" : ""}`}
-              style={{ opacity: isLocked ? 0.85 : 1 }}>
-
-              {/* Locked banner � admin only */}
-              {!registrarView && (isLocked || autoLocked) && (
-                <div className="px-4 py-2 d-flex align-items-center gap-2"
-                  style={{ background: "#fef2f2", borderBottom: "1px solid #fecaca" }}>
-                  <span></span>
-                  <span className="small text-danger fw-semibold">
-                    {autoLocked
-                      ? `Auto-locked: ${currentTerm} deadline passed with ${pending} pending request(s)`
-                      : "Manually locked by admin  grade submission disabled"}
-                  </span>
-                  {isLocked && (
-                    <button onClick={() => unlockTeacher(t.id, t.name)}
-                      className="btn btn-sm btn-outline-danger ms-auto" style={{ fontSize: 11 }}>
-                       Unlock
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Teacher Header Row */}
-              <div
-                className="d-flex align-items-center gap-3 p-3 px-4"
-                style={{ cursor: "pointer", background: expanded === t.id ? "#f8f9ff" : "white" }}
-                onClick={() => setExpanded(expanded === t.id ? null : t.id)}
-              >
-                <div className="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center text-success fw-bold flex-shrink-0" style={{ width: 40, height: 40, fontSize: 13 }}>
-                  {initials(t.name)}
-                </div>
-
-                <div className="flex-grow-1">
-                  <div className="fw-bold text-dark small">{t.name}</div>
-                  <div className="d-flex align-items-center gap-2 flex-wrap mt-1">
-                    <span className="text-muted" style={{ fontSize: 11 }}>{t.id}</span>
-                    <span className="text-muted" style={{ fontSize: 11 }}>·</span>
-                    <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: 11 }}>{t.section}</span>
-                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: 11 }}>Room {t.room}</span>
-                    {!registrarView && pending > 0 && (
-                      <span className="badge bg-danger text-white" style={{ fontSize: 11 }}>
-                        {pending} pending request{pending !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {!registrarView && pending === 0 && (
-                      <span className="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="check" size={10} /> All resolved</span>
-                    )}
-                    {registrarView && (
-                      <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}>Active</span>
-                    )}
-                  </div>
-                </div>
-
-                <span className={`badge px-3 py-2 flex-shrink-0 ${t.employmentStatus === "Full Time" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>
-                  {t.employmentStatus === "Full Time" ? "Full Time" : "Part Time"}
-                </span>
-                <span className="text-muted ms-2" style={{ fontSize: 12, transition: "transform 0.2s", display: "inline-block", transform: expanded === t.id ? "rotate(180deg)" : "rotate(0deg)" }}></span>
-              </div>
-
-              {/* Expanded detail */}
-              {expanded === t.id && (
-                <div className="border-top px-4 py-3" style={{ background: "#f8f9ff" }}>
-
-                  {/* Reminder & Lock actions � admin only */}
-                  {!registrarView && (
-                  <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <p className="text-muted text-uppercase fw-semibold mb-0" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Grade Submission � {currentTerm}</p>
-                    <div className="d-flex gap-2 align-items-center">
-                      {reminderInfo?.sent && (
-                        <span className="text-muted" style={{ fontSize: 11 }}>Reminder sent at {reminderInfo.sentAt}</span>
-                      )}
-                      {pending > 0 && !isLocked && !autoLocked && (
-                        <button onClick={(e) => { e.stopPropagation(); sendReminder(t.id, t.name); }}
-                          className="btn btn-sm btn-warning fw-semibold" style={{ fontSize: 12, borderRadius: 8 }}>
-                          {reminderInfo?.sent ? "Resend Reminder" : "Send Reminder"}
-                        </button>
-                      )}
-                      {pending > 0 && !isLocked && !autoLocked && (
-                        <button onClick={(e) => { e.stopPropagation(); lockTeacher(t.id, t.name); }}
-                          className="btn btn-sm btn-danger fw-semibold" style={{ fontSize: 12, borderRadius: 8 }}>
-                          Lock
-                        </button>
-                      )}
-                      {isLocked && (
-                        <button onClick={(e) => { e.stopPropagation(); unlockTeacher(t.id, t.name); }}
-                          className="btn btn-sm btn-outline-success fw-semibold" style={{ fontSize: 12, borderRadius: 8 }}>
-                          Unlock
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  )}
-
-                  {/* Pending requests � admin only */}
-                  {!registrarView && pending > 0 && (
-                    <div className="mb-3">
-                      <div className="small fw-semibold text-danger mb-2"> Pending student grade requests:</div>
-                      <div className="d-flex flex-column gap-1">
-                        {allGradeRequests
-                          .filter(r => r.status === "pending" && String(r.teacher).replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.)\s*/i, "") === t.name.split(" ").slice(1).join(" "))
-                          .map(r => (
-                            <div key={String(r.id)} className="d-flex align-items-center gap-2 p-2 rounded-2 bg-white border" style={{ fontSize: 12 }}>
-                              <span></span>
-                              <span className="fw-semibold text-dark">{r.student}</span>
-                              <span className="text-muted">�</span>
-                              <span className="text-muted">{r.subject}</span>
-                              <span className="ms-auto text-muted" style={{ fontSize: 11 }}>{r.requestedAt}</span>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Subject Schedule */}
-                  <p className="text-muted text-uppercase fw-semibold mb-2" style={{ fontSize: 11, letterSpacing: "0.08em" }}>Subject Schedule</p>
-                  <div className="d-flex flex-column gap-2">
-                    {t.subjects.map((s: TeacherSubject, idx: number) => (
-                      <div key={idx} className="d-flex align-items-center gap-3 p-3 rounded-3 bg-white border">
-                        <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 36, height: 36, fontSize: 16 }}></div>
-                        <div className="flex-grow-1">
-                          <div className="fw-semibold text-dark small">{s.name}</div>
-                          <div className="text-muted" style={{ fontSize: 11 }}>Section: {t.section}</div>
-                        </div>
-                        <div className="text-end flex-shrink-0">
-                          <div className="d-flex align-items-center gap-2">
-                            <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: 11 }}> In: {s.timeIn}</span>
-                            <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 11 }}> Out: {s.timeOut}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {/* Filter Cards */}
+      <div className="row g-3">
+        <div className="col-6 col-md-3">
+          <div 
+            className={`card border-0 shadow-sm h-100 ${statusFilter === "All" ? "border-primary" : ""}`}
+            style={{ 
+              cursor: "pointer", 
+              borderWidth: statusFilter === "All" ? "2px" : "0",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 .5rem 1rem rgba(0,0,0,.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 .125rem .25rem rgba(0,0,0,.075)";
+            }}
+            onClick={() => setStatusFilter("All")}
+          >
+            <div className="card-body text-center py-3">
+              <div className="fs-2 fw-bold text-primary">{totalActive}</div>
+              <div className="small text-muted">All Active</div>
             </div>
-            );
-          })
-        }
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div 
+            className={`card border-0 shadow-sm h-100 ${statusFilter === "Full-time" ? "border-info" : ""}`}
+            style={{ 
+              cursor: "pointer", 
+              borderWidth: statusFilter === "Full-time" ? "2px" : "0",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 .5rem 1rem rgba(0,0,0,.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 .125rem .25rem rgba(0,0,0,.075)";
+            }}
+            onClick={() => setStatusFilter("Full-time")}
+          >
+            <div className="card-body text-center py-3">
+              <div className="fs-2 fw-bold text-info">{totalFullTime}</div>
+              <div className="small text-muted">Full-time</div>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div 
+            className={`card border-0 shadow-sm h-100 ${statusFilter === "Part-time" ? "border-warning" : ""}`}
+            style={{ 
+              cursor: "pointer", 
+              borderWidth: statusFilter === "Part-time" ? "2px" : "0",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 .5rem 1rem rgba(0,0,0,.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 .125rem .25rem rgba(0,0,0,.075)";
+            }}
+            onClick={() => setStatusFilter("Part-time")}
+          >
+            <div className="card-body text-center py-3">
+              <div className="fs-2 fw-bold text-warning">{totalPartTime}</div>
+              <div className="small text-muted">Part-time</div>
+            </div>
+          </div>
+        </div>
+        <div className="col-6 col-md-3">
+          <div 
+            className={`card border-0 shadow-sm h-100 ${statusFilter === "Inactive" ? "border-secondary" : ""}`}
+            style={{ 
+              cursor: "pointer", 
+              borderWidth: statusFilter === "Inactive" ? "2px" : "0",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 .5rem 1rem rgba(0,0,0,.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 .125rem .25rem rgba(0,0,0,.075)";
+            }}
+            onClick={() => setStatusFilter("Inactive")}
+          >
+            <div className="card-body text-center py-3">
+              <div className="fs-2 fw-bold text-secondary">{totalInactive}</div>
+              <div className="small text-muted">Inactive</div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Teachers Table */}
+      <div className="card border-0 shadow-sm">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0">
+            <thead className="bg-light">
+              <tr>
+                <th className="px-4 py-3 small fw-semibold text-muted">TEACHER</th>
+                <th className="px-4 py-3 small fw-semibold text-muted">TEACHER ID</th>
+                <th className="px-4 py-3 small fw-semibold text-muted">EMAIL</th>
+                <th className="px-4 py-3 small fw-semibold text-muted">EMPLOYMENT TYPE</th>
+                <th className="px-4 py-3 small fw-semibold text-muted">TERM</th>
+                <th className="px-4 py-3 small fw-semibold text-muted">STATUS</th>
+                {role === "principal" && <th className="px-4 py-3 small fw-semibold text-muted">ACTIONS</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={role === "principal" ? 7 : 6} className="text-center py-5 text-muted">
+                    No teachers found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((teacher) => {
+                  const initials = teacher.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+                  
+                  return (
+                    <tr key={teacher.id}>
+                      <td className="px-4 py-3">
+                        <div className="d-flex align-items-center gap-3">
+                          <div 
+                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                            style={{ width: 40, height: 40, fontSize: 13 }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="fw-semibold text-dark">{teacher.full_name}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted small">{teacher.teacher_id}</td>
+                      <td className="px-4 py-3 text-muted small">{teacher.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`badge ${teacher.employment_type === "Full-time" ? "bg-info" : "bg-warning"} text-white`}>
+                          {teacher.employment_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {teacher.term ? (
+                          <span className="badge bg-purple text-white" style={{ backgroundColor: "#6f42c1" }}>
+                            {teacher.term}
+                          </span>
+                        ) : (
+                          <span className="text-muted small">--</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`badge ${teacher.account_status === "active" ? "bg-success" : "bg-secondary"}`}>
+                          {teacher.account_status === "active" ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      {role === "principal" && (
+                        <td className="px-4 py-3">
+                          <div className="d-flex gap-2">
+                            <button 
+                              onClick={() => openEditModal(teacher)}
+                              className="btn btn-sm btn-outline-primary"
+                              title="Edit teacher"
+                            >
+                              ✏️
+                            </button>
+                            {teacher.account_status === "active" ? (
+                              <button 
+                                onClick={() => openConfirmModal("deactivate", teacher)}
+                                className="btn btn-sm btn-outline-danger"
+                                title="Deactivate teacher"
+                              >
+                                🚫
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => openConfirmModal("activate", teacher)}
+                                className="btn btn-sm btn-outline-success"
+                                title="Activate teacher"
+                              >
+                                ✅
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Teacher Modal */}
       {showAddTeacher && role === "principal" && (
         <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setShowAddTeacher(false)}>
           <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
             <div className="modal-content border-0 shadow-lg rounded-3">
               <form onSubmit={createTeacher}>
-                <div className="modal-header">
+                <div className="modal-header border-0 pb-0">
                   <div>
-                    <h5 className="modal-title fw-bold">Add Teacher</h5>
-                    <p className="text-muted small mb-0">Create a teacher login account</p>
+                    <h5 className="modal-title fw-bold mb-1">Add Teacher</h5>
+                    <p className="text-muted small mb-0">Create a new teacher account</p>
                   </div>
-                  <button type="button" className="btn-close" aria-label="Close" onClick={() => setShowAddTeacher(false)} />
+                  <button type="button" className="btn-close" onClick={() => setShowAddTeacher(false)} />
                 </div>
                 <div className="modal-body d-flex flex-column gap-3">
                   <div className="row g-3">
                     <div className="col-12 col-sm-6">
                       <label className="form-label small fw-semibold">First name</label>
-                      <input required minLength={2} value={teacherForm.firstName} onChange={e => setTeacherForm({ ...teacherForm, firstName: e.target.value })} className="form-control" />
+                      <input 
+                        required 
+                        minLength={2} 
+                        value={teacherForm.firstName} 
+                        onChange={e => setTeacherForm({ ...teacherForm, firstName: e.target.value })} 
+                        className="form-control" 
+                      />
                     </div>
                     <div className="col-12 col-sm-6">
                       <label className="form-label small fw-semibold">Last name</label>
-                      <input required minLength={2} value={teacherForm.lastName} onChange={e => setTeacherForm({ ...teacherForm, lastName: e.target.value })} className="form-control" />
+                      <input 
+                        required 
+                        minLength={2} 
+                        value={teacherForm.lastName} 
+                        onChange={e => setTeacherForm({ ...teacherForm, lastName: e.target.value })} 
+                        className="form-control" 
+                      />
                     </div>
                   </div>
                   <div>
                     <label className="form-label small fw-semibold">Email</label>
-                    <input required type="email" value={teacherForm.email} onChange={e => setTeacherForm({ ...teacherForm, email: e.target.value })} className="form-control" />
+                    <input 
+                      required 
+                      type="email" 
+                      value={teacherForm.email} 
+                      onChange={e => setTeacherForm({ ...teacherForm, email: e.target.value })} 
+                      className="form-control" 
+                    />
                   </div>
                   <div>
                     <label className="form-label small fw-semibold">Temporary password</label>
-                    <input required minLength={8} type="password" value={teacherForm.password} onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} className="form-control" />
-                    <div className="form-text">The teacher ID will be generated automatically.</div>
+                    <input 
+                      required 
+                      minLength={8} 
+                      type="password" 
+                      value={teacherForm.password} 
+                      onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} 
+                      className="form-control" 
+                    />
+                    <div className="form-text">Minimum 8 characters</div>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Employment Type</label>
+                    <select 
+                      required
+                      value={teacherForm.employmentType}
+                      onChange={e => setTeacherForm({ ...teacherForm, employmentType: e.target.value as "Full-time" | "Part-time" })}
+                      className="form-select"
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Part-time">Part-time</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Term (Optional)</label>
+                    <select 
+                      value={teacherForm.term}
+                      onChange={e => setTeacherForm({ ...teacherForm, term: e.target.value as "" | "Term 1" | "Term 2" | "Term 3" })}
+                      className="form-select"
+                    >
+                      <option value="">Not assigned</option>
+                      <option value="Term 1">Term 1</option>
+                      <option value="Term 2">Term 2</option>
+                      <option value="Term 3">Term 3</option>
+                    </select>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer border-0">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setShowAddTeacher(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={creatingTeacher}>{creatingTeacher ? "Creating..." : "Create Account"}</button>
+                  <button type="submit" className="btn btn-primary" disabled={creatingTeacher}>
+                    {creatingTeacher ? "Creating..." : "Create Account"}
+                  </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Teacher Modal */}
+      {showEditTeacher && editingTeacher && role === "principal" && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setShowEditTeacher(false)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <form onSubmit={updateTeacher}>
+                <div className="modal-header border-0 pb-0">
+                  <div>
+                    <h5 className="modal-title fw-bold mb-1">Edit Teacher</h5>
+                    <p className="text-muted small mb-0">Update teacher information</p>
+                  </div>
+                  <button type="button" className="btn-close" onClick={() => setShowEditTeacher(false)} />
+                </div>
+                <div className="modal-body d-flex flex-column gap-3">
+                  <div className="row g-3">
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">First name</label>
+                      <input 
+                        required 
+                        minLength={2} 
+                        value={editForm.firstName} 
+                        onChange={e => setEditForm({ ...editForm, firstName: e.target.value })} 
+                        className="form-control" 
+                      />
+                    </div>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">Last name</label>
+                      <input 
+                        required 
+                        minLength={2} 
+                        value={editForm.lastName} 
+                        onChange={e => setEditForm({ ...editForm, lastName: e.target.value })} 
+                        className="form-control" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Email</label>
+                    <input 
+                      required 
+                      type="email" 
+                      value={editForm.email} 
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value })} 
+                      className="form-control" 
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Employment Type</label>
+                    <select 
+                      required
+                      value={editForm.employmentType}
+                      onChange={e => setEditForm({ ...editForm, employmentType: e.target.value as "Full-time" | "Part-time" })}
+                      className="form-select"
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Part-time">Part-time</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Term</label>
+                    <select 
+                      value={editForm.term}
+                      onChange={e => setEditForm({ ...editForm, term: e.target.value as "" | "Term 1" | "Term 2" | "Term 3" })}
+                      className="form-select"
+                    >
+                      <option value="">Not assigned</option>
+                      <option value="Term 1">Term 1</option>
+                      <option value="Term 2">Term 2</option>
+                      <option value="Term 3">Term 3</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="modal-footer border-0">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setShowEditTeacher(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={updatingTeacher}>
+                    {updatingTeacher ? "Updating..." : "Update Teacher"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmAction && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1060 }} onClick={() => !processingAction && setShowConfirmModal(false)}>
+          <div className="modal-dialog modal-dialog-centered modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <div className="modal-body text-center py-4">
+                <div className="mb-3">
+                  <div 
+                    className={`rounded-circle mx-auto d-flex align-items-center justify-content-center ${confirmAction.type === "deactivate" ? "bg-danger" : "bg-success"} bg-opacity-10`}
+                    style={{ width: 60, height: 60 }}
+                  >
+                    <span style={{ fontSize: 30 }}>{confirmAction.type === "deactivate" ? "🚫" : "✅"}</span>
+                  </div>
+                </div>
+                <h5 className="fw-bold mb-2">
+                  {confirmAction.type === "deactivate" ? "Deactivate Teacher?" : "Activate Teacher?"}
+                </h5>
+                <p className="text-muted small mb-4">
+                  {confirmAction.type === "deactivate" 
+                    ? `Are you sure you want to deactivate ${confirmAction.teacher.full_name}? They will not be able to log in.`
+                    : `Are you sure you want to activate ${confirmAction.teacher.full_name}?`}
+                </p>
+                <div className="d-flex gap-2 justify-content-center">
+                  <button 
+                    onClick={() => setShowConfirmModal(false)} 
+                    className="btn btn-outline-secondary"
+                    disabled={processingAction}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleConfirmAction} 
+                    className={`btn ${confirmAction.type === "deactivate" ? "btn-danger" : "btn-success"}`}
+                    disabled={processingAction}
+                  >
+                    {processingAction ? "Processing..." : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1060 }} onClick={() => setShowSuccessModal(false)}>
+          <div className="modal-dialog modal-dialog-centered modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <div className="modal-body text-center py-4">
+                <div className="mb-3">
+                  <div 
+                    className="rounded-circle bg-success bg-opacity-10 mx-auto d-flex align-items-center justify-content-center"
+                    style={{ width: 60, height: 60 }}
+                  >
+                    <span style={{ fontSize: 30 }}>✅</span>
+                  </div>
+                </div>
+                <p className="text-dark mb-4">{successMessage}</p>
+                <button onClick={() => setShowSuccessModal(false)} className="btn btn-primary">
+                  OK
+                </button>
+              </div>
             </div>
           </div>
         </div>
