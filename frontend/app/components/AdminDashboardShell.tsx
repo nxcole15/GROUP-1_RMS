@@ -13,6 +13,7 @@ type StudentRecord = {
   status: string;
   tuition: string;
   room: number;
+  photo_url?: string | null;
 };
 
 type TeacherSubject = { name: string; timeIn: string; timeOut: string };
@@ -310,10 +311,11 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
 
   const trackOptions = [
     { label: "All Tracks", value: "all" },
-    { label: "STEM", value: "STEM" },
-    { label: "HUMMS", value: "HUMMS" },
-    { label: "ABM", value: "ABM" },
-    { label: "TVL-TechPro", value: "TVL-TechPro" },
+    { label: "Academic Track - STEM", value: "Academic Track - STEM" },
+    { label: "Academic Track - HUMSS", value: "Academic Track - HUMSS" },
+    { label: "Academic Track - ABM", value: "Academic Track - ABM" },
+    { label: "TECH-PRO - ICT", value: "TECH-PRO - ICT" },
+    { label: "TECH-PRO - Cookery", value: "TECH-PRO - Cookery" },
   ] as const;
 
   const gradeOptions = [
@@ -340,10 +342,10 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       <div className="rounded-3 p-4"
         style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
         <h2 className="text-white fw-black fs-4 mb-1">
-          Welcome back, {adminInfo?.full_name || 'Admin'}
+          Welcome back, {adminInfo?.full_name || '...'}
         </h2>
         <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
-          {adminInfo?.role === 'principal' ? 'Principal' : 'Administrator'} · Full Access · SY {getCurrentSchoolYear()}
+          {adminInfo?.role === 'principal' ? 'Principal' : adminInfo?.role ? 'Administrator' : '...'} · Full Access · SY {getCurrentSchoolYear()}
         </p>
         {pendingStats && pendingStats.total > 0 && (
           <div className="d-flex gap-2 flex-wrap">
@@ -359,10 +361,10 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
       {!hideBanner && (
       <div className="row g-3">
         {[
-          { label:"Active Students",     value: dashboardStats?.activeStudents ?? 0,    icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
-          { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "NaN",        icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
-          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? 0,         icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
-          { label:"Pending Payments",    value: pendingStats?.payments ?? 0,            icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
+          { label:"Active Students",     value: dashboardStats?.activeStudents ?? "...",    icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
+          { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "...",        icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
+          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "...",         icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
+          { label:"Pending Payments",    value: pendingStats?.payments ?? "...",            icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
@@ -416,8 +418,6 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
               </div>
 
               <div className="mb-3">
-                <label className="small fw-semibold" style={{ color: "#0f172a" }}>Filter (Track · Grade · Gender)</label>
-
                 <div className="d-flex gap-2 mt-2" style={{ flexWrap: "wrap" }}>
                   <div style={{ minWidth: 160 }}>
                     <label className="small" style={{ color: "#475569" }}>Track</label>
@@ -476,11 +476,20 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                 });
 
                 // Group by track (for x-axis)
-                const countsByTrack = ["STEM", "HUMMS", "ABM", "TVL-TechPro"].map((t) => {
+                const trackMapping = [
+                  { fullName: "Academic Track - STEM", shortName: "STEM" },
+                  { fullName: "Academic Track - HUMSS", shortName: "HUMSS" },
+                  { fullName: "Academic Track - ABM", shortName: "ABM" },
+                  { fullName: "TECH-PRO - ICT", shortName: "ICT" },
+                  { fullName: "TECH-PRO - Cookery", shortName: "Cookery" },
+                ];
+                
+                const countsByTrack = trackMapping.map((t) => {
                   return {
-                    track: t,
+                    track: t.shortName, // Use short name for display
+                    fullTrack: t.fullName, // Keep full name for tooltip
                     count: filteredData
-                      .filter((item) => item.track === t)
+                      .filter((item) => item.track === t.fullName)
                       .reduce((sum, item) => sum + item.count, 0),
                   };
                 });
@@ -545,7 +554,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                                 </span>
                                 {/* Bar */}
                                 <div
-                                  title={`${c.track}: ${c.count} student${c.count !== 1 ? "s" : ""}`}
+                                  title={`${c.fullTrack}: ${c.count} student${c.count !== 1 ? "s" : ""}`}
                                   style={{
                                     width: "60%",
                                     minWidth: 28,
@@ -629,11 +638,74 @@ function StudentsPanel() {
   const [search, setSearch] = useState("");
   const [selectedTrack, setSelectedTrack] = useState("All");
   const [selectedGrade, setSelectedGrade] = useState("All");
+  const [selectedStatus, setSelectedStatus] = useState("Active");
   const [apiStudents, setApiStudents] = useState<typeof students | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    studentId: string;
+    studentName: string;
+    action: "reactivate" | "deactivate";
+  } | null>(null);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
+  const tracks = ["All", "Academic Track - STEM", "Academic Track - HUMSS", "Academic Track - ABM", "TECH-PRO - ICT", "TECH-PRO - Cookery"];
   const grades = ["All", "11", "12"];
+  const statuses = ["All", "Active", "Inactive"];
+
+  // Handle activate/deactivate student
+  const handleToggleStatus = async (studentId: string, studentName: string, action: "reactivate" | "deactivate") => {
+    // Show confirmation modal
+    setConfirmAction({ studentId, studentName, action });
+    setShowConfirmModal(true);
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!confirmAction) return;
+    
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const endpoint = confirmAction.action === "deactivate" ? "deactivate" : "reactivate";
+      const res = await fetch(`${API_BASE}/api/admin/students/${confirmAction.studentId}/${endpoint}`, {
+        method: "PATCH",
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        // Close confirmation modal
+        setShowConfirmModal(false);
+        
+        // Show success modal
+        const actionText = confirmAction.action === "deactivate" ? "deactivated" : "activated";
+        setSuccessMessage(`${confirmAction.studentName} has been ${actionText} successfully!`);
+        setShowSuccessModal(true);
+        
+        setConfirmAction(null);
+        
+        // Refresh the student list
+        setSearch(search + " "); // Trigger re-fetch
+        setTimeout(() => setSearch(search.trim()), 100);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update student status.");
+        setShowConfirmModal(false);
+      }
+    } catch (err) {
+      alert("Network error. Please try again.");
+      setShowConfirmModal(false);
+    }
+  };
 
   // Debounced search against real API
   useEffect(() => {
@@ -660,20 +732,26 @@ function StudentsPanel() {
               id: number;
               student_id: string;
               full_name: string;
+              pathway?: string;
               track?: string;
+              strand?: string;
               grade_level?: number;
               status?: string;
               account_status?: "pending" | "active" | "suspended";
               tuition_status?: string;
+              gwa?: number | null;
+              room?: string | null;
+              photo_url?: string | null;
             }) => ({
               id: s.student_id || String(s.id),
               name: s.full_name,
-              track: s.track || "STEM",
+              track: s.track && s.strand ? `${s.track} - ${s.strand}` : (s.pathway || "N/A"),
               grade: s.grade_level || 11,
-              gwa: 0,
-              status: s.account_status || s.status || "Active",
-              tuition: s.tuition_status || "Unknown",
-              room: 1,
+              gwa: s.gwa || 0,
+              status: s.account_status || s.status || "active",
+              tuition: s.tuition_status || "N/A",
+              room: s.room ? parseInt(s.room) : 0,
+              photo_url: s.photo_url || null,
             })));
           } else {
             setApiStudents([]);
@@ -689,16 +767,32 @@ function StudentsPanel() {
 
   const filtered = sourceStudents.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
-    const matchTrack  = selectedTrack === "All" || s.track === selectedTrack;
-    const matchGrade  = selectedGrade === "All" || s.grade === Number(selectedGrade);
-    return matchSearch && matchTrack && matchGrade;
+    
+    // Match both old format (just "STEM") and new format ("Academic Track - STEM")
+    const matchTrack = selectedTrack === "All" || 
+                      s.track === selectedTrack || 
+                      selectedTrack.endsWith(s.track); // e.g., "Academic Track - STEM" ends with "STEM"
+    
+    const matchGrade = selectedGrade === "All" || s.grade === Number(selectedGrade);
+    
+    // Status filter: Active = active, Inactive = suspended, All = both
+    const matchStatus = selectedStatus === "All" || 
+                       (selectedStatus === "Active" && s.status === "active") ||
+                       (selectedStatus === "Inactive" && s.status === "suspended");
+    
+    return matchSearch && matchTrack && matchGrade && matchStatus;
   });
 
   return (
     <div className="d-flex flex-column gap-4">
       <div>
-        <h2 className="fw-black fs-4 text-dark mb-0">Students</h2>
-        <p className="text-muted small mb-0">{filtered.length} student{filtered.length !== 1 ? "s" : ""} found {apiStudents ? "(live results)" : "(cached)"}</p>
+        <h2 className="fw-black fs-4 text-dark mb-0">
+          Students Enrolled List 
+          {selectedStatus !== "All" && (
+            <span className="text-muted fw-normal" style={{ fontSize: 14 }}> ({selectedStatus})</span>
+          )}
+        </h2>
+        <p className="text-muted small mb-0">{filtered.length} student{filtered.length !== 1 ? "s" : ""} found</p>
       </div>
 
       {/* Filters */}
@@ -718,6 +812,11 @@ function StudentsPanel() {
               {grades.map(g => <option key={g} value={g}>{g === "All" ? "All Grades" : `Grade ${g}`}</option>)}
             </select>
           </div>
+          <div>
+            <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="form-select form-select-sm rounded-3" style={{ minWidth: 120 }}>
+              {statuses.map(st => <option key={st} value={st}>{st === "All" ? "All Status" : st}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -733,24 +832,47 @@ function StudentsPanel() {
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>GWA</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Room</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Status</th>
+                <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={7} className="text-center text-muted py-4 small">No students found for the selected track/grade.</td></tr>
+                ? <tr><td colSpan={8} className="text-center text-muted py-4 small">No students found for the selected track/grade.</td></tr>
                 : filtered.map((s, i) => (
                   <tr key={s.id}>
                     <td className="ps-4 text-muted small">{i + 1}</td>
                     <td>
                       <div className="d-flex align-items-center gap-2">
-                        <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:28, height:28, fontSize:11 }}>{initials(s.name)}</div>
+                        {s.photo_url ? (
+                          <img 
+                            src={s.photo_url} 
+                            alt={s.name}
+                            className="rounded-circle flex-shrink-0"
+                            style={{ width: 32, height: 32, objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div 
+                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                            style={{ width: 32, height: 32, fontSize: 11 }}
+                          >
+                            {initials(s.name)}
+                          </div>
+                        )}
                         <span className="small fw-medium text-dark">{s.name}</span>
                       </div>
                     </td>
                     <td className="d-none d-sm-table-cell font-mono text-muted small">{s.id}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{s.track}  Grade {s.grade}</td>
-                    <td className="d-none d-lg-table-cell fw-bold text-primary small">{s.gwa}</td>
-                    <td className="d-none d-lg-table-cell text-muted small"><span className="badge bg-info-subtle text-info border border-info-subtle">Room {s.room}</span></td>
+                    <td className="d-none d-lg-table-cell text-muted small">{s.track} Grade {s.grade}</td>
+                    <td className="d-none d-lg-table-cell fw-bold text-primary small">
+                      {s.gwa > 0 ? s.gwa.toFixed(2) : <span className="text-muted">--</span>}
+                    </td>
+                    <td className="d-none d-lg-table-cell text-muted small">
+                      {s.room > 0 ? (
+                        <span className="badge bg-info-subtle text-info border border-info-subtle">Room {s.room}</span>
+                      ) : (
+                        <span className="text-muted">TBA</span>
+                      )}
+                    </td>
                     <td>
                       <span className={`badge ${
                         s.status === "active" || s.status === "Active"
@@ -762,6 +884,25 @@ function StudentsPanel() {
                         {s.status}
                       </span>
                     </td>
+                    <td>
+                      {s.status === "active" ? (
+                        <button 
+                          onClick={() => handleToggleStatus(s.id, s.name, "deactivate")}
+                          className="btn btn-sm btn-outline-danger"
+                          style={{ fontSize: 11 }}
+                        >
+                          Deactivate
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleToggleStatus(s.id, s.name, "reactivate")}
+                          className="btn btn-sm btn-outline-success"
+                          style={{ fontSize: 11 }}
+                        >
+                          Activate
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               }
@@ -769,6 +910,98 @@ function StudentsPanel() {
           </table>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmAction && (
+        <div 
+          className="modal fade show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title fw-bold">
+                  {confirmAction.action === "deactivate" ? "Deactivate Student?" : "Activate Student?"}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowConfirmModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body pt-2">
+                <p className="mb-2">
+                  {confirmAction.action === "deactivate" ? (
+                    <>
+                      Are you sure you want to deactivate <strong>{confirmAction.studentName}</strong>?
+                      <br />
+                      <span className="text-danger small">They will no longer be able to access the system.</span>
+                    </>
+                  ) : (
+                    <>
+                      Are you sure you want to activate <strong>{confirmAction.studentName}</strong>?
+                      <br />
+                      <span className="text-success small">They will be able to access the system again.</span>
+                    </>
+                  )}
+                </p>
+              </div>
+              <div className="modal-footer border-0 pt-0">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className={`btn ${confirmAction.action === "deactivate" ? "btn-danger" : "btn-success"}`}
+                  onClick={confirmToggleStatus}
+                >
+                  {confirmAction.action === "deactivate" ? "Deactivate" : "Activate"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div 
+          className="modal fade show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowSuccessModal(false)}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-body text-center p-4">
+                <div className="mb-3">
+                  <div 
+                    className="rounded-circle d-inline-flex align-items-center justify-content-center"
+                    style={{ width: 60, height: 60, background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                  >
+                    <svg width="30" height="30" fill="white" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                    </svg>
+                  </div>
+                </div>
+                <h5 className="fw-bold mb-2">Success!</h5>
+                <p className="text-muted mb-3">{successMessage}</p>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={() => setShowSuccessModal(false)}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2089,7 +2322,7 @@ function TuitionPanel() {
         paymentId: 0,
       }));
 
-  const tracks = ["All", "STEM", "HUMMS", "ABM", "TVL-TechPro"];
+  const tracks = ["All", "Academic Track - STEM", "Academic Track - HUMSS", "Academic Track - ABM", "TECH-PRO - ICT", "TECH-PRO - Cookery"];
 
   const filtered = allRecords.filter(r => {
     const name = String(r.name).toLowerCase();

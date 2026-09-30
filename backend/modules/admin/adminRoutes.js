@@ -22,6 +22,7 @@ const {
   getTeachers,
   createTeacherAccount,
   reactivateStudent,
+  deactivateStudent,
 } = require("./adminController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
@@ -42,7 +43,8 @@ router.delete("/admins/:id", deleteAdminAccount);
 router.get("/dashboard",       getDashboard);
 router.get("/students",         listStudents);
 router.get("/students/search",  searchStudents);
-router.patch("/students/:student_id/reactivate",reactivateStudent);
+router.patch("/students/:student_id/reactivate", reactivateStudent);
+router.patch("/students/:student_id/deactivate", deactivateStudent);
 router.get("/audit-log",       getAuditLog);
 router.get("/teachers", getTeachers);
 router.post("/teachers", createTeacherAccount);
