@@ -12,7 +12,7 @@ const ApplicationModel = {
       "email","phone","date_of_birth","gender","civil_status",
       "nationality","religion","address",
       "student_status","existing_student_id",
-      "pathway","grade_level","school_year","learning_modality",
+      "pathway","track","strand","grade_level","school_year","learning_modality",
       "father_name","father_occupation","mother_name","mother_occupation",
       "guardian_name","guardian_relation","guardian_phone",
       "previous_school","previous_school_address","years_attended",

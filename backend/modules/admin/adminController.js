@@ -232,29 +232,21 @@ async function getDashboard(req, res, next) {
       : "0.00";
 
     // Students by track and grade level for enrollment insights
-    // Count from enrollment_applications where approved or from active students
+    // Count from active students only (they were already created from approved applications)
     const [studentsByTrack] = await db.query(
       `SELECT 
-        ea.pathway as track,
-        ea.grade_level,
-        ea.gender,
-        COUNT(*) as count
-       FROM enrollment_applications ea
-       WHERE ea.status = 'approved'
-       GROUP BY ea.pathway, ea.grade_level, ea.gender
-       
-       UNION ALL
-       
-       SELECT 
-        s.pathway as track,
+        CASE 
+          WHEN s.track IS NOT NULL AND s.strand IS NOT NULL 
+          THEN CONCAT(s.track, ' - ', s.strand)
+          ELSE s.pathway
+        END as track,
         s.grade_level,
         ea.gender,
         COUNT(*) as count
        FROM students s
        LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
        WHERE s.account_status = 'active'
-       GROUP BY s.pathway, s.grade_level, ea.gender
-       
+       GROUP BY s.track, s.strand, s.pathway, s.grade_level, ea.gender
        ORDER BY track, grade_level, gender`
     );
 
@@ -325,11 +317,28 @@ async function getDashboard(req, res, next) {
 async function listStudents(req, res, next) {
   try {
     const [rows] = await db.query(
-      `SELECT id, student_id, full_name, pathway, grade_level, term,
-              pathway AS course, grade_level AS year_level, term AS semester,
-              email, account_status
-       FROM students
-       ORDER BY full_name`
+      `SELECT 
+        s.id, 
+        s.student_id, 
+        s.full_name, 
+        s.pathway,
+        s.track,
+        s.strand,
+        s.grade_level, 
+        s.term,
+        s.pathway AS course, 
+        s.grade_level AS year_level, 
+        s.term AS semester,
+        s.email, 
+        s.account_status,
+        ROUND(AVG(g.percentage), 2) as gwa,
+        NULL as room,
+        ea.photo_url
+       FROM students s
+       LEFT JOIN grades g ON s.student_id = g.student_id
+       LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
+       GROUP BY s.id, s.student_id, s.full_name, s.pathway, s.track, s.strand, s.grade_level, s.term, s.email, s.account_status, ea.photo_url
+       ORDER BY s.full_name`
     );
 
     res.json({ students: rows });
@@ -342,12 +351,29 @@ async function searchStudents(req, res, next) {
     if (!query) return listStudents(req, res, next);
 
     const [rows] = await db.query(
-      `SELECT id, student_id, full_name, pathway, grade_level, term,
-              pathway AS course, grade_level AS year_level, term AS semester,
-              email, account_status
-       FROM students
-       WHERE full_name LIKE ? OR student_id LIKE ?
-       ORDER BY full_name`,
+      `SELECT 
+        s.id, 
+        s.student_id, 
+        s.full_name, 
+        s.pathway,
+        s.track,
+        s.strand,
+        s.grade_level, 
+        s.term,
+        s.pathway AS course, 
+        s.grade_level AS year_level, 
+        s.term AS semester,
+        s.email, 
+        s.account_status,
+        ROUND(AVG(g.percentage), 2) as gwa,
+        NULL as room,
+        ea.photo_url
+       FROM students s
+       LEFT JOIN grades g ON s.student_id = g.student_id
+       LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
+       WHERE s.full_name LIKE ? OR s.student_id LIKE ?
+       GROUP BY s.id, s.student_id, s.full_name, s.pathway, s.track, s.strand, s.grade_level, s.term, s.email, s.account_status, ea.photo_url
+       ORDER BY s.full_name`,
       [`%${query}%`, `%${query}%`]
     );
 
@@ -585,6 +611,33 @@ async function reactivateStudent(req, res, next) {
   }
 }
 
+async function deactivateStudent(req, res, next) {
+  try {
+    const studentId = req.params.student_id;
+
+    const [result] = await db.query(
+      `UPDATE students
+       SET account_status = 'suspended'
+       WHERE student_id = ? AND account_status = 'active'`,
+      [studentId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        error: "Active student account not found.",
+      });
+    }
+
+    res.json({
+      message: "Student account deactivated successfully.",
+      student_id: studentId,
+      account_status: "suspended",
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 module.exports = {
   createAdminAccount,
@@ -594,6 +647,7 @@ module.exports = {
   deleteAdminAccount,
   getDashboard, searchStudents, listStudents,
   reactivateStudent,
+  deactivateStudent,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,

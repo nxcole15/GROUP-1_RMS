@@ -39,8 +39,26 @@ function generateTempPassword() {
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
-    // Map 'strand' to 'pathway' for compatibility — must run BEFORE required-field validation
-    if (req.body.strand && !req.body.pathway) {
+    // Store track and strand separately
+    // Frontend sends: track="TECH-PRO", strand="Cookery" or track="Academic Track", strand="ABM"
+    
+    // Keep pathway for backward compatibility, but also store track and strand
+    if (req.body.track && req.body.strand) {
+      // For TECH-PRO track, map pathway to TVL-TechPro for compatibility
+      if (req.body.track === "TECH-PRO") {
+        req.body.pathway = "TVL-TechPro";
+      } 
+      // For Academic Track, use the strand as pathway
+      else if (req.body.track === "Academic Track") {
+        req.body.pathway = req.body.strand;
+      }
+      // Fallback: use strand
+      else {
+        req.body.pathway = req.body.strand;
+      }
+    }
+    // Legacy compatibility: if only strand is provided
+    else if (req.body.strand && !req.body.pathway) {
       req.body.pathway = req.body.strand;
     }
 
@@ -252,13 +270,15 @@ async function approveApplication(req, res, next) {
 
     await db.query(
       `INSERT INTO students
-      (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
+      (student_id, password, full_name, pathway, track, strand, grade_level, term, email, account_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
       [
         studentId,
         hashedPass,
         `${app.first_name} ${app.last_name}`,
         app.pathway,
+        app.track || null,
+        app.strand || null,
         app.grade_level,
         term,
         app.email,
