@@ -26,7 +26,37 @@ const {
   reactivateTeacher,
   reactivateStudent,
   deactivateStudent,
+  getGradeSubmissionConfig,
+  setGradeSubmissionSchedule,
+  openGradeSubmissionNow,
+  closeGradeSubmissionNow,
+  clearGradeSubmissionSchedule,
 } = require("./adminController");
+const {
+  getPendingSubmissions,
+  getAllSubmissions,
+  getSubmissionDetails,
+  approveSubmission,
+  returnSubmission,
+  getGradeSubmissionStats
+} = require("./adminGradeReviewController");
+const {
+  getTeachersForScheduling,
+  getTeacherSchedules,
+  getTeacherScheduleDetails,
+  createTeacherSchedule,
+  updateTeacherSchedule,
+  deleteTeacherSchedule,
+  getEnrolledStudents,
+  enrollStudentInSchedule,
+  unenrollStudentFromSchedule,
+  getScheduleStudents,
+  getStudentSchedules,
+  // Priority 2 Features
+  getWeeklyTimetable,
+  bulkEnrollStudents,
+  getSchedulingStatistics
+} = require("./schedulingController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
 // ── Public admin auth ──────────────────────────────────────────────────────
@@ -68,5 +98,40 @@ router.patch("/payments/:id/verify", verifyPayment);
 router.get("/documents",               getPendingDocuments);
 router.patch("/documents/:id/approve", approveDocument);
 router.patch("/documents/:id/reject",  rejectDocument);
+
+// Grade Submission Config
+router.get("/grade-submission-config", getGradeSubmissionConfig);
+router.patch("/grade-submission-config/:term/schedule", setGradeSubmissionSchedule);
+router.post("/grade-submission-config/:term/open", openGradeSubmissionNow);
+router.post("/grade-submission-config/:term/close", closeGradeSubmissionNow);
+router.delete("/grade-submission-config/:term/schedule", clearGradeSubmissionSchedule);
+
+// Grade Submission Review (Principal)
+router.get("/grade-submissions/pending", getPendingSubmissions);
+router.get("/grade-submissions", getAllSubmissions);
+router.get("/grade-submissions/:batch_id", getSubmissionDetails);
+router.post("/grade-submissions/:batch_id/approve", approveSubmission);
+router.post("/grade-submissions/:batch_id/return", returnSubmission);
+router.get("/grade-submissions-stats", getGradeSubmissionStats);
+
+// Teacher Scheduling (Registrar)
+router.get("/scheduling/teachers", getTeachersForScheduling);
+router.get("/scheduling/schedules", getTeacherSchedules);
+router.get("/scheduling/teachers/:teacher_id/schedules", getTeacherScheduleDetails);
+router.post("/scheduling/schedules", createTeacherSchedule);
+router.patch("/scheduling/schedules/:schedule_id", updateTeacherSchedule);
+router.delete("/scheduling/schedules/:schedule_id", deleteTeacherSchedule);
+
+// Student Enrollment in Schedules (Registrar)
+router.get("/scheduling/students", getEnrolledStudents);
+router.post("/scheduling/schedules/:schedule_id/enroll", enrollStudentInSchedule);
+router.delete("/scheduling/schedules/:schedule_id/students/:student_id", unenrollStudentFromSchedule);
+router.get("/scheduling/schedules/:schedule_id/students", getScheduleStudents);
+router.get("/scheduling/students/:student_id/schedules", getStudentSchedules);
+
+// Priority 2 Features - Scheduling
+router.get("/scheduling/timetable", getWeeklyTimetable);
+router.post("/scheduling/schedules/:schedule_id/enroll-bulk", bulkEnrollStudents);
+router.get("/scheduling/statistics", getSchedulingStatistics);
 
 module.exports = router;

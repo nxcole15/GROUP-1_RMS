@@ -13,7 +13,8 @@ type IconName =
   | "check" | "checkCircle" | "calendar" | "chart" | "peso" | "clock" | "file"
   | "bot" | "message" | "palette" | "clipboard" | "lightbulb" | "refresh"
   | "thumbsUp" | "thumbsDown" | "graduation" | "book" | "alert" | "x"
-  | "camera" | "bell" | "trash" | "arrowRight" | "send" | "download" | "close";
+  | "camera" | "bell" | "trash" | "arrowRight" | "send" | "download" | "close"
+  | "list" | "grid" | "user" | "map-pin";
 
 function Icon({ name, size = 18, className }: { name: IconName; size?: number; className?: string }) {
   const p = {
@@ -48,6 +49,10 @@ function Icon({ name, size = 18, className }: { name: IconName; size?: number; c
     case "arrowRight":  return <svg {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
     case "send":        return <svg {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
     case "download":    return <svg {...p}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    case "list":        return <svg {...p}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+    case "grid":        return <svg {...p}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+    case "user":        return <svg {...p}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    case "map-pin":     return <svg {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>;
     default:            return null;
   }
 }
@@ -539,8 +544,19 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
   }
 
   const confirmSubject = enrolledSubjects.find(s => s.id === confirmSubjectId);
-  const allRequested   = enrolledSubjects.length > 0 && enrolledSubjects.every(s => requestMap[s.id] !== "idle");
-  const pendingCount   = enrolledSubjects.filter(s => requestMap[s.id] === "pending").length;
+  
+  // Filter logic: 
+  // - "idle" subjects need action (can request)
+  // - "pending" subjects are in progress
+  // - "rejected" subjects can be re-requested
+  // - "released_to_student" subjects should NOT show in cards
+  const unreleased = enrolledSubjects.filter(s => {
+    const existing = existingRequests.find(r => Number(r.subject_id) === s.id);
+    return existing?.status !== "released_to_student";
+  });
+  
+  const allRequested   = unreleased.length > 0 && unreleased.every(s => requestMap[s.id] === "pending");
+  const pendingCount   = unreleased.filter(s => requestMap[s.id] === "pending").length;
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -581,26 +597,13 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
         </div>
       )}
 
-      {/* Request window notice */}
-      <div className="rounded-3 p-3 d-flex align-items-start gap-3"
-        style={{ background:"rgba(99,102,241,0.06)", border:"1.5px solid rgba(99,102,241,0.25)" }}>
-        <span className="text-primary flex-shrink-0"><Icon name="bell" size={20} /></span>
-        <div>
-          <div className="fw-bold small text-dark mb-1">Grade Request Window is Open - {term}</div>
-          <p className="text-muted small mb-0" style={{ lineHeight:1.6 }}>
-            You can now request your grades for this term. Click <strong>Request Grade</strong> on each subject.
-            Your teacher will be notified to prepare and release your grades.
-          </p>
-        </div>
-      </div>
-
       {/* Progress summary */}
       {pendingCount > 0 && !allRequested && (
         <div className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
           style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.25)" }}>
           <span className="text-warning"><Icon name="clock" size={16} /></span>
           <span className="small text-dark">
-            <strong>{pendingCount}</strong> of <strong>{enrolledSubjects.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent - waiting for your teachers.
+            <strong>{pendingCount}</strong> of <strong>{unreleased.length}</strong> grade request{pendingCount > 1 ? "s" : ""} sent - waiting for your teachers.
           </span>
         </div>
       )}
@@ -616,16 +619,16 @@ function GradesRequestOpen({ term, existingRequests = [] }: { term: string; exis
         </div>
       )}
 
-      {/* Subject cards � always visible */}
-      {enrolledSubjects.length === 0 && (
+      {/* Subject cards � only show unreleased subjects */}
+      {unreleased.length === 0 && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4 text-center text-muted small">
-            Loading your enrolled subjects...
+            No subjects available for grade requests.
           </div>
         </div>
       )}
       <div className="row g-3">
-        {enrolledSubjects.map((subj) => {
+        {unreleased.map((subj) => {
           const status = requestMap[subj.id] ?? "idle";
           return (
             <div key={subj.id} className="col-12 col-sm-6">
@@ -725,12 +728,31 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
   const [requestConfig, setRequestConfig] = useState<{term: string; is_open: number}[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"list"|"card">("list"); // Default to list view
+  const [schoolYear, setSchoolYear] = useState<string>("2025-2026"); // Default school year
 
   const termLabel = selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3";
   const configEntry = requestConfig.find(c => c.term === termLabel);
   const isRequestOpen = !!configEntry?.is_open;
 
-  // Fetch term config (no auth needed) � poll every 15s so it auto-updates when principal opens/closes
+  // Fetch student info to get school year from schedules
+  useEffect(() => {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    fetch(`${API_BASE}/api/student/schedules`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { 
+        if (data?.schedules?.[0]?.school_year) {
+          setSchoolYear(data.schedules[0].school_year);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch term config (no auth needed) – poll every 15s so it auto-updates when principal opens/closes
   useEffect(() => {
     function fetchConfig() {
       fetch(`${API_BASE}/api/grade-requests/config`)
@@ -794,10 +816,37 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div>
           <h2 className="fw-black fs-4 text-dark mb-1">My Grades</h2>
-          <p className="text-muted small mb-0">School Year 2025-2026</p>
+          <p className="text-muted small mb-0">School Year {schoolYear}</p>
         </div>
         <GradeColorLegend />
       </div>
+
+      {/* Green indicator with text - only show when request window is open */}
+      {isRequestOpen && (
+        <div className="d-flex align-items-center gap-2">
+          <span className="d-inline-block rounded-circle bg-success" style={{ width: 8, height: 8 }}></span>
+          <span className="fw-bold small text-dark">Grade Request Window Open - {termLabel}</span>
+        </div>
+      )}
+
+      {/* Red indicator with text - only show when request window is closed */}
+      {!isRequestOpen && (
+        <div className="d-flex align-items-center gap-2">
+          <span className="d-inline-block rounded-circle bg-danger" style={{ width: 8, height: 8 }}></span>
+          <span className="fw-bold small text-muted">Grade Request Window Closed - {termLabel}</span>
+        </div>
+      )}
+
+      {/* Blue notification box with instructional text - only show when request window is open */}
+      {isRequestOpen && (
+        <div className="rounded-3 p-3 d-flex align-items-start gap-3"
+          style={{ background:"rgba(99,102,241,0.06)", border:"1.5px solid rgba(99,102,241,0.25)" }}>
+          <span className="text-primary flex-shrink-0"><Icon name="bell" size={20} /></span>
+          <div className="small text-muted">
+            You can now request your grades for this term. Click <strong>Request Grade</strong> on each subject. Your teacher will be notified to prepare and release your grades.
+          </div>
+        </div>
+      )}
 
       {/* Term selector */}
       <div className="d-flex gap-2">
@@ -811,51 +860,110 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 
       {loading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
 
-      {/* Released grades � only shown after full workflow completion */}
+      {/* Released grades with view toggle */}
       {!loading && releasedGrades.length > 0 && (
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
           <div className="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
             <span className="fw-bold small text-dark">Released Grades - {termLabel}</span>
             <span className="badge bg-success text-white ms-auto d-inline-flex align-items-center gap-1" style={{ fontSize: 10 }}><Icon name="check" size={10} /> Official</span>
+            
+            {/* View toggle buttons */}
+            <div className="btn-group btn-group-sm ms-2" role="group">
+              <button 
+                type="button" 
+                className={`btn ${viewMode === "list" ? "btn-primary" : "btn-outline-secondary"}`}
+                onClick={() => setViewMode("list")}
+                style={{ fontSize: 11 }}>
+                <Icon name="list" size={14} /> List
+              </button>
+              <button 
+                type="button" 
+                className={`btn ${viewMode === "card" ? "btn-primary" : "btn-outline-secondary"}`}
+                onClick={() => setViewMode("card")}
+                style={{ fontSize: 11 }}>
+                <Icon name="grid" size={14} /> Card
+              </button>
+            </div>
           </div>
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Subject</th>
-                  <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Teacher</th>
-                  <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Score</th>
-                  <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
+          
+          {/* List View */}
+          {viewMode === "list" && (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Subject</th>
+                    <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Teacher</th>
+                    <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Score</th>
+                    <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {releasedGrades.map((g, i) => {
+                    const score = Number(g.score);
+                    const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
+                    return (
+                      <tr key={i}>
+                        <td className="ps-4">
+                          <div className="small fw-medium text-dark">{g.subject_name}</div>
+                          <div className="text-muted" style={{fontSize:11}}>{g.subject_code}</div>
+                        </td>
+                        <td className="d-none d-sm-table-cell small text-muted">{g.teacher_name}</td>
+                        <td className="text-end">
+                          <div className="d-flex align-items-center justify-content-end gap-2">
+                            <div className="progress flex-shrink-0" style={{ width:60, height:6 }}>
+                              <div className="progress-bar" style={{ width:`${score}%`, background:color }} />
+                            </div>
+                            <span className="small fw-semibold" style={{color}}>{score}</span>
+                          </div>
+                        </td>
+                        <td className="text-end pe-4">
+                          <span className="badge bg-success text-white d-inline-flex align-items-center gap-1" style={{ fontSize: 10 }}><Icon name="check" size={10} /> Released</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Card View */}
+          {viewMode === "card" && (
+            <div className="p-4">
+              <div className="row g-3">
                 {releasedGrades.map((g, i) => {
                   const score = Number(g.score);
+                  const letterGrade = score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-" : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-" : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-" : score >= 65 ? "D" : "F";
                   const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
                   return (
-                    <tr key={i}>
-                      <td className="ps-4">
-                        <div className="small fw-medium text-dark">{g.subject_name}</div>
-                        <div className="text-muted" style={{fontSize:11}}>{g.subject_code}</div>
-                      </td>
-                      <td className="d-none d-sm-table-cell small text-muted">{g.teacher_name}</td>
-                      <td className="text-end">
-                        <div className="d-flex align-items-center justify-content-end gap-2">
-                          <div className="progress flex-shrink-0" style={{ width:60, height:6 }}>
-                            <div className="progress-bar" style={{ width:`${score}%`, background:color }} />
+                    <div key={i} className="col-12 col-sm-6 col-lg-4">
+                      <div className="card border-0 shadow-sm rounded-3 h-100">
+                        <div className="card-body p-4">
+                          {/* Subject header */}
+                          <div className="d-flex align-items-center gap-3 mb-3">
+                            <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0"
+                              style={{ width:40, height:40 }}><Icon name="book" size={18} /></div>
+                            <div className="flex-grow-1 overflow-hidden">
+                              <div className="fw-bold small text-dark text-truncate">{g.subject_name}</div>
+                              <div className="text-muted" style={{ fontSize:11 }}>{g.teacher_name} - {g.subject_code}</div>
+                            </div>
                           </div>
-                          <span className="small fw-semibold" style={{color}}>{score}</span>
+                          
+                          {/* Grade display */}
+                          <div className="rounded-3 p-3 text-center" style={{ background: "rgba(16,185,129,0.07)", border: "1.5px solid rgba(16,185,129,0.3)" }}>
+                            <div className="fw-black text-success mb-1" style={{ fontSize: 28 }}>{letterGrade}</div>
+                            <div className="fw-semibold small" style={{ color }}>Score: {score}</div>
+                            <div className="text-muted mt-1 d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="checkCircle" size={12} /> Grade Released</div>
+                          </div>
                         </div>
-                      </td>
-                      <td className="text-end pe-4">
-                        <span className="badge bg-success text-white d-inline-flex align-items-center gap-1" style={{ fontSize: 10 }}><Icon name="check" size={10} /> Released</span>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -887,10 +995,6 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
       {/* Grade request section � only when window is open */}
       {!loading && isRequestOpen && (
         <div>
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <span className="rounded-circle bg-success d-inline-block" style={{ width:8, height:8 }} />
-            <h3 className="fw-bold small text-dark mb-0">Grade Request Window Open - {termLabel}</h3>
-          </div>
           <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} />
         </div>
       )}
@@ -900,72 +1004,230 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 
 /* -- Schedule View -- */
 function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
-  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
-  const todayIdx = Math.min(new Date().getDay()-1,4);
-  const [day, setDay] = useState(days[todayIdx>=0?todayIdx:0]);
-    const [apiSchedule, setApiSchedule] = useState<{
-    id: number; day: string; time_start: string; time_end: string;
-    room: string; code: string; subject_name: string; teacher_name: string;
+  const [schedules, setSchedules] = useState<{
+    schedule_id: number;
+    subject_name: string;
+    room: string;
+    day: string;
+    time_start: string;
+    time_end: string;
+    teacher_name: string;
+    department: string;
   }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("inform_token");
-    if (!token) return;
-    fetch(`${API_BASE}/api/enrollment/schedule`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.schedule?.length) setApiSchedule(data.schedule); })
-      .catch(() => {});
+    loadSchedules();
   }, []);
 
-    const displaySchedule = apiSchedule.length > 0
-    ? apiSchedule.filter(s => s.day === day).map(s => ({
-        time: `${s.time_start.slice(0,5)}-${s.time_end.slice(0,5)}`,
-        subject: s.subject_name,
-        room: s.room,
-        teacher: s.teacher_name,
-        enter: s.time_start.slice(0,5),
-        leave: s.time_end.slice(0,5),
-      }))
-    : (timetable[day] ?? []);
+  async function loadSchedules() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/student/schedules`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.schedules) {
+          setSchedules(data.schedules);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load schedules:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const timeSlots = [
+    "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", 
+    "13:00", "14:00", "15:00", "16:00", "17:00"
+  ];
+
+  function getSchedulesForDayAndTime(day: string, timeSlot: string) {
+    return schedules.filter((schedule) => {
+      if (schedule.day !== day) return false;
+      
+      const scheduleStart = schedule.time_start.slice(0, 5);
+      const scheduleEnd = schedule.time_end.slice(0, 5);
+      const slotEnd = `${(parseInt(timeSlot.slice(0, 2)) + 1).toString().padStart(2, '0')}:00`;
+      
+      return scheduleStart <= timeSlot && scheduleEnd > timeSlot;
+    });
+  }
 
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-        <div><h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2><p className="text-muted small mb-0">Term 1 - 2025-2026</p></div>
-        <button onClick={() => onAskJobert(`Today is ${day}. My classes are: ${displaySchedule.map(c => c.subject).join(", ")}. Give me study tips.`)}
-          className="btn btn-outline-primary btn-sm" style={{ fontSize:12 }}> Study tips for today</button>
+        <div>
+          <h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2>
+          <p className="text-muted small mb-0">Term 1 - 2025-2026</p>
+        </div>
+        <button 
+          onClick={loadSchedules}
+          className="btn btn-outline-primary btn-sm" 
+          style={{ fontSize: 12 }}
+        >
+          🔄 Refresh
+        </button>
       </div>
-      <div className="d-flex gap-2 overflow-auto pb-1">
-        {days.map(d => (
-          <button key={d} onClick={() => setDay(d)} className={`btn btn-sm flex-shrink-0 ${day===d?"btn-primary":"btn-outline-secondary"}`}>{d.slice(0,3)}</button>
-        ))}
-      </div>
-      <div className="d-flex flex-column gap-3">
-        {displaySchedule.map((cls,i) => (
-          <div key={i} className="card border-0 shadow-sm rounded-3">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:44, height:44 }}><Icon name="book" size={20} /></div>
-                  <div><div className="fw-bold text-dark">{cls.subject}</div><div className="text-muted small"> {cls.teacher}</div></div>
-                </div>
-                <span className="badge bg-dark text-white">{cls.time}</span>
+
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary spinner-border-sm" />
+          <p className="text-muted mt-2 small">Loading your schedule...</p>
+        </div>
+      ) : schedules.length === 0 ? (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-5 text-center">
+            <div className="text-muted">
+              <Icon name="calendar" size={48} />
+              <p className="mt-3 mb-0">No enrolled classes yet</p>
+              <p className="small text-muted">Contact the registrar to enroll in classes</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-3">
+            <div className="table-responsive">
+              <table className="table table-bordered table-sm mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th style={{ width: '80px', fontSize: '0.75rem' }} className="text-center">Time</th>
+                    {daysOfWeek.map(day => (
+                      <th key={day} style={{ fontSize: '0.75rem', minWidth: '140px' }} className="text-center fw-bold">
+                        {day}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeSlots.map(timeSlot => (
+                    <tr key={timeSlot}>
+                      <td className="text-center fw-semibold small text-muted" style={{ fontSize: '0.75rem' }}>
+                        {timeSlot}
+                      </td>
+                      {daysOfWeek.map(day => {
+                        const daySchedules = getSchedulesForDayAndTime(day, timeSlot);
+                        return (
+                          <td key={`${day}-${timeSlot}`} className="p-1" style={{ verticalAlign: 'top' }}>
+                            {daySchedules.map((schedule) => (
+                              <div 
+                                key={schedule.schedule_id}
+                                className="card mb-1 border cursor-pointer"
+                                style={{ 
+                                  fontSize: '0.7rem',
+                                  backgroundColor: '#e7f3ff',
+                                  borderColor: '#4a90e2 !important'
+                                }}
+                                onClick={() => setSelectedSchedule(schedule)}
+                              >
+                                <div className="card-body p-2">
+                                  <div className="fw-bold text-dark mb-1" style={{ fontSize: '0.75rem' }}>
+                                    {schedule.subject_name}
+                                  </div>
+                                  <div className="text-muted" style={{ fontSize: '0.65rem' }}>
+                                    📍 {schedule.room}
+                                  </div>
+                                  <div className="text-muted" style={{ fontSize: '0.65rem' }}>
+                                    👨‍🏫 {schedule.teacher_name}
+                                  </div>
+                                  <div className="text-muted mt-1" style={{ fontSize: '0.65rem' }}>
+                                    {schedule.time_start.slice(0, 5)} - {schedule.time_end.slice(0, 5)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Details Modal */}
+      {selectedSchedule && (
+        <div 
+          className="modal d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setSelectedSchedule(null)}
+        >
+          <div 
+            className="modal-dialog modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title fw-bold">{selectedSchedule.subject_name}</h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setSelectedSchedule(null)}
+                />
               </div>
-              <div className="row g-2">
-                {[[" Room",cls.room,"bg-light"],["Enter",cls.enter,"bg-success bg-opacity-10 border-success border-opacity-25"],[" Leave",cls.leave,"bg-danger bg-opacity-10 border-danger border-opacity-25"]].map(([lbl,val,bg]) => (
-                  <div key={lbl} className="col-4">
-                    <div className={`rounded-3 p-2 border ${bg}`}><div className="text-muted" style={{ fontSize:10 }}>{lbl}</div><div className="fw-bold small text-dark">{val}</div></div>
+              <div className="modal-body p-4">
+                <div className="row g-3">
+                  <div className="col-12">
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <Icon name="user" size={16} />
+                      <strong className="small">Teacher:</strong>
+                    </div>
+                    <p className="ms-4 mb-0">{selectedSchedule.teacher_name}</p>
+                    <p className="ms-4 mb-0 text-muted small">{selectedSchedule.department}</p>
                   </div>
-                ))}
+                  
+                  <div className="col-6">
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <Icon name="calendar" size={16} />
+                      <strong className="small">Day:</strong>
+                    </div>
+                    <p className="ms-4 mb-0">{selectedSchedule.day}</p>
+                  </div>
+                  
+                  <div className="col-6">
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <Icon name="clock" size={16} />
+                      <strong className="small">Time:</strong>
+                    </div>
+                    <p className="ms-4 mb-0">
+                      {selectedSchedule.time_start.slice(0, 5)} - {selectedSchedule.time_end.slice(0, 5)}
+                    </p>
+                  </div>
+                  
+                  <div className="col-12">
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <Icon name="map-pin" size={16} />
+                      <strong className="small">Room:</strong>
+                    </div>
+                    <p className="ms-4 mb-0">{selectedSchedule.room}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setSelectedSchedule(null)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

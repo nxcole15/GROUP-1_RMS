@@ -94,7 +94,7 @@ type TeacherSubjectRecord = {
 
 const subjects: TeacherSubjectRecord[] = [];
 const teacherSchedule: Array<{day: string; subject: string; room: string; time: string; enter: string; leave: string}> = [];
-const students: Array<{id: string; name: string; pathway: string; grade: number; status: string}> = [];
+const students: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}> = [];
 const grades: Array<{student_id: string; name: string; subject: string; percentage: number; term: string}> = [];
 const gradeRequestsTeacher: Array<{id: number; student: string; subject: string; status: string; requestedAt: string}> = [];
 const attendance: Array<{student_id: string; name: string; subject: string; total: number; present: number; percentage: number}> = [];
@@ -118,16 +118,15 @@ function isDeadlinePassed() {
   return new Date() > TEACHER_TERM_DEADLINES[getActiveTerm()];
 }
 
-type Panel = "overview"|"subjects"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog";
+type Panel = "overview"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "overview",       label: "Overview",        icon: "overview" },
-  { id: "subjects",       label: "My Classes",       icon: "book" },
   { id: "schedule",       label: "My Schedule",      icon: "calendar" },
   { id: "students",       label: "My Students",      icon: "students" },
   { id: "grades",         label: "Submit Grades",    icon: "chart" },
   { id: "requests",       label: "Grade Requests",   icon: "requests" },
-  { id: "documents",      label: "Documents",        icon: "documents" },
+  { id: "documents",      label: "Document Requests",        icon: "documents" },
 ];
 
 /* -- Sidebar -- */
@@ -228,12 +227,11 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
       {/* Stats */}
       <div className="row g-3">
         {[
-          { label: "My Classes",       value: subjects.length,    icon: "book", cls: "border-primary-subtle bg-primary-subtle",   val: "text-primary"   },
           { label: "My Students",      value: students.length,    icon: "students", cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
           { label: "Class Avg. Grade", value: `${avgGrade}%`,     icon: "chart", cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
           { label: "Pending Requests", value: pendingRequests,    icon: "requests", cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
         ].map(s => (
-          <div key={s.label} className="col-6 col-lg-3">
+          <div key={s.label} className="col-6 col-lg-4">
             <div className={`card border rounded-3 h-100 ${s.cls}`}>
               <div className="card-body p-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
@@ -294,46 +292,171 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
 
 /* -- Schedule Panel -- */
 function SchedulePanel() {
-  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
-  const todayIdx = Math.min(new Date().getDay() - 1, 4);
-  const [day, setDay] = useState(days[todayIdx >= 0 ? todayIdx : 0]);
-  const daySchedule = teacherSchedule.filter(s => s.day === day);
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  // Calculate current school year
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startYear = month >= 6 ? year : year - 1;
+    const endYear = startYear + 1;
+    return `${startYear}-${endYear}`;
+  };
+
+  useEffect(() => {
+    loadSchedules();
+  }, []);
+
+  async function loadSchedules() {
+    const token = localStorage.getItem("inform_token");
+    
+    if (!token || token.startsWith("demo_")) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/teacher/schedules`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSchedules(data.schedules || []);
+      }
+    } catch (err) {
+      console.error("Failed to load schedules:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Get unique time slots
+  const timeSlots = Array.from(
+    new Set(
+      schedules.map(s => `${s.time_start.slice(0, 5)}-${s.time_end.slice(0, 5)}`)
+    )
+  ).sort();
+
+  // Helper to find schedule for specific day and time
+  const getScheduleForSlot = (day: string, timeSlot: string) => {
+    return schedules.find(s => 
+      s.day === day && 
+      `${s.time_start.slice(0, 5)}-${s.time_end.slice(0, 5)}` === timeSlot
+    );
+  };
+
+  // Format time for display (e.g., "08:00" -> "8:00 AM")
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const currentTerm = schedules[0]?.term || "Term 1";
+  const schoolYear = schedules[0]?.school_year || getCurrentSchoolYear();
+
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2><p className="text-muted small mb-0">Term 1     2025-2026</p></div>
-      <div className="d-flex gap-2 overflow-auto pb-1">
-        {days.map(d => (
-          <button key={d} onClick={() => setDay(d)}
-            className={`btn btn-sm flex-shrink-0 ${day === d ? "btn-success text-white" : "btn-outline-secondary"}`}>
-            {d.slice(0, 3)}
-          </button>
-        ))}
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">My Teaching Schedule</h2>
+        <p className="text-muted small mb-0">{currentTerm} {schoolYear}</p>
       </div>
-      {daySchedule.length === 0
-        ? <div className="card border-0 shadow-sm rounded-3"><div className="card-body p-4 text-center text-muted small">No classes scheduled for {day}</div></div>
-        : <div className="d-flex flex-column gap-3">
-            {daySchedule.map((cls, i) => (
-              <div key={i} className="card border-0 shadow-sm rounded-3">
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div><div className="fw-bold text-dark">{cls.subject}</div><div className="text-muted small"> {cls.room}</div></div>
-                    <span className="badge bg-dark text-white">{cls.time}</span>
-                  </div>
-                  <div className="row g-2">
-                    {[[" Room", cls.room, "bg-light"], ["✓ Enter", cls.enter, "bg-success bg-opacity-10 border-success border-opacity-25"], ["✓ Leave", cls.leave, "bg-danger bg-opacity-10 border-danger border-opacity-25"], ["👥 Students", String(subjects.find(s => s.name === cls.subject)?.enrolled || 0), "bg-info bg-opacity-10 border-info border-opacity-25"]].map(([label, val, bg]) => (
-                      <div key={label} className="col-6 col-sm-3">
-                        <div className={`rounded-3 p-3 border ${bg}`}>
-                          <div className="text-muted small mb-1">{label}</div>
-                          <div className="fw-bold text-dark small">{val}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
+
+      {loading ? (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted">
+            <div className="spinner-border spinner-border-sm me-2" />
+            Loading schedule...
           </div>
-      }
+        </div>
+      ) : schedules.length === 0 ? (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4 text-center text-muted">
+            <div className="mb-2">📅</div>
+            <div className="fw-semibold">No classes scheduled</div>
+            <div className="small">Your registrar hasn't assigned any schedules yet.</div>
+          </div>
+        </div>
+      ) : (
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table table-bordered mb-0" style={{ minWidth: 900 }}>
+              <thead style={{ background: "linear-gradient(135deg, #0891b2, #06b6d4)", color: "white" }}>
+                <tr>
+                  <th className="text-center fw-semibold" style={{ width: 140, verticalAlign: "middle" }}>
+                    TIME & ROOM
+                  </th>
+                  {days.map(day => (
+                    <th key={day} className="text-center fw-semibold" style={{ minWidth: 160 }}>
+                      {day.toUpperCase()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map((timeSlot, idx) => (
+                  <tr key={idx}>
+                    <td className="text-center align-middle bg-light" style={{ fontWeight: 600, fontSize: 13 }}>
+                      <div>{formatTime(timeSlot.split('-')[0])}</div>
+                      <div>{formatTime(timeSlot.split('-')[1])}</div>
+                    </td>
+                    {days.map(day => {
+                      const schedule = getScheduleForSlot(day, timeSlot);
+                      return (
+                        <td 
+                          key={day} 
+                          className={`align-middle ${schedule ? 'bg-white' : 'bg-light bg-opacity-50'}`}
+                          style={{ padding: schedule ? 12 : 8 }}
+                        >
+                          {schedule ? (
+                            <div>
+                              <div className="fw-bold text-dark small mb-1" style={{ fontSize: 12 }}>
+                                {schedule.subject_name}
+                              </div>
+                              <div className="text-muted mb-1" style={{ fontSize: 11 }}>
+                                <strong>Room:</strong> {schedule.room}
+                              </div>
+                              <div className="text-muted mb-1" style={{ fontSize: 11 }}>
+                                {schedule.strand}
+                              </div>
+                              <div>
+                                <span 
+                                  className="badge" 
+                                  style={{ 
+                                    fontSize: 10,
+                                    background: schedule.enrolled_count >= schedule.max_capacity * 0.9 
+                                      ? '#fecaca' 
+                                      : '#bbf7d0',
+                                    color: schedule.enrolled_count >= schedule.max_capacity * 0.9 
+                                      ? '#991b1b' 
+                                      : '#166534'
+                                  }}
+                                >
+                                  👥 {schedule.enrolled_count}/{schedule.max_capacity}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center text-muted" style={{ fontSize: 11 }}>-</div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -380,17 +503,114 @@ function SubjectsPanel({ subjects: propSubjects }: { subjects?: typeof subjects 
 }
 
 /* -- Students Panel -- */
-function StudentsPanel({ students: propStudents }: { students?: typeof students } = {}) {
+function StudentsPanel({ students: propStudents }: { students?: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}> } = {}) {
+  // State for search and filters
   const [search, setSearch] = useState("");
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [selectedClass, setSelectedClass] = useState<string>("all");
+  const [selectedTerm, setSelectedTerm] = useState<string>("all");
+  
   const displayStudents = propStudents ?? students;
-  const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase()));
+  
+  // Get unique class combinations (Subject - Track & Strand)
+  const uniqueClasses = Array.from(
+    new Set(
+      displayStudents
+        .filter(s => s.subject && s.track_strand)
+        .map(s => `${s.subject} - ${s.track_strand}`)
+    )
+  ) as string[];
+  
+  // Filter logic - chain multiple conditions
+  const filtered = displayStudents.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
+    
+    // Match by subject and track_strand combination
+    const studentClass = s.subject && s.track_strand ? `${s.subject} - ${s.track_strand}` : "";
+    const matchesClass = selectedClass === "all" || studentClass === selectedClass;
+    
+    const matchesTerm = selectedTerm === "all" || s.term === selectedTerm;
+    return matchesSearch && matchesClass && matchesTerm;
+  });
+  
+  const handleImageError = (studentId: string) => {
+    setImageErrors(prev => new Set(prev).add(studentId));
+  };
+  
+  const clearAllFilters = () => {
+    setSearch("");
+    setSelectedClass("all");
+    setSelectedTerm("all");
+  };
+  
+  const hasActiveFilters = search !== "" || selectedClass !== "all" || selectedTerm !== "all";
+  
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">My Students</h2><p className="text-muted small mb-0">{displayStudents.length} students in your classes</p></div>
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">My Students</h2>
+        <p className="text-muted small mb-0">Showing {filtered.length} of {displayStudents.length} students</p>
+      </div>
+      
+      {/* Search Bar */}
       <div className="input-group shadow-sm" style={{ maxWidth: 400 }}>
         <span className="input-group-text bg-white"><Icon name="search" size={18} /></span>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or ID..." className="form-control border-start-0" />
       </div>
+      
+      {/* Filter Dropdowns */}
+      <div className="row g-3">
+        <div className="col-md-5">
+          <label className="form-label small fw-semibold text-muted text-uppercase" style={{ letterSpacing: "0.05em" }}>Subject - Track & Strand</label>
+          <select className="form-select form-select-sm" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+            <option value="all">All Classes</option>
+            {uniqueClasses.map(cls => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
+        </div>
+        <div className="col-md-3">
+          <label className="form-label small fw-semibold text-muted text-uppercase" style={{ letterSpacing: "0.05em" }}>Term</label>
+          <select className="form-select form-select-sm" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}>
+            <option value="all">All Terms</option>
+            <option value="Term 1">Term 1</option>
+            <option value="Term 2">Term 2</option>
+            <option value="Term 3">Term 3</option>
+          </select>
+        </div>
+        <div className="col-md-4 d-flex align-items-end">
+          <button className="btn btn-outline-secondary btn-sm w-100" onClick={clearAllFilters} disabled={!hasActiveFilters}>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+      
+      {/* Active Filters Badges */}
+      {hasActiveFilters && (
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          <span className="small text-muted fw-semibold">Active filters:</span>
+          {search !== "" && (
+            <span className="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1">
+              Search: &quot;{search}&quot;
+              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSearch("")} aria-label="Clear search"></button>
+            </span>
+          )}
+          {selectedClass !== "all" && (
+            <span className="badge bg-info-subtle text-info border border-info-subtle d-flex align-items-center gap-1">
+              {selectedClass}
+              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSelectedClass("all")} aria-label="Clear class"></button>
+            </span>
+          )}
+          {selectedTerm !== "all" && (
+            <span className="badge bg-warning-subtle text-warning border border-warning-subtle d-flex align-items-center gap-1">
+              {selectedTerm}
+              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSelectedTerm("all")} aria-label="Clear term"></button>
+            </span>
+          )}
+        </div>
+      )}
+      
+      {/* Students Table */}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
@@ -398,20 +618,33 @@ function StudentsPanel({ students: propStudents }: { students?: typeof students 
               <tr>
                 <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Name</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>ID</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Pathway</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Grade</th>
+                <th className="small text-muted fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
+                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Track & Strand</th>
+                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Term</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={5} className="text-center py-4 small text-muted">No students found.</td></tr>
-                : filtered.map(s => (
-                  <tr key={s.id}>
-                    <td className="ps-4 small fw-medium text-dark">{s.name}</td>
+                ? <tr><td colSpan={6} className="text-center py-4 small text-muted">{displayStudents.length === 0 ? "No students found." : "No students match the selected filters."}</td></tr>
+                : filtered.map((s, idx) => (
+                  <tr key={`${s.id}-${s.subject}-${s.term}-${idx}`}>
+                    <td className="ps-4 small fw-medium text-dark">
+                      <div className="d-flex align-items-center gap-2">
+                        {s.photo_url && !imageErrors.has(s.id) ? (
+                          <img src={s.photo_url} alt={s.name} className="rounded-circle" style={{ width: 32, height: 32, objectFit: 'cover' }} onError={() => handleImageError(s.id)} />
+                        ) : (
+                          <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: 32, height: 32, fontSize: '0.75rem' }}>
+                            {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span>{s.name}</span>
+                      </div>
+                    </td>
                     <td className="d-none d-sm-table-cell small text-muted">{s.id}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">{s.pathway}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">Grade {s.grade}</td>
+                    <td className="d-none d-md-table-cell small text-muted">{s.subject || "-"}</td>
+                    <td className="d-none d-lg-table-cell small text-muted">{s.track_strand || s.pathway}</td>
+                    <td className="d-none d-lg-table-cell small text-muted">{s.term || "-"}</td>
                     <td><span className={`badge ${s.status === "Active" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{s.status}</span></td>
                   </tr>
                 ))
@@ -424,101 +657,700 @@ function StudentsPanel({ students: propStudents }: { students?: typeof students 
   );
 }
 
-/* -- Grades Panel -- */
-function GradesPanel({ isGradeLocked, activeTerm, teacherSubjects = subjects }: { isGradeLocked: boolean; activeTerm: string; teacherSubjects?: Array<{ id: number; name: string }> }) {
-  const [selectedSubject, setSelectedSubject] = useState<number | null>(teacherSubjects[0]?.id ?? null);
-  const [apiGrades, setApiGrades] = useState<{student_id:string;full_name:string;percentage:number;term:string}[]>([]);
-  const [gradesLoading, setGradesLoading] = useState(false);
-  const [gradesError, setGradesError] = useState(false);
+/* -- NEW Grades Panel -- */
+function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; activeTerm: string }) {
+  // ========== STATE ==========
+  // Subject/Class selection
+  const [subjects, setSubjects] = useState<Array<{
+    subject_name: string;
+    strand: string;
+    term: string;
+    total_students: number;
+    graded_count: number;
+    progress_percentage: number;
+    is_complete: boolean;
+  }>>([]);
+  
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<string>("Term 1"); // Default to Term 1
+  
+  // Students and grades
+  const [students, setStudents] = useState<Array<{
+    student_id: string;
+    full_name: string;
+    photo_url: string | null;
+    pathway: string;
+    grade_level: number;
+    percentage: number | null;
+    submission_status: string | null;
+  }>>([]);
+  
+  const [editedGrades, setEditedGrades] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  
+  // Submission window
+  const [submissionWindow, setSubmissionWindow] = useState<{
+    is_open: boolean;
+    start_date: string;
+    end_date: string;
+    days_remaining: number;
+  } | null>(null);
+  
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
+  // ========== LOAD SUBJECTS ON MOUNT ==========
   useEffect(() => {
-    if (selectedSubject === null) return;
+    loadSubjects();
+  }, [selectedTerm]);
+
+  async function loadSubjects() {
     const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return;
-    setGradesLoading(true);
-    setGradesError(false);
-    fetch(`${API_BASE}/api/teacher/grades/${selectedSubject}`, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.grades?.length) setApiGrades(data.grades);
-        else setApiGrades([]);
-      })
-      .catch(() => setGradesError(true))
-      .finally(() => setGradesLoading(false));
-  }, [selectedSubject]);
+    if (!token || token.startsWith("demo_")) {
+      setLoading(false);
+      return;
+    }
 
-  const displayGrades = apiGrades.length > 0
-    ? apiGrades.map(g => ({ student_id: g.student_id, name: g.full_name, subject: teacherSubjects.find(s=>s.id===selectedSubject)?.name ?? "", percentage: g.percentage, term: g.term }))
-    : grades.filter(g => g.subject === teacherSubjects.find(s => s.id === selectedSubject)?.name);
+    try {
+      const response = await fetch(`${API_BASE}/api/teacher/grade-submission/subjects-new`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
 
-  const avg = displayGrades.length > 0 ? Math.round(displayGrades.reduce((a, g) => a + g.percentage, 0) / displayGrades.length) : 0;
+      if (response.ok) {
+        const data = await response.json();
+        setSubjects(data.subjects || []);
+        
+        // Auto-select first subject for selected term
+        const termSubjects = data.subjects.filter((s: any) => s.term === selectedTerm);
+        if (termSubjects.length > 0 && !selectedSubject) {
+          const firstSubject = `${termSubjects[0].subject_name}|${termSubjects[0].strand}`;
+          setSelectedSubject(firstSubject);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load subjects:", err);
+      showToast("❌ Failed to load subjects");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ========== LOAD STUDENTS WHEN SUBJECT CHANGES ==========
+  useEffect(() => {
+    if (selectedSubject) {
+      loadStudents();
+    }
+  }, [selectedSubject, selectedTerm]);
+
+  async function loadStudents() {
+    if (!selectedSubject) return;
+    
+    const [subject_name, strand] = selectedSubject.split("|");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        subject_name,
+        strand,
+        term: selectedTerm
+      });
+
+      const response = await fetch(
+        `${API_BASE}/api/teacher/grade-submission/students-for-class?${params}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data.students || []);
+        setSubmissionWindow(data.submission_window);
+        
+        // Initialize edited grades with current values
+        const initial: Record<string, string> = {};
+        data.students.forEach((s: any) => {
+          if (s.percentage !== null) {
+            initial[s.student_id] = s.percentage.toString();
+          }
+        });
+        setEditedGrades(initial);
+      }
+    } catch (err) {
+      console.error("Failed to load students:", err);
+      showToast("❌ Failed to load students");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ========== AUTO-SAVE EVERY 30 SECONDS ==========
+  useEffect(() => {
+    if (!selectedSubject || Object.keys(editedGrades).length === 0) return;
+    
+    const interval = setInterval(() => {
+      autoSaveGrades();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [editedGrades, selectedSubject]);
+
+  async function autoSaveGrades() {
+    if (!selectedSubject || saving || submitting) return;
+
+    const [subject_name, strand] = selectedSubject.split("|");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    let savedCount = 0;
+
+    for (const [student_id, percentageStr] of Object.entries(editedGrades)) {
+      if (percentageStr === '' || percentageStr === null) continue;
+      
+      const percentage = parseFloat(percentageStr);
+      if (isNaN(percentage) || percentage < 0 || percentage > 100) continue;
+
+      try {
+        const response = await fetch(`${API_BASE}/api/teacher/grade-submission/save-draft`, {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            student_id,
+            subject_name,
+            strand,
+            percentage,
+            term: selectedTerm
+          })
+        });
+
+        if (response.ok) {
+          savedCount++;
+        }
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+      }
+    }
+
+    if (savedCount > 0) {
+      setLastAutoSave(new Date());
+    }
+  }
+
+  // ========== MANUAL SAVE ==========
+  async function saveAllDrafts() {
+    if (!selectedSubject) return;
+
+    const [subject_name, strand] = selectedSubject.split("|");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const [student_id, percentageStr] of Object.entries(editedGrades)) {
+      if (percentageStr === '' || percentageStr === null) continue;
+      
+      const percentage = parseFloat(percentageStr);
+      if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+        errorCount++;
+        continue;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/teacher/grade-submission/save-draft`, {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            student_id,
+            subject_name,
+            strand,
+            percentage,
+            term: selectedTerm
+          })
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      } catch (err) {
+        errorCount++;
+      }
+    }
+
+    setSaving(false);
+    
+    if (errorCount === 0) {
+      showToast(`✅ Saved ${successCount} grade(s)`);
+      setLastAutoSave(new Date());
+      loadStudents(); // Reload to get updated data
+    } else {
+      showToast(`⚠️ Saved ${successCount}, ${errorCount} failed`);
+    }
+  }
+
+  // ========== SUBMIT BATCH ==========
+  async function submitBatch() {
+    if (!selectedSubject) return;
+
+    const [subject_name, strand] = selectedSubject.split("|");
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSubmitting(true);
+    setShowConfirmModal(false);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/teacher/grade-submission/submit-batch`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          subject_name,
+          strand,
+          term: selectedTerm,
+          notes: ""
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast(`✅ ${data.total_submitted} grades submitted successfully!`);
+        loadStudents();
+      } else {
+        showToast(`❌ ${data.error || "Submission failed"}`);
+      }
+    } catch (err) {
+      showToast("❌ Network error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ========== HELPER FUNCTIONS ==========
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function handleGradeChange(studentId: string, value: string) {
+    // Allow empty or numbers 0-100 with decimals
+    if (value === '' || (/^\d*\.?\d*$/.test(value) && (value === '' || parseFloat(value) <= 100))) {
+      setEditedGrades(prev => ({ ...prev, [studentId]: value }));
+    }
+  }
+
+  function handleImageError(studentId: string) {
+    setImageErrors(prev => new Set(prev).add(studentId));
+  }
+
+  // ========== CALCULATED VALUES ==========
+  const currentSubjectData = subjects.find(s => 
+    `${s.subject_name}|${s.strand}` === selectedSubject && s.term === selectedTerm
+  );
+
+  const gradedStudents = students.filter(s => 
+    editedGrades[s.student_id] && editedGrades[s.student_id] !== ''
+  );
+
+  const percentages = gradedStudents
+    .map(s => parseFloat(editedGrades[s.student_id]))
+    .filter(p => !isNaN(p));
+
+  const classAverage = percentages.length > 0
+    ? (percentages.reduce((a, b) => a + b, 0) / percentages.length).toFixed(1)
+    : '0.0';
+
+  const progressPercentage = students.length > 0
+    ? Math.round((gradedStudents.length / students.length) * 100)
+    : 0;
+
+  const filteredStudents = students.filter(s =>
+    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    s.student_id.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const canSubmit = gradedStudents.length === students.length && students.length > 0;
+  const isWindowOpen = submissionWindow?.is_open ?? false;
+  
+  // Check if all grades are already approved
+  const allApproved = students.length > 0 && students.every(s => s.submission_status === 'approved');
+  const hasApprovedGrades = students.some(s => s.submission_status === 'approved');
+
+  // Get time since last auto-save
+  const timeSinceAutoSave = lastAutoSave 
+    ? Math.floor((new Date().getTime() - lastAutoSave.getTime()) / 1000)
+    : null;
+
+  // ========== RENDER ==========
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2><p className="text-muted small mb-0">Submit and manage student grades</p></div>
-      {isGradeLocked && (
+      {/* Header */}
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2>
+        <p className="text-muted small mb-0">Submit and manage student grades (internal record)</p>
+      </div>
+
+      {/* Status Alert */}
+      {!isWindowOpen && (
         <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
+          <div style={{ color: "#dc2626", marginTop: 2 }}><Icon name="alert" size={20} /></div>
           <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} deadline passed</div>
-            <div className="text-muted small">This panel is read-only. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
+            <div className="fw-bold small text-danger">Grade Submission Closed for {selectedTerm}</div>
+            <div className="text-muted small">Contact the principal to open the submission window.</div>
           </div>
         </div>
       )}
-      <div className="d-flex gap-3 flex-wrap align-items-center">
-        <div style={{ width: 220 }}>
-          <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Select Subject</label>
-          <select value={selectedSubject ?? ""} onChange={e => setSelectedSubject(e.target.value ? Number(e.target.value) : null)} className="form-select form-select-sm rounded-3">
-            {teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+
+      {isWindowOpen && submissionWindow && (
+        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+          <div style={{ color: "#16a34a", marginTop: 2 }}><Icon name="checkCircle" size={20} /></div>
+          <div>
+            <div className="fw-bold small text-success">Grade Submission Open for {selectedTerm}</div>
+            <div className="text-muted small">
+              {submissionWindow.days_remaining > 0 
+                ? `${submissionWindow.days_remaining} days remaining until ${new Date(submissionWindow.end_date).toLocaleDateString()}`
+                : 'Closes today!'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Banner */}
+      <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+        <div style={{ color: "#2563eb", marginTop: 2 }}><Icon name="alert" size={18} /></div>
+        <div className="small text-muted">
+          <strong>Note:</strong> Submitted grades are recorded internally and not visible to students. 
+          Students must submit grade requests to receive their grades.
+        </div>
+      </div>
+
+      {/* Already Approved Alert */}
+      {selectedSubject && allApproved && (
+        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#f0fdf4", border: "1px solid #86efac" }}>
+          <div style={{ color: "#16a34a", marginTop: 2 }}><Icon name="checkCircle" size={20} /></div>
+          <div>
+            <div className="fw-bold small text-success">Grades Already Submitted & Approved</div>
+            <div className="text-muted small">
+              All grades for this class have been submitted and approved. No further action needed.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Class Selector & Term Filter */}
+      <div className="row g-3">
+        <div className="col-md-7">
+          <label className="form-label fw-semibold text-uppercase small mb-2" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>
+            Select Class
+          </label>
+          <select
+            value={selectedSubject || ""}
+            onChange={e => setSelectedSubject(e.target.value)}
+            className="form-select shadow-sm"
+            disabled={loading}
+          >
+            <option value="">-- Select a class --</option>
+            {subjects.filter(s => s.term === selectedTerm).map(subj => (
+              <option key={`${subj.subject_name}|${subj.strand}`} value={`${subj.subject_name}|${subj.strand}`}>
+                {subj.subject_name} - {subj.strand}
+              </option>
+            ))}
           </select>
         </div>
-        <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
-          <div className="card-body p-3 d-flex align-items-center gap-3">
-            <Icon name="chart" size={24} className="text-success" />
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{teacherSubjects.find(s => s.id === selectedSubject)?.name ?? "No subject assigned"}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayGrades.length} students graded</div></div>
-            <div className="fw-black fs-3 text-success">{avg}%</div>
+        <div className="col-md-5">
+          <label className="form-label fw-semibold text-uppercase small mb-2" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>
+            Term
+          </label>
+          <div className="btn-group w-100 shadow-sm" role="group">
+            {["Term 1", "Term 2", "Term 3"].map(term => (
+              <button
+                key={term}
+                type="button"
+                className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => {
+                  setSelectedTerm(term);
+                  setSelectedSubject(null);
+                }}
+              >
+                {term.replace("Term ", "")}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-      <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>ID</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Score</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Grade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gradesLoading ? (
-                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
-              ) : (
-                displayGrades.map((g, i) => (
-                  <tr key={i}>
-                    <td className="ps-4 small fw-medium text-dark">{g.name}</td>
-                    <td className="d-none d-sm-table-cell small text-muted">{g.student_id}</td>
-                    <td className="text-end">
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        <div className="progress flex-shrink-0" style={{ width: 60, height: 6 }}>
-                          <div className="progress-bar bg-success" style={{ width: `${g.percentage}%` }} />
-                        </div>
-                        <span className="small fw-semibold text-dark">{g.percentage}%</span>
-                      </div>
-                    </td>
-                    <td className="text-end pe-4 fw-black small text-success">{g.percentage >= 90 ? "A" : g.percentage >= 80 ? "B" : "C"}</td>
-                  </tr>
-                ))
+
+      {/* Progress Card */}
+      {selectedSubject && (
+        <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)" }}>
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h3 className="fw-bold mb-1">{selectedSubject.split("|")[0]}</h3>
+                <p className="text-muted small mb-0">{selectedSubject.split("|")[1]} · {selectedTerm}</p>
+              </div>
+              {lastAutoSave && timeSinceAutoSave !== null && (
+                <span className="badge bg-success-subtle text-success border border-success-subtle">
+                  💾 Auto-saved {timeSinceAutoSave}s ago
+                </span>
               )}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <span className="small fw-semibold text-dark">Progress</span>
+                <span className="small text-muted">{gradedStudents.length}/{students.length} students ({progressPercentage}%)</span>
+              </div>
+              <div className="progress" style={{ height: 12 }}>
+                <div
+                  className="progress-bar bg-success"
+                  style={{ width: `${progressPercentage}%` }}
+                  role="progressbar"
+                />
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="row g-3">
+              <div className="col-6">
+                <div className="text-muted small">Class Average</div>
+                <div className="fw-bold fs-4 text-primary">{classAverage}%</div>
+              </div>
+              <div className="col-6">
+                <div className="text-muted small">Total Students</div>
+                <div className="fw-bold fs-4 text-dark">{students.length}</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      {teacherSubjects.length === 0 && <div className="alert alert-info small">No subjects are assigned to your account yet.</div>}
-      {gradesError && <div className="alert alert-warning small mt-3">Could not load grades from server. Showing cached data.</div>}
+      )}
+
+      {/* Search Bar */}
+      {selectedSubject && students.length > 0 && (
+        <div className="input-group shadow-sm">
+          <span className="input-group-text bg-white border-end-0">
+            <Icon name="search" size={18} />
+          </span>
+          <input
+            type="text"
+            className="form-control border-start-0"
+            placeholder="Search students by name or ID..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Students Table */}
+      {selectedSubject && (
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table table-hover mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th className="ps-4 small fw-semibold text-uppercase" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Student</th>
+                  <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>ID</th>
+                  <th className="small fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Pathway</th>
+                  <th className="small fw-semibold text-uppercase" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Grade (%)</th>
+                  <th className="pe-4 small fw-semibold text-uppercase text-center" style={{ letterSpacing: "0.05em", color: "#6b7280", width: 60 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4">
+                      <div className="spinner-border spinner-border-sm text-primary me-2" />
+                      <span className="text-muted small">Loading students...</span>
+                    </td>
+                  </tr>
+                ) : filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4 text-muted small">
+                      {search ? `No students found matching "${search}"` : 'No students enrolled in this class'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map(student => {
+                    const hasGrade = editedGrades[student.student_id] && editedGrades[student.student_id] !== '';
+                    const gradeValue = editedGrades[student.student_id] || '';
+                    const isValid = gradeValue === '' || (!isNaN(parseFloat(gradeValue)) && parseFloat(gradeValue) >= 0 && parseFloat(gradeValue) <= 100);
+
+                    return (
+                      <tr key={student.student_id}>
+                        <td className="ps-4">
+                          <div className="d-flex align-items-center gap-2">
+                            {student.photo_url && !imageErrors.has(student.student_id) ? (
+                              <img
+                                src={student.photo_url}
+                                alt={student.full_name}
+                                className="rounded-circle"
+                                style={{ width: 32, height: 32, objectFit: 'cover' }}
+                                onError={() => handleImageError(student.student_id)}
+                              />
+                            ) : (
+                              <div
+                                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                                style={{ width: 32, height: 32, fontSize: '0.75rem' }}
+                              >
+                                {student.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="small fw-medium">{student.full_name}</span>
+                          </div>
+                        </td>
+                        <td className="d-none d-md-table-cell small text-muted">{student.student_id}</td>
+                        <td className="d-none d-lg-table-cell small text-muted">{student.pathway}</td>
+                        <td>
+                          <input
+                            type="text"
+                            className={`form-control form-control-sm ${!isValid ? 'is-invalid' : ''}`}
+                            style={{ width: 100 }}
+                            value={gradeValue}
+                            onChange={e => handleGradeChange(student.student_id, e.target.value)}
+                            placeholder="0-100"
+                            disabled={!isWindowOpen || student.submission_status === 'approved'}
+                          />
+                        </td>
+                        <td className="pe-4 text-center">
+                          {hasGrade && isValid ? (
+                            <span className="text-success" title="Grade entered">✅</span>
+                          ) : !isValid ? (
+                            <span className="text-danger" title="Invalid grade">⚠️</span>
+                          ) : (
+                            <span className="text-muted" title="No grade">⚪</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      {selectedSubject && students.length > 0 && isWindowOpen && !allApproved && (
+        <div className="d-flex gap-2 justify-content-end">
+          <button
+            className="btn btn-outline-secondary"
+            onClick={() => {
+              setEditedGrades({});
+              loadStudents();
+            }}
+            disabled={saving || submitting}
+          >
+            Cancel Changes
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={saveAllDrafts}
+            disabled={saving || submitting || Object.keys(editedGrades).length === 0}
+          >
+            {saving ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                💾 Save All Drafts
+              </>
+            )}
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={() => setShowConfirmModal(true)}
+            disabled={!canSubmit || saving || submitting || allApproved}
+            title={allApproved ? "Grades already submitted and approved" : ""}
+          >
+            {submitting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Submitting...
+              </>
+            ) : allApproved ? (
+              <>
+                ✅ Already Submitted
+              </>
+            ) : (
+              <>
+                📤 Submit All Grades
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <>
+          <div className="modal show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Confirm Grade Submission</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowConfirmModal(false)} />
+                </div>
+                <div className="modal-body">
+                  <p>You are about to submit grades for <strong>{gradedStudents.length} students</strong>.</p>
+                  <p className="text-muted small mb-0">
+                    These grades will be recorded in the system and available for grade requests. 
+                    The principal can return grades if corrections are needed.
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowConfirmModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-success" onClick={submitBatch}>
+                    Confirm Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop show" onClick={() => setShowConfirmModal(false)} />
+        </>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 11 }}>
+          <div className="toast show" role="alert">
+            <div className="toast-body">
+              {toast}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -530,10 +1362,14 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     status: string;
     student_id: string;
     full_name: string;
+    student_name?: string;
     subject_code: string;
+    subject_name: string;
     subject_title: string;
+    term: string;
     current_grade?: string;
     requestedAt?: string;
+    created_at?: string;
     score?: number;
     letterGrade?: string;
     submittedToAdminAt?: string;
@@ -576,36 +1412,62 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
   function acceptRequest(id: number) {
     if (isGradeLocked) return;
-    showToast("?? Request accepted � enter the calculated grade below");
+    showToast("Request accepted - enter the calculated grade below");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: "teacher_calculating" } : r));
   }
 
-  function submitToAdmin(id: number) {
+  async function submitToAdmin(id: number) {
     if (isGradeLocked) return;
     const g = grading[id];
-    if (!g?.score || isNaN(Number(g.score))) { showToast("?? Enter a valid score first"); return; }
+    if (!g?.score || isNaN(Number(g.score))) { 
+      showToast("Enter a valid score first"); 
+      return; 
+    }
     const score = Number(g.score);
-    // Calculate letter grade (not used in API but kept for reference)
-    // const letterGrade = score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-"
-    //   : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-"
-    //   : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-"
-    //   : score >= 65 ? "D" : "F";
       
     const token = localStorage.getItem("inform_token");
-      if (token) {
-        fetch(`${API_BASE}/api/grade-requests/teacher/${id}/submit`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ score, remarks: g.remarks || "" }),
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => { if (data?.request) reload(); })
-          .catch(() => {});
+    if (!token) {
+      showToast("Authentication required");
+      return;
     }
-    setGrading(prev => { const n = { ...prev }; delete n[id]; return n; });
-    reload();
-    showToast(`✅ Grade submitted to Registrar for review`);
+
+    try {
+      console.log(`[SUBMIT] Submitting grade request ${id} with score ${score}`);
+      const response = await fetch(`${API_BASE}/api/grade-requests/teacher/${id}/submit`, {
+        method: "PATCH",
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          "Content-Type": "application/json" 
+        },
+        credentials: "include",
+        body: JSON.stringify({ score, remarks: g.remarks || "" }),
+      });
+
+      console.log(`[SUBMIT] Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error(`[SUBMIT] Error:`, errorData);
+        showToast(errorData?.error || "Failed to submit grade");
+        return;
+      }
+
+      const data = await response.json();
+      console.log(`[SUBMIT] Success:`, data);
+      
+      // Clear the grading entry and reload
+      setGrading(prev => { 
+        const n = { ...prev }; 
+        delete n[id]; 
+        return n; 
+      });
+      
+      await reload();
+      showToast("Grade submitted to Principal for review");
+    } catch (err) {
+      console.error(`[SUBMIT] Exception:`, err);
+      showToast("Network error - please try again");
+    }
   }
 
   function releaseToStudent(id: number) {
@@ -619,7 +1481,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       body: JSON.stringify({}),
     })
       .then(r => r.ok ? r.json() : null)
-      .then(() => { reload(); showToast("?? Grade released to student!"); })
+      .then(() => { reload(); showToast("Grade released to student!"); })
       .catch(() => {});
   }
 
@@ -632,14 +1494,12 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
   function statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      student_requested:  "?? Requested",
-      teacher_calculating:"?? Calculating",
-      registrar_review:   "?? Sent to Registrar",
-      principal_review:   "?? Principal Review",
-      principal_approved: "? Principal Approved",
-      registrar_released: "?? Released by Registrar",
-      released_to_student:"?? Grade Released",
-      rejected:           "? Rejected",
+      student_requested:  "Requested",
+      teacher_calculating:"Calculating",
+      principal_review:   "Sent to Principal",
+      principal_approved: "Principal Approved",
+      released_to_student:"Grade Released",
+      rejected:           "Rejected",
     };
     return labels[status] || status;
   }
@@ -653,8 +1513,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
   const newRequests     = requests.filter(r => r.status === "student_requested");
   const inProgress      = requests.filter(r => r.status === "teacher_calculating");
-  const pendingAdmin    = requests.filter(r => r.status === "registrar_review");
-  const verifiedByAdmin = requests.filter(r => r.status === "principal_approved" || r.status === "registrar_released");
+  const pendingAdmin    = requests.filter(r => r.status === "principal_review"); // NEW FLOW: principal_review instead of registrar_review
+  const verifiedByAdmin = requests.filter(r => r.status === "principal_approved");
   const released        = requests.filter(r => r.status === "released_to_student");
   const rejected        = requests.filter(r => r.status === "rejected");
 
@@ -670,7 +1530,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Requests</h2><p className="text-muted small mb-0">Student grade requests for {activeTerm}</p></div>
+      <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Requests</h2><p className="text-muted small mb-0">Student grade requests from all terms</p></div>
 
       {/* Lock banner */}
       {isGradeLocked && (
@@ -711,23 +1571,24 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 1 � New student requests */}
       {newRequests.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">?? New Student Requests � Action Required</h3>
+          <h3 className="fw-bold small text-dark mb-3">New Student Requests - Action Required</h3>
           <div className="d-flex flex-column gap-2">
             {newRequests.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3">
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div>
-                      <div className="fw-bold text-dark small">{req.full_name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_title} · {activeTerm} · {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'N/A'}</div>
+                    <div className="flex-grow-1">
+                      <div className="fw-bold text-dark mb-1">{req.student_name || req.full_name}</div>
+                      <div className="text-muted small">{req.subject_code || req.subject_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{req.term} · Requested: {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked � visit Registrar&apos;s Office</div>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
                     : <div className="d-flex gap-2">
-                        <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">✅ Accept &amp; Calculate</button>
-                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">✕ Reject</button>
+                        <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">Accept &amp; Calculate</button>
+                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">Reject</button>
                       </div>
                   }
                 </div>
@@ -740,15 +1601,16 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 2 � Teacher calculating, enter grade form */}
       {inProgress.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">📝 Enter &amp; Submit Grades to Admin</h3>
+          <h3 className="fw-bold small text-dark mb-3">Enter &amp; Submit Grades to Principal</h3>
           <div className="d-flex flex-column gap-2">
             {inProgress.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div>
-                      <div className="fw-bold text-dark small">{req.full_name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.subject_title} · {activeTerm}</div>
+                    <div className="flex-grow-1">
+                      <div className="fw-bold text-dark mb-1">{req.student_name || req.full_name}</div>
+                      <div className="text-muted small">{req.subject_code || req.subject_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{activeTerm}</div>
                     </div>
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
@@ -778,8 +1640,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     </div>
                   )}
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked � visit Registrar&apos;s Office</div>
-                    : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">?? Submit to Admin for Verification</button>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
+                    : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">Submit to Principal for Verification</button>
                   }
                 </div>
               </div>
@@ -791,7 +1653,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 3 � Waiting for admin */}
       {pendingAdmin.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Awaiting Admin Verification</h3>
+          <h3 className="fw-bold small text-dark mb-3">Awaiting Principal Verification</h3>
           <div className="d-flex flex-column gap-2">
             {pendingAdmin.map(req => (
               <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-85">
@@ -812,7 +1674,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       {/* STEP 4 � Admin verified, teacher must release */}
       {verifiedByAdmin.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Admin Verified � Release to Student</h3>
+          <h3 className="fw-bold small text-dark mb-3">Principal Verified - Release to Student</h3>
           <div className="d-flex flex-column gap-2">
             {verifiedByAdmin.map(req => (
               <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
@@ -826,8 +1688,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>?? Locked � visit Registrar&apos;s Office</div>
-                    : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">?? Release Grade to Student</button>
+                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
+                    : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">Release Grade to Student</button>
                   }
                 </div>
               </div>
@@ -1355,7 +2217,7 @@ export default function TeacherDashboardPage() {
     id: number; code: string; name: string; units: number; max_capacity: number; enrolled_count: number;
   }[]>([]);
   const [apiStudents, setApiStudents] = useState<{
-    student_id: string; full_name: string; email: string;
+    student_id: string; full_name: string; email: string; pathway: string | null; grade_level: number | null; photo_url: string | null; track: string | null; strand: string | null; subject_name?: string; term?: string; track_strand?: string;
   }[]>([]);
 
   // -- Route protection ------------------------------------------
@@ -1395,10 +2257,30 @@ export default function TeacherDashboardPage() {
 
   function renderPanel() {
     switch (panel) {
-      case "subjects":      return <SubjectsPanel subjects={apiSubjects.length ? apiSubjects.map(s => ({ id: s.id, code: s.code, name: s.name, units: s.units, enrolled: s.enrolled_count, max: s.max_capacity })) : undefined} />;
       case "schedule":      return <SchedulePanel />;
-      case "students":      return <StudentsPanel students={apiStudents.length ? apiStudents.map(s => ({ id: s.student_id, name: s.full_name, pathway: "Academic", grade: 0, status: "Active" })) : undefined} />;
-      case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacherSubjects={apiSubjects.map(s => ({ id: s.id, name: s.name }))} />;
+      case "students":      return <StudentsPanel students={apiStudents.length ? apiStudents.map(s => {
+        // Build pathway string from track/strand
+        let pathwayDisplay = s.track || "Academic Track";
+        if (s.strand) {
+          pathwayDisplay = `${s.track} - ${s.strand}`;
+        }
+        
+        // Build track_strand string
+        const trackStrand = (s.track && s.strand) ? `${s.track} - ${s.strand}` : (s.track || s.strand || "");
+        
+        return {
+          id: s.student_id, 
+          name: s.full_name, 
+          pathway: pathwayDisplay, 
+          grade: s.grade_level || 11, 
+          status: "Active",
+          photo_url: s.photo_url,
+          subject: s.subject_name,
+          term: s.term,
+          track_strand: trackStrand
+        };
+      }) : undefined} />;
+      case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;

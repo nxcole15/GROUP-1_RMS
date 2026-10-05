@@ -87,6 +87,7 @@ async function getDashboard(req, res, next) {
 
     res.json({ teacher, subjects, students, stats, activity });
   } catch (err) {
+    console.error("Dashboard error:", err);
     next(err);
   }
 }

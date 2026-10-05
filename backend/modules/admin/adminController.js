@@ -739,6 +739,225 @@ async function reactivateTeacher(req, res, next) {
   }
 }
 
+// ──────────────────────────────────────────────────────────────
+// Grade Submission Config
+// ──────────────────────────────────────────────────────────────
+
+async function getGradeSubmissionConfig(req, res, next) {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        term,
+        is_open,
+        start_date,
+        end_date,
+        manual_override,
+        last_modified_by,
+        last_modified_at,
+        notes,
+        CASE 
+          WHEN manual_override = 'open' THEN 'open'
+          WHEN manual_override = 'closed' THEN 'closed'
+          WHEN start_date IS NOT NULL AND end_date IS NOT NULL THEN
+            CASE
+              WHEN NOW() >= start_date AND NOW() <= end_date THEN 'open'
+              WHEN NOW() < start_date THEN 'not_started'
+              ELSE 'deadline_passed'
+            END
+          ELSE 'no_schedule'
+        END as calculated_status
+      FROM grade_submission_config
+      ORDER BY FIELD(term, 'Term 1', 'Term 2', 'Term 3')
+    `);
+
+    // Map the calculated status to user-friendly response
+    const config = rows.map(row => {
+      let actualStatus = 'closed';
+      let statusReason = '';
+
+      switch (row.calculated_status) {
+        case 'open':
+          actualStatus = 'open';
+          statusReason = row.manual_override === 'open' ? 'Manually opened' : 'Scheduled';
+          break;
+        case 'closed':
+          actualStatus = 'closed';
+          statusReason = 'Manually closed';
+          break;
+        case 'not_started':
+          actualStatus = 'closed';
+          statusReason = 'Not started yet';
+          break;
+        case 'deadline_passed':
+          actualStatus = 'closed';
+          statusReason = 'Deadline passed';
+          break;
+        case 'no_schedule':
+          actualStatus = 'closed';
+          statusReason = 'No schedule set';
+          break;
+      }
+
+      return {
+        term: row.term,
+        is_open: actualStatus === 'open',
+        actual_status: actualStatus,
+        status_reason: statusReason,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        manual_override: row.manual_override,
+        last_modified_by: row.last_modified_by,
+        last_modified_at: row.last_modified_at,
+        notes: row.notes
+      };
+    });
+
+    res.json({ config });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function setGradeSubmissionSchedule(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can set grade submission schedule." });
+    }
+
+    const { term } = req.params;
+    const { start_date, end_date, notes } = req.body;
+
+    if (!['Term 1', 'Term 2', 'Term 3'].includes(term)) {
+      return res.status(400).json({ error: "Invalid term." });
+    }
+
+    if (!start_date || !end_date) {
+      return res.status(400).json({ error: "Start date and end date are required." });
+    }
+
+    // Convert ISO datetime strings to MySQL datetime format (no timezone conversion)
+    // Input: "2026-09-30T22:18:00" -> Output: "2026-09-30 22:18:00"
+    const startMysql = start_date.replace('T', ' ');
+    const endMysql = end_date.replace('T', ' ');
+
+    // Validate dates (parse as local time)
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+
+    if (start >= end) {
+      return res.status(400).json({ error: "End date must be after start date." });
+    }
+
+    await db.query(`
+      UPDATE grade_submission_config
+      SET 
+        start_date = ?,
+        end_date = ?,
+        manual_override = 'none',
+        last_modified_by = ?,
+        last_modified_at = NOW(),
+        notes = ?
+      WHERE term = ?
+    `, [startMysql, endMysql, req.admin.admin_id, notes || null, term]);
+
+    res.json({ message: "Grade submission schedule set successfully." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function openGradeSubmissionNow(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can manually open grade submission." });
+    }
+
+    const { term } = req.params;
+    const { notes } = req.body || {};
+
+    if (!['Term 1', 'Term 2', 'Term 3'].includes(term)) {
+      return res.status(400).json({ error: "Invalid term." });
+    }
+
+    await db.query(`
+      UPDATE grade_submission_config
+      SET 
+        manual_override = 'open',
+        start_date = NULL,
+        end_date = NULL,
+        last_modified_by = ?,
+        last_modified_at = NOW(),
+        notes = ?
+      WHERE term = ?
+    `, [req.admin.admin_id, notes || 'Manually opened', term]);
+
+    res.json({ message: `Grade submission for ${term} opened successfully.` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function closeGradeSubmissionNow(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can manually close grade submission." });
+    }
+
+    const { term } = req.params;
+    const { notes } = req.body || {};
+
+    if (!['Term 1', 'Term 2', 'Term 3'].includes(term)) {
+      return res.status(400).json({ error: "Invalid term." });
+    }
+
+    await db.query(`
+      UPDATE grade_submission_config
+      SET 
+        manual_override = 'closed',
+        start_date = NULL,
+        end_date = NULL,
+        last_modified_by = ?,
+        last_modified_at = NOW(),
+        notes = ?
+      WHERE term = ?
+    `, [req.admin.admin_id, notes || 'Manually closed', term]);
+
+    res.json({ message: `Grade submission for ${term} closed successfully.` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function clearGradeSubmissionSchedule(req, res, next) {
+  try {
+    if (req.admin.role !== "principal") {
+      return res.status(403).json({ error: "Only the principal can clear grade submission schedule." });
+    }
+
+    const { term } = req.params;
+
+    if (!['Term 1', 'Term 2', 'Term 3'].includes(term)) {
+      return res.status(400).json({ error: "Invalid term." });
+    }
+
+    await db.query(`
+      UPDATE grade_submission_config
+      SET 
+        start_date = NULL,
+        end_date = NULL,
+        manual_override = 'none',
+        last_modified_by = ?,
+        last_modified_at = NOW(),
+        notes = NULL
+      WHERE term = ?
+    `, [req.admin.admin_id, term]);
+
+    res.json({ message: `Grade submission schedule for ${term} cleared successfully.` });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function reactivateStudent(req, res, next) {
   try {
     const studentId = req.params.student_id;
@@ -807,4 +1026,9 @@ module.exports = {
   getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
   getTeachers, createTeacherAccount, updateTeacher, deactivateTeacher, reactivateTeacher,
+  getGradeSubmissionConfig,
+  setGradeSubmissionSchedule,
+  openGradeSubmissionNow,
+  closeGradeSubmissionNow,
+  clearGradeSubmissionSchedule,
 };

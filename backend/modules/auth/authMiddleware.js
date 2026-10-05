@@ -22,9 +22,11 @@ function authenticateStudent(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    
     if (decoded.role !== "student") {
       return res.status(403).json({ error: "Access denied." });
     }
+    
     req.student = decoded;
     next();
   } catch (err) {

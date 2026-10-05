@@ -170,17 +170,17 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
   let filteredNavItems = navItems;
   
   if (role === "registrar") {
-    // Registrar: Remove students, teachers, tuition; add scheduling
+    // Registrar: Remove students, teachers, tuition, grades, and grade requests
     filteredNavItems = navItems.filter(item => 
-      !["students", "teachers", "tuition"].includes(item.id)
+      !["students", "teachers", "tuition", "grades", "requests"].includes(item.id)
     );
-    // Add scheduling item after grades
-    const gradesIndex = filteredNavItems.findIndex(item => item.id === "grades");
-    if (gradesIndex !== -1) {
+    // Add scheduling item after enrollment
+    const enrollmentIndex = filteredNavItems.findIndex(item => item.id === "enrollment");
+    if (enrollmentIndex !== -1) {
       filteredNavItems = [
-        ...filteredNavItems.slice(0, gradesIndex + 1),
+        ...filteredNavItems.slice(0, enrollmentIndex + 1),
         { id: "scheduling", label: "Scheduling" },
-        ...filteredNavItems.slice(gradesIndex + 1)
+        ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
   }
@@ -568,7 +568,7 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
                                     animation: `scaleIn 500ms cubic-bezier(0.34,1.2,0.64,1) ${delay}ms both`,
                                   }}
                                 />
-                                {/* X label */}
+                    o            {/* X label */}
                                 <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", marginTop: 6, textAlign: "center", lineHeight: 1.2 }}>
                                   {c.track}
                                 </span>
@@ -1007,95 +1007,442 @@ function StudentsPanel() {
 }
 
 /*  Grades Panel  */
-function GradesPanel() {
+function GradesPanel({ role }: { role?: string } = {}) {
   const [selected, setSelected] = useState("");
-  const [term1Open, setTerm1Open] = useState(false);
-  const [term2Open, setTerm2Open] = useState(false);
-  const [term3Open, setTerm3Open] = useState(false);
+  
+  // Grade submission config state
+  const [submissionConfig, setSubmissionConfig] = useState<{
+    term: string;
+    is_open: boolean;
+    actual_status: string;
+    status_reason: string;
+    start_date: string | null;
+    end_date: string | null;
+    manual_override: string;
+    last_modified_by: string | null;
+    last_modified_at: string | null;
+    notes: string | null;
+  }[]>([]);
+
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [processingTerm, setProcessingTerm] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  // Form state for each term
+  const [termForms, setTermForms] = useState<Record<string, { startDate: string; startTime: string; endDate: string; endTime: string; notes: string }>>({
+    "Term 1": { startDate: "", startTime: "", endDate: "", endTime: "", notes: "" },
+    "Term 2": { startDate: "", startTime: "", endDate: "", endTime: "", notes: "" },
+    "Term 3": { startDate: "", startTime: "", endDate: "", endTime: "", notes: "" },
+  });
+
+  // Selected term for scheduling
+  const [selectedTerm, setSelectedTerm] = useState<"Term 1" | "Term 2" | "Term 3">("Term 1");
   
   const student = students.find(s => s.id === selected) ?? students[0] ?? null;
   const grades: Array<{ subject: string; grade: string; pct: number; units: number; teacher: string }> = [];
 
+  // Get config for selected term
+  const selectedConfig = submissionConfig.find(c => c.term === selectedTerm);
+  const selectedForm = termForms[selectedTerm] || { startDate: "", startTime: "", endDate: "", endTime: "", notes: "" };
+
+  // Load grade submission config
+  function loadSubmissionConfig() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    setLoadingConfig(true);
+    fetch(`${API_BASE}/api/admin/grade-submission-config`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.config) {
+          setSubmissionConfig(data.config);
+          
+          // Pre-fill form with existing schedule
+          const newForms: any = {};
+          data.config.forEach((c: any) => {
+            if (c.start_date && c.end_date) {
+              // Parse as local datetime (MySQL returns datetime without timezone)
+              const startStr = c.start_date.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
+              const endStr = c.end_date.replace(' ', 'T');
+              
+              // Extract date and time parts directly from the string
+              const [startDate, startTime] = startStr.split('T');
+              const [endDate, endTime] = endStr.split('T');
+              
+              newForms[c.term] = {
+                startDate: startDate, // "2026-09-30"
+                startTime: startTime.slice(0, 5), // "05:52"
+                endDate: endDate, // "2026-09-30"
+                endTime: endTime.slice(0, 5), // "05:54"
+                notes: c.notes || ""
+              };
+            } else {
+              newForms[c.term] = { startDate: "", startTime: "", endDate: "", endTime: "", notes: "" };
+            }
+          });
+          setTermForms(newForms);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingConfig(false));
+  }
+
+  useEffect(() => {
+    loadSubmissionConfig();
+    
+    // Auto-refresh every 30 seconds to update open/closed status
+    const interval = setInterval(() => {
+      loadSubmissionConfig();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  async function setSchedule(term: string) {
+    const form = termForms[term];
+    if (!form.startDate || !form.startTime || !form.endDate || !form.endTime) {
+      setSuccessMessage("Please fill in all date and time fields");
+      setShowSuccessModal(true);
+      return;
+    }
+
+    const startDateTime = `${form.startDate}T${form.startTime}:00`;
+    const endDateTime = `${form.endDate}T${form.endTime}:00`;
+
+    console.log("Setting schedule:", { term, startDateTime, endDateTime, notes: form.notes });
+
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
+
+    setProcessingTerm(term);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/grade-submission-config/${term}/schedule`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          start_date: startDateTime,
+          end_date: endDateTime,
+          notes: form.notes || null
+        }),
+      });
+      const data = await response.json();
+      console.log("Response:", { status: response.status, data });
+      
+      if (!response.ok) throw new Error(data.error || "Failed to set schedule");
+
+      loadSubmissionConfig();
+      setSuccessMessage(`Schedule set for ${term}`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error("Error setting schedule:", error);
+      setSuccessMessage(error instanceof Error ? error.message : "Failed to set schedule");
+      setShowSuccessModal(true);
+    } finally {
+      setProcessingTerm(null);
+    }
+  }
+
+  async function openNow(term: string) {
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setProcessingTerm(term);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/grade-submission-config/${term}/open`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ notes: "Manually opened" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to open");
+
+      loadSubmissionConfig();
+      setSuccessMessage(`${term} opened successfully`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : "Failed to open");
+      setShowSuccessModal(true);
+    } finally {
+      setProcessingTerm(null);
+    }
+  }
+
+  async function closeNow(term: string) {
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setProcessingTerm(term);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/grade-submission-config/${term}/close`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ notes: "Manually closed" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to close");
+
+      loadSubmissionConfig();
+      setSuccessMessage(`${term} closed successfully`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : "Failed to close");
+      setShowSuccessModal(true);
+    } finally {
+      setProcessingTerm(null);
+    }
+  }
+
+  async function clearSchedule(term: string) {
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setProcessingTerm(term);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/grade-submission-config/${term}/schedule`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to clear schedule");
+
+      loadSubmissionConfig();
+      setSuccessMessage(`Schedule cleared for ${term}`);
+      setShowSuccessModal(true);
+    } catch (error) {
+      setSuccessMessage(error instanceof Error ? error.message : "Failed to clear schedule");
+      setShowSuccessModal(true);
+    } finally {
+      setProcessingTerm(null);
+    }
+  }
+
+  function formatDateTime(dateStr: string | null) {
+    if (!dateStr) return "Not set";
+    
+    // MySQL returns datetime as "YYYY-MM-DD HH:MM:SS" in local time
+    // Parse it directly without timezone conversion
+    const str = dateStr.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
+    const [datePart, timePart] = str.split('T');
+    const [year, month, day] = datePart.split('-');
+    const [hour, minute] = timePart.split(':');
+    
+    // Create date using local timezone
+    const date = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // Month is 0-indexed
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute)
+    );
+    
+    return date.toLocaleString("en-US", { 
+      month: "short", 
+      day: "numeric", 
+      year: "numeric", 
+      hour: "numeric", 
+      minute: "2-digit",
+      hour12: true 
+    });
+  }
+
   if (!student) {
     return (
       <div className="d-flex flex-column gap-4">
+        {/* Header */}
         <div>
-          <h2 className="fw-black fs-4 text-dark mb-0">Grades Management</h2>
-          <p className="text-muted small mb-0">View and manage student grades</p>
+          <h2 className="fw-black fs-4 text-dark mb-0">Grade Submission Control</h2>
+          <p className="text-muted small mb-0">Manage when teachers can submit student grades</p>
         </div>
         
-        {/* Term Submission Control */}
+        {/* Grade Submission Control - Principal Only */}
+        {role === "principal" && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4">
-            <h5 className="fw-bold mb-3">Grade Submission Control</h5>
-            <p className="text-muted small mb-3">Enable or disable grade submission for each term</p>
             
-            <div className="d-flex flex-column gap-3">
-              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
-                <div>
-                  <div className="fw-semibold">Term 1</div>
-                  <div className="text-muted small">Teachers {term1Open ? "can" : "cannot"} submit grades</div>
+            {loadingConfig ? (
+              <div className="text-center py-4 text-muted">Loading...</div>
+            ) : (
+              <>
+                {/* Term Selector */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold mb-2">Select Term to Manage:</label>
+                  <div className="d-flex gap-2">
+                    {["Term 1", "Term 2", "Term 3"].map((term) => {
+                      return (
+                        <button
+                          key={term}
+                          onClick={() => setSelectedTerm(term as "Term 1" | "Term 2" | "Term 3")}
+                          className={`btn ${selectedTerm === term ? "btn-primary" : "btn-outline-secondary"}`}
+                        >
+                          {term}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="form-check form-switch">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    checked={term1Open}
-                    onChange={(e) => setTerm1Open(e.target.checked)}
-                    style={{ width: "3rem", height: "1.5rem" }}
-                  />
-                  <label className="form-check-label fw-semibold ms-2">
-                    {term1Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
-                  </label>
-                </div>
-              </div>
 
-              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
-                <div>
-                  <div className="fw-semibold">Term 2</div>
-                  <div className="text-muted small">Teachers {term2Open ? "can" : "cannot"} submit grades</div>
-                </div>
-                <div className="form-check form-switch">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    checked={term2Open}
-                    onChange={(e) => setTerm2Open(e.target.checked)}
-                    style={{ width: "3rem", height: "1.5rem" }}
-                  />
-                  <label className="form-check-label fw-semibold ms-2">
-                    {term2Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
-                  </label>
-                </div>
-              </div>
+                {selectedConfig && (
+                  <div className="border rounded-3 p-4">
+                    {/* Status Header */}
+                    <div className="d-flex align-items-center justify-content-between mb-4">
+                      <div>
+                        <h5 className="fw-bold mb-1">{selectedTerm}</h5>
+                        <div className="small text-muted">{selectedConfig.status_reason}</div>
+                      </div>
+                      <span className={`badge ${selectedConfig.is_open ? "bg-success" : "bg-danger"} px-3 py-2 fs-6`}>
+                        {selectedConfig.is_open ? "🟢 OPEN" : "🔴 CLOSED"}
+                      </span>
+                    </div>
 
-              <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border">
-                <div>
-                  <div className="fw-semibold">Term 3</div>
-                  <div className="text-muted small">Teachers {term3Open ? "can" : "cannot"} submit grades</div>
-                </div>
-                <div className="form-check form-switch">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    checked={term3Open}
-                    onChange={(e) => setTerm3Open(e.target.checked)}
-                    style={{ width: "3rem", height: "1.5rem" }}
-                  />
-                  <label className="form-check-label fw-semibold ms-2">
-                    {term3Open ? <span className="text-success">Open</span> : <span className="text-danger">Closed</span>}
-                  </label>
-                </div>
-              </div>
-            </div>
+                    {/* Schedule Form */}
+                    <div className="row g-3 mb-3">
+                      <div className="col-12 col-md-6">
+                        <label className="form-label small fw-semibold">Start Date & Time</label>
+                        <div className="row g-2">
+                          <div className="col-7">
+                            <input 
+                              type="date" 
+                              className="form-control"
+                              value={selectedForm.startDate}
+                              onChange={(e) => setTermForms({
+                                ...termForms,
+                                [selectedTerm]: { ...selectedForm, startDate: e.target.value }
+                              })}
+                            />
+                          </div>
+                          <div className="col-5">
+                            <input 
+                              type="time" 
+                              className="form-control"
+                              value={selectedForm.startTime}
+                              onChange={(e) => setTermForms({
+                                ...termForms,
+                                [selectedTerm]: { ...selectedForm, startTime: e.target.value }
+                              })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-12 col-md-6">
+                        <label className="form-label small fw-semibold">End Date & Time</label>
+                        <div className="row g-2">
+                          <div className="col-7">
+                            <input 
+                              type="date" 
+                              className="form-control"
+                              value={selectedForm.endDate}
+                              onChange={(e) => setTermForms({
+                                ...termForms,
+                                [selectedTerm]: { ...selectedForm, endDate: e.target.value }
+                              })}
+                            />
+                          </div>
+                          <div className="col-5">
+                            <input 
+                              type="time" 
+                              className="form-control"
+                              value={selectedForm.endTime}
+                              onChange={(e) => setTermForms({
+                                ...termForms,
+                                [selectedTerm]: { ...selectedForm, endTime: e.target.value }
+                              })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label small fw-semibold">Notes (Optional)</label>
+                        <input 
+                          type="text" 
+                          className="form-control"
+                          placeholder="e.g., Extended deadline"
+                          value={selectedForm.notes}
+                          onChange={(e) => setTermForms({
+                            ...termForms,
+                            [selectedTerm]: { ...selectedForm, notes: e.target.value }
+                          })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Current Schedule Info - Only show if scheduled and not passed */}
+                    {selectedConfig.start_date && selectedConfig.end_date && 
+                     selectedConfig.manual_override === 'none' && 
+                     selectedConfig.status_reason !== 'Deadline passed' && (
+                      <div className="alert alert-info small mb-3">
+                        <strong>Current Schedule:</strong><br />
+                        Opens: {formatDateTime(selectedConfig.start_date)}<br />
+                        Closes: {formatDateTime(selectedConfig.end_date)}
+                      </div>
+                    )}
+
+                    {/* Schedule Done Message */}
+                    {selectedConfig.status_reason === 'Deadline passed' && (
+                      <div className="alert alert-secondary small mb-3">
+                        <strong>Schedule Complete:</strong> Submission period has ended and is now closed.
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="d-flex gap-2 flex-wrap">
+                      <button 
+                        onClick={() => setSchedule(selectedTerm)}
+                        className="btn btn-primary"
+                        disabled={processingTerm === selectedTerm}
+                      >
+                        {processingTerm === selectedTerm ? "Processing..." : "📅 Set Schedule"}
+                      </button>
+                      <button 
+                        onClick={() => openNow(selectedTerm)}
+                        className="btn btn-success"
+                        disabled={processingTerm === selectedTerm || selectedConfig.is_open}
+                      >
+                        {processingTerm === selectedTerm ? "Processing..." : "✅ Open Now"}
+                      </button>
+                      <button 
+                        onClick={() => closeNow(selectedTerm)}
+                        className="btn btn-danger"
+                        disabled={processingTerm === selectedTerm || !selectedConfig.is_open}
+                      >
+                        {processingTerm === selectedTerm ? "Processing..." : "🚫 Close Now"}
+                      </button>
+                      <button 
+                        onClick={() => clearSchedule(selectedTerm)}
+                        className="btn btn-outline-secondary"
+                        disabled={processingTerm === selectedTerm}
+                      >
+                        {processingTerm === selectedTerm ? "Processing..." : "🗑️ Clear"}
+                      </button>
+                    </div>
+
+                    {/* Last Modified */}
+                    {selectedConfig.last_modified_by && selectedConfig.last_modified_at && (
+                      <div className="text-muted small mt-3">
+                        Last modified by {selectedConfig.last_modified_by} on {formatDateTime(selectedConfig.last_modified_at)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
+        )}
         
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4 text-center text-muted small">
-            No student grade data is available yet.
-          </div>
-        </div>
+        {/* Submitted Grade Batches - Simple inline version */}
+        {role === "principal" && <SubmittedGradesList />}
+
       </div>
     );
   }
@@ -1253,23 +1600,38 @@ function EnrollmentPanel({ role }: { role?: string }) {
 
   useEffect(() => {
   const token = localStorage.getItem("inform_token");
-  if (!token) return;
+  if (!token) {
+    console.warn("No token found");
+    setEnrollments([]);
+    return;
+  }
+  
+  console.log("Fetching applications...");
   
   // Fetch from applications API (where students actually submit)
   fetch(`${API_BASE}/api/applications`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 
+      Authorization: `Bearer ${token}`
+    },
     credentials: "include",
   })
     .then(r => {
+      console.log("Applications response status:", r.status);
       if (!r.ok) {
-        console.error("Applications fetch error:", r.status);
-        return null;
+        console.error("Applications fetch error:", r.status, r.statusText);
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
       }
       return r.json();
     })
     .then(data => {
       console.log("Applications data:", data);
+      if (!data) {
+        console.warn("No applications data received");
+        setEnrollments([]);
+        return;
+      }
       if (data?.applications && Array.isArray(data.applications)) {
+        console.log(`Found ${data.applications.length} applications`);
         // Map applications to enrollment format
         setEnrollments(data.applications.map((app: {
           id: number; 
@@ -1705,7 +2067,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
                     <tr>
                       <td className="ps-4">
                         <div className="d-flex align-items-center gap-3">
-                          {/* Student Photo - now with photo_url from backend */}
+                          {/* Student Photo */}
                           {e.photo ? (
                             <Image
                               src={e.photo}
@@ -1716,7 +2078,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                               style={{ objectFit:"cover", border:"2px solid #e2e8f0" }}
                             />
                           ) : (
-                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" style={{ width:40, height:40, fontSize:12 }}>
+                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                              style={{ width:40, height:40, fontSize:12 }}>
                               {initials(e.name)}
                             </div>
                           )}
@@ -3223,8 +3586,16 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       .catch(() => {});
     fetch(`${API_BASE}/api/grade-requests/config`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.config) setTermConfig(data.config); })
-      .catch(() => {});
+      .then(data => { 
+        console.log('Config fetched:', data);
+        if (data?.config) {
+          console.log('Setting termConfig to:', data.config);
+          setTermConfig(data.config);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch config:', err);
+      });
   }
 
   useEffect(() => {
@@ -3238,6 +3609,9 @@ function AdminRequestsPanel({ role }: { role?: string }) {
   function toggleTerm(term: string, open: boolean) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) { showToast("Session expired. Please log in again."); return; }
+    
+    console.log('toggleTerm called:', { term, open, endpoint: `${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}` });
+    
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
     fetch(`${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
@@ -3245,9 +3619,17 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       credentials: "include",
       body: JSON.stringify({ term }),
     })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(() => { showToast(open ? `${term} opened.` : `${term} closed.`); reload(); })
-      .catch(() => {
+      .then(r => {
+        console.log('toggleTerm response:', r.status, r.statusText);
+        return r.ok ? r.json() : Promise.reject(r.status);
+      })
+      .then((data) => { 
+        console.log('toggleTerm success:', data);
+        showToast(open ? `${term} opened.` : `${term} closed.`); 
+        reload(); 
+      })
+      .catch((err) => {
+        console.error('toggleTerm error:', err);
         setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 0 : 1 } : c));
         showToast("Failed to update term.");
       });
@@ -3819,74 +4201,1460 @@ function AdminDocumentsPanel() {
 }
 
 /*  Scheduling Panel  */
+
+// Timetable View Component
+function TimetableView({ filters, setFilters, showToast }: any) {
+  const [timetableData, setTimetableData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedScheduleDetails, setSelectedScheduleDetails] = useState<any>(null);
+
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    return month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+  };
+
+  useEffect(() => {
+    loadTimetable();
+  }, [filters]);
+
+  async function loadTimetable() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.term) params.append('term', filters.term);
+      if (filters.track) params.append('track', filters.track);
+      if (filters.strand) params.append('strand', filters.strand);
+      if (filters.room) params.append('room', filters.room);
+      params.append('school_year', getCurrentSchoolYear());
+
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/timetable?${params}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTimetableData(data);
+      } else {
+        showToast("❌ Failed to load timetable");
+      }
+    } catch (err) {
+      showToast("❌ Failed to load timetable");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const timeSlots = [
+    "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", 
+    "13:00", "14:00", "15:00", "16:00", "17:00"
+  ];
+
+  function getSchedulesForDayAndTime(day: string, timeSlot: string) {
+    if (!timetableData?.schedules) return [];
+    
+    return timetableData.schedules.filter((schedule: any) => {
+      if (schedule.day !== day) return false;
+      
+      const scheduleStart = schedule.time_start.slice(0, 5);
+      const scheduleEnd = schedule.time_end.slice(0, 5);
+      const slotEnd = `${(parseInt(timeSlot.slice(0, 2)) + 1).toString().padStart(2, '0')}:00`;
+      
+      return scheduleStart <= timeSlot && scheduleEnd > timeSlot;
+    });
+  }
+
+  return (
+    <div className="card border-0 shadow-sm rounded-3">
+      <div className="card-body p-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h3 className="fw-bold fs-5 mb-1">📅 Weekly Timetable</h3>
+            <p className="text-muted small mb-0">View all schedules in calendar format</p>
+          </div>
+          
+          <button className="btn btn-sm btn-outline-primary" onClick={loadTimetable}>
+            🔄 Refresh
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="row g-3 mb-4">
+          <div className="col-md-3">
+            <label className="form-label small fw-semibold">Term</label>
+            <select 
+              className="form-select form-select-sm"
+              value={filters.term}
+              onChange={(e) => setFilters({ ...filters, term: e.target.value })}
+            >
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
+          </div>
+          <div className="col-md-3">
+            <label className="form-label small fw-semibold">Track</label>
+            <select 
+              className="form-select form-select-sm"
+              value={filters.track}
+              onChange={(e) => setFilters({ ...filters, track: e.target.value, strand: "" })}
+            >
+              <option value="">All Tracks</option>
+              <option value="Academic Track">Academic Track</option>
+              <option value="TechPro Track">TechPro Track</option>
+            </select>
+          </div>
+          <div className="col-md-3">
+            <label className="form-label small fw-semibold">Strand</label>
+            <select 
+              className="form-select form-select-sm"
+              value={filters.strand}
+              onChange={(e) => setFilters({ ...filters, strand: e.target.value })}
+              disabled={!filters.track}
+            >
+              <option value="">All Strands</option>
+              {filters.track === "Academic Track" && (
+                <>
+                  <option value="STEM">STEM</option>
+                  <option value="HUMMS">HUMMS</option>
+                  <option value="ABM">ABM</option>
+                  <option value="GAS">GAS</option>
+                </>
+              )}
+              {filters.track === "TechPro Track" && (
+                <>
+                  <option value="ICT">ICT</option>
+                  <option value="Cookery">Cookery</option>
+                </>
+              )}
+            </select>
+          </div>
+          <div className="col-md-3">
+            <label className="form-label small fw-semibold">Room</label>
+            <input 
+              type="text" 
+              className="form-control form-control-sm"
+              placeholder="Filter by room..."
+              value={filters.room}
+              onChange={(e) => setFilters({ ...filters, room: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {/* Conflicts Warning */}
+        {timetableData?.conflicts && timetableData.conflicts.length > 0 && (
+          <div className="alert alert-warning mb-4">
+            <strong>⚠️ {timetableData.conflicts.length} Room Conflict(s) Detected:</strong>
+            <ul className="mb-0 mt-2 small">
+              {timetableData.conflicts.map((conflict: any, idx: number) => (
+                <li key={idx}>
+                  <strong>{conflict.room}</strong> on <strong>{conflict.day}</strong>: 
+                  {` ${conflict.schedule1.subject} (${conflict.schedule1.teacher}) `}
+                  conflicts with 
+                  {` ${conflict.schedule2.subject} (${conflict.schedule2.teacher})`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" />
+            <p className="text-muted mt-2">Loading timetable...</p>
+          </div>
+        ) : !timetableData || timetableData.total === 0 ? (
+          <div className="text-center py-5 text-muted">
+            <p>No schedules found for the selected filters.</p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-bordered table-sm">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '80px', fontSize: '0.75rem' }} className="text-center">Time</th>
+                  {daysOfWeek.map(day => (
+                    <th key={day} style={{ fontSize: '0.75rem', minWidth: '150px' }} className="text-center fw-bold">
+                      {day}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map(timeSlot => (
+                  <tr key={timeSlot}>
+                    <td className="text-center fw-semibold small text-muted" style={{ fontSize: '0.75rem' }}>
+                      {timeSlot}
+                    </td>
+                    {daysOfWeek.map(day => {
+                      const schedules = getSchedulesForDayAndTime(day, timeSlot);
+                      return (
+                        <td key={`${day}-${timeSlot}`} className="p-1" style={{ verticalAlign: 'top' }}>
+                          {schedules.map((schedule: any) => (
+                            <div 
+                              key={schedule.id}
+                              className="card mb-1 border cursor-pointer"
+                              style={{ 
+                                fontSize: '0.7rem',
+                                backgroundColor: schedule.enrolled_count >= schedule.max_capacity * 0.9 ? '#fef3cd' : '#d1e7dd'
+                              }}
+                              onClick={() => setSelectedScheduleDetails(schedule)}
+                            >
+                              <div className="card-body p-2">
+                                <div className="fw-bold text-truncate">{schedule.subject_name}</div>
+                                <div className="text-muted text-truncate" style={{ fontSize: '0.65rem' }}>
+                                  {schedule.room} • {schedule.teacher_name}
+                                </div>
+                                <div className="text-muted" style={{ fontSize: '0.65rem' }}>
+                                  {schedule.time_start.slice(0,5)}-{schedule.time_end.slice(0,5)}
+                                </div>
+                                <div className="mt-1">
+                                  <span className={`badge ${schedule.enrolled_count >= schedule.max_capacity * 0.9 ? 'bg-warning' : 'bg-success'}`} 
+                                    style={{ fontSize: '0.6rem' }}>
+                                    {schedule.enrolled_count}/{schedule.max_capacity}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Schedule Details Modal */}
+        {selectedScheduleDetails && (
+          <>
+            <div className="modal-backdrop fade show" onClick={() => setSelectedScheduleDetails(null)} />
+            <div className="modal fade show d-block" tabIndex={-1}>
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header bg-primary text-white">
+                    <h5 className="modal-title">Schedule Details</h5>
+                    <button type="button" className="btn-close btn-close-white" onClick={() => setSelectedScheduleDetails(null)} />
+                  </div>
+                  <div className="modal-body">
+                    <table className="table table-sm">
+                      <tbody>
+                        <tr><th>Subject:</th><td>{selectedScheduleDetails.subject_name}</td></tr>
+                        <tr><th>Teacher:</th><td>{selectedScheduleDetails.teacher_name}</td></tr>
+                        <tr><th>Room:</th><td>{selectedScheduleDetails.room}</td></tr>
+                        <tr><th>Day:</th><td>{selectedScheduleDetails.day}</td></tr>
+                        <tr><th>Time:</th><td>{selectedScheduleDetails.time_start.slice(0,5)} - {selectedScheduleDetails.time_end.slice(0,5)}</td></tr>
+                        <tr><th>Track/Strand:</th><td>{selectedScheduleDetails.track} / {selectedScheduleDetails.strand}</td></tr>
+                        <tr><th>Term:</th><td>{selectedScheduleDetails.term}</td></tr>
+                        <tr><th>Capacity:</th><td>{selectedScheduleDetails.enrolled_count} / {selectedScheduleDetails.max_capacity}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setSelectedScheduleDetails(null)}>Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Submitted Grades List Component
+function SubmittedGradesList() {
+  const [submissions, setSubmissions] = useState<Array<any>>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTerm, setSelectedTerm] = useState("Term 1");
+  
+  // Filters
+  const [filterTeacher, setFilterTeacher] = useState("");
+  const [filterSubjectStrand, setFilterSubjectStrand] = useState("");
+  
+  // Modal state
+  const [viewingSubmission, setViewingSubmission] = useState<any>(null);
+  const [students, setStudents] = useState<Array<any>>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  useEffect(() => {
+    loadSubmissions();
+  }, [selectedTerm]);
+
+  async function loadSubmissions() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/grade-submissions?term=${selectedTerm}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubmissions(data.submissions || []);
+      }
+    } catch (err) {
+      console.error("Failed to load submissions:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function viewDetails(submission: any) {
+    setViewingSubmission(submission);
+    setLoadingStudents(true);
+    
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      // Use the admin endpoint to get submission details
+      const response = await fetch(
+        `${API_BASE}/api/admin/grade-submissions/${submission.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setStudents(data.grades || []);
+      }
+    } catch (err) {
+      console.error("Failed to load students:", err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  }
+
+  function closeModal() {
+    setViewingSubmission(null);
+    setStudents([]);
+  }
+
+  // Get unique values for filters
+  const teachers = Array.from(new Set(submissions.map(s => s.teacher_name))).sort();
+  
+  // Combine subject and strand for filter options
+  const subjectStrands = Array.from(new Set(
+    submissions.map(s => {
+      const subject = s.display_subject_name;
+      const strand = s.display_strand;
+      return strand ? `${subject} - ${strand}` : subject;
+    })
+  )).sort();
+
+  // Apply filters
+  const filteredSubmissions = submissions.filter(sub => {
+    if (filterTeacher && sub.teacher_name !== filterTeacher) return false;
+    if (filterSubjectStrand) {
+      const subjectStrand = sub.display_strand 
+        ? `${sub.display_subject_name} - ${sub.display_strand}`
+        : sub.display_subject_name;
+      if (subjectStrand !== filterSubjectStrand) return false;
+    }
+    return true;
+  });
+
+  return (
+    <>
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-4">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h3 className="fw-bold mb-1">Submitted Grades</h3>
+              <p className="text-muted small mb-0">View all grade submissions from teachers</p>
+            </div>
+            <div className="btn-group" role="group">
+              {["Term 1", "Term 2", "Term 3"].map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-primary'} btn-sm`}
+                  onClick={() => setSelectedTerm(term)}
+                >
+                  {term.replace("Term ", "")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-6">
+              <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>
+                Filter by Teacher
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={filterTeacher}
+                onChange={e => setFilterTeacher(e.target.value)}
+              >
+                <option value="">All Teachers</option>
+                {teachers.map(teacher => (
+                  <option key={teacher} value={teacher}>{teacher}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>
+                Filter by Subject & Track/Strand
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={filterSubjectStrand}
+                onChange={e => setFilterSubjectStrand(e.target.value)}
+              >
+                <option value="">All Subjects & Tracks/Strands</option>
+                {subjectStrands.map(ss => (
+                  <option key={ss} value={ss}>{ss}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {(filterTeacher || filterSubjectStrand) && (
+            <div className="mb-3">
+              <button 
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => {
+                  setFilterTeacher("");
+                  setFilterSubjectStrand("");
+                }}
+              >
+                Clear Filters
+              </button>
+              <span className="text-muted small ms-2">
+                Showing {filteredSubmissions.length} of {submissions.length} submissions
+              </span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-primary spinner-border-sm me-2" />
+              <span className="text-muted small">Loading submissions...</span>
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="text-center text-muted small py-4">
+              {submissions.length === 0 
+                ? `No grade submissions for ${selectedTerm} yet.`
+                : 'No submissions match the selected filters.'}
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th className="small fw-semibold text-uppercase">Teacher</th>
+                    <th className="small fw-semibold text-uppercase">Subject</th>
+                    <th className="small fw-semibold text-uppercase text-center">Students</th>
+                    <th className="small fw-semibold text-uppercase text-center">Status</th>
+                    <th className="small fw-semibold text-uppercase">Submitted</th>
+                    <th className="small fw-semibold text-uppercase text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSubmissions.map((sub) => (
+                    <tr key={sub.id}>
+                      <td className="small">{sub.teacher_name}</td>
+                      <td className="small">
+                        {sub.display_subject_name}
+                        {sub.display_strand && <span className="text-muted"> - {sub.display_strand}</span>}
+                      </td>
+                      <td className="small text-center">{sub.total_students}</td>
+                      <td className="text-center">
+                        <span className={`badge ${
+                          sub.status === 'approved' ? 'bg-success' : 
+                          sub.status === 'submitted' ? 'bg-primary' : 
+                          sub.status === 'returned' ? 'bg-warning' : 'bg-secondary'
+                        }`}>
+                          {sub.status === 'approved' ? '✅ Submitted' : 
+                           sub.status === 'submitted' ? '📤 Pending' : 
+                           sub.status === 'returned' ? '↩️ Returned' : sub.status}
+                        </span>
+                      </td>
+                      <td className="small text-muted">
+                        {new Date(sub.submitted_at).toLocaleDateString()} {new Date(sub.submitted_at).toLocaleTimeString()}
+                      </td>
+                      <td className="text-center">
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => viewDetails(sub)}
+                        >
+                          👁️ View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* View Details Modal */}
+      {viewingSubmission && (
+        <>
+          <div className="modal show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <div>
+                    <h5 className="modal-title fw-bold mb-1">Grade Submission Details</h5>
+                    <p className="text-muted small mb-0">
+                      {viewingSubmission.display_subject_name}
+                      {viewingSubmission.display_strand && ` - ${viewingSubmission.display_strand}`}
+                      {' · '}
+                      {viewingSubmission.term}
+                    </p>
+                  </div>
+                  <button type="button" className="btn-close" onClick={closeModal} />
+                </div>
+                <div className="modal-body">
+                  {/* Submission Info */}
+                  <div className="card bg-light border-0 mb-4">
+                    <div className="card-body p-3">
+                      <div className="row g-3">
+                        <div className="col-6">
+                          <div className="text-muted small">Teacher</div>
+                          <div className="fw-semibold">{viewingSubmission.teacher_name}</div>
+                        </div>
+                        <div className="col-6">
+                          <div className="text-muted small">Total Students</div>
+                          <div className="fw-semibold">{viewingSubmission.total_students}</div>
+                        </div>
+                        <div className="col-6">
+                          <div className="text-muted small">Submitted At</div>
+                          <div className="fw-semibold">
+                            {new Date(viewingSubmission.submitted_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="col-6">
+                          <div className="text-muted small">Status</div>
+                          <div>
+                            <span className={`badge ${
+                              viewingSubmission.status === 'approved' ? 'bg-success' : 
+                              viewingSubmission.status === 'submitted' ? 'bg-primary' : 
+                              viewingSubmission.status === 'returned' ? 'bg-warning' : 'bg-secondary'
+                            }`}>
+                              {viewingSubmission.status === 'approved' ? '✅ Submitted' : 
+                               viewingSubmission.status === 'submitted' ? '📤 Pending' : 
+                               viewingSubmission.status === 'returned' ? '↩️ Returned' : viewingSubmission.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Students List */}
+                  {loadingStudents ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border text-primary spinner-border-sm me-2" />
+                      <span className="text-muted small">Loading students...</span>
+                    </div>
+                  ) : students.length === 0 ? (
+                    <div className="text-center text-muted small py-4">
+                      No student data available
+                    </div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-sm table-hover mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th className="small fw-semibold">Student ID</th>
+                            <th className="small fw-semibold">Name</th>
+                            <th className="small fw-semibold">Pathway</th>
+                            <th className="small fw-semibold text-center">Grade (%)</th>
+                            <th className="small fw-semibold text-center">Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((student) => {
+                            const grade = student.percentage !== null ? parseFloat(student.percentage) : null;
+                            const passed = grade !== null && grade >= 80; // Correct passing grade is 80+
+                            
+                            return (
+                              <tr key={student.student_id}>
+                                <td className="small">{student.student_id}</td>
+                                <td className="small">{student.student_name}</td>
+                                <td className="small text-muted">{student.pathway}</td>
+                                <td className="small text-center">
+                                  <span className={`fw-semibold ${
+                                    grade === null ? 'text-muted' : 
+                                    passed ? 'text-success' : 'text-danger'
+                                  }`}>
+                                    {grade !== null ? grade.toFixed(2) : '-'}
+                                  </span>
+                                </td>
+                                <td className="text-center">
+                                  {grade !== null && (
+                                    <span className={`badge ${passed ? 'bg-success' : 'bg-danger'}`}>
+                                      {passed ? 'Passed' : 'Failed'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop show" onClick={closeModal} />
+        </>
+      )}
+    </>
+  );
+}
+
+// Statistics Dashboard Component
+function StatisticsDashboard({ filters, setFilters, showToast }: any) {
+  const [statistics, setStatistics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStatistics();
+  }, [filters]);
+
+  async function loadStatistics() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.term) params.append('term', filters.term);
+      if (filters.school_year) params.append('school_year', filters.school_year);
+
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/statistics?${params}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatistics(data.statistics);
+      } else {
+        showToast("❌ Failed to load statistics");
+      }
+    } catch (err) {
+      showToast("❌ Failed to load statistics");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card border-0 shadow-sm rounded-3">
+      <div className="card-body p-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h3 className="fw-bold fs-5 mb-1">📊 Scheduling Statistics</h3>
+            <p className="text-muted small mb-0">Overview and analytics</p>
+          </div>
+          
+          <button className="btn btn-sm btn-outline-primary" onClick={loadStatistics}>
+            🔄 Refresh
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="row g-3 mb-4">
+          <div className="col-md-6">
+            <label className="form-label small fw-semibold">Term</label>
+            <select 
+              className="form-select form-select-sm"
+              value={filters.term}
+              onChange={(e) => setFilters({ ...filters, term: e.target.value })}
+            >
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
+          </div>
+          <div className="col-md-6">
+            <label className="form-label small fw-semibold">School Year</label>
+            <input 
+              type="text" 
+              className="form-control form-control-sm"
+              placeholder="e.g., 2026-2027"
+              value={filters.school_year}
+              onChange={(e) => setFilters({ ...filters, school_year: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" />
+            <p className="text-muted mt-2">Loading statistics...</p>
+          </div>
+        ) : !statistics ? (
+          <div className="text-center py-5 text-muted">
+            <p>No statistics available.</p>
+          </div>
+        ) : (
+          <div className="row g-4">
+            {/* Overview Cards */}
+            <div className="col-md-4">
+              <div className="card border-0 bg-primary bg-opacity-10">
+                <div className="card-body text-center">
+                  <div className="display-4 fw-bold text-primary">{statistics.total_schedules}</div>
+                  <div className="text-muted">Total Schedules</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="card border-0 bg-success bg-opacity-10">
+                <div className="card-body text-center">
+                  <div className="display-4 fw-bold text-success">
+                    {statistics.teachers.with_schedules}/{statistics.teachers.total}
+                  </div>
+                  <div className="text-muted">Teachers Assigned</div>
+                  <div className="small text-success fw-bold">{statistics.teachers.percentage}%</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="card border-0 bg-info bg-opacity-10">
+                <div className="card-body text-center">
+                  <div className="display-4 fw-bold text-info">
+                    {statistics.students.enrolled}/{statistics.students.total_approved}
+                  </div>
+                  <div className="text-muted">Students Enrolled</div>
+                  <div className="small text-info fw-bold">{statistics.students.percentage}%</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Stats */}
+            <div className="col-md-6">
+              <div className="card border-0 shadow-sm">
+                <div className="card-header bg-white">
+                  <h6 className="mb-0 fw-semibold">Room Utilization</h6>
+                </div>
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span>Rooms Used:</span>
+                    <span className="fw-bold">{statistics.rooms.utilized}</span>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span>Capacity Utilization:</span>
+                    <span className="fw-bold">{statistics.capacity.utilization_percentage}%</span>
+                  </div>
+                  <div className="progress mt-2" style={{ height: '8px' }}>
+                    <div 
+                      className="progress-bar bg-success" 
+                      style={{ width: `${statistics.capacity.utilization_percentage}%` }}
+                    />
+                  </div>
+                  <small className="text-muted">
+                    {statistics.capacity.enrolled} / {statistics.capacity.total} total seats
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <div className="card border-0 shadow-sm">
+                <div className="card-header bg-white">
+                  <h6 className="mb-0 fw-semibold">Conflicts</h6>
+                </div>
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span>Room Conflicts:</span>
+                    <span className={`badge ${statistics.conflicts.room_conflicts > 0 ? 'bg-danger' : 'bg-success'} fs-6`}>
+                      {statistics.conflicts.room_conflicts}
+                    </span>
+                  </div>
+                  {statistics.conflicts.room_conflicts > 0 && (
+                    <div className="alert alert-warning mt-3 mb-0 small">
+                      ⚠️ Please review the timetable to resolve conflicts
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Track Distribution */}
+            <div className="col-12">
+              <div className="card border-0 shadow-sm">
+                <div className="card-header bg-white">
+                  <h6 className="mb-0 fw-semibold">Track Distribution</h6>
+                </div>
+                <div className="card-body">
+                  <div className="table-responsive">
+                    <table className="table table-sm mb-0">
+                      <thead>
+                        <tr>
+                          <th>Track</th>
+                          <th className="text-center">Schedules</th>
+                          <th className="text-center">Total Students</th>
+                          <th className="text-center">Avg. Class Size</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statistics.track_distribution.map((track: any) => (
+                          <tr key={track.track}>
+                            <td className="fw-semibold">{track.track}</td>
+                            <td className="text-center">{track.schedule_count}</td>
+                            <td className="text-center">{track.total_students}</td>
+                            <td className="text-center">
+                              {track.schedule_count > 0 
+                                ? Math.round(track.total_students / track.schedule_count) 
+                                : 0}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SchedulingPanel() {
-  const [activeTab, setActiveTab] = useState<"teacher" | "student">("teacher");
+  const [activeTab, setActiveTab] = useState<"teacher" | "student" | "timetable" | "statistics">("teacher");
+  
+  // Calculate current school year
+  const getCurrentSchoolYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startYear = month >= 6 ? year : year - 1;
+    const endYear = startYear + 1;
+    return `${startYear}-${endYear}`;
+  };
   
   // Teacher Schedule State
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(true);
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState("");
+  const [teacherFilter, setTeacherFilter] = useState<"all" | "with" | "without">("all");
   const [showAddTeacherSchedule, setShowAddTeacherSchedule] = useState(false);
+  const [showViewTeacherSchedules, setShowViewTeacherSchedules] = useState(false);
   const [showEditTeacherSchedule, setShowEditTeacherSchedule] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+  const [teacherSchedules, setTeacherSchedules] = useState<any[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [teacherScheduleForm, setTeacherScheduleForm] = useState({
-    subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: ""
+    subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "Academic Track", term: "Term 1"
   });
+  const [saving, setSaving] = useState(false);
 
   // Student Schedule State
   const [students, setStudents] = useState<any[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentFilter, setStudentFilter] = useState<"all" | "scheduled" | "unscheduled">("all");
   const [showEnrollSchedule, setShowEnrollSchedule] = useState(false);
-  const [showEditStudentSchedule, setShowEditStudentSchedule] = useState(false);
+  const [showViewStudentSchedules, setShowViewStudentSchedules] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [studentScheduleForm, setStudentScheduleForm] = useState({
-    teacher: "", subject: "", schedule: "", term: "", schoolYear: ""
+  const [studentSchedules, setStudentSchedules] = useState<any[]>([]);
+  const [availableSchedules, setAvailableSchedules] = useState<any[]>([]);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string>("");
+  
+  // Priority 2: Timetable State
+  const [timetableData, setTimetableData] = useState<any>(null);
+  const [timetableLoading, setTimetableLoading] = useState(false);
+  const [timetableFilters, setTimetableFilters] = useState({
+    term: "Term 1",
+    track: "",
+    strand: "",
+    room: ""
   });
 
+  // Priority 2: Bulk Enrollment State
+  const [showBulkEnroll, setShowBulkEnroll] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [bulkEnrollScheduleId, setBulkEnrollScheduleId] = useState<string>("");
+
+  // Priority 2: Statistics State
+  const [statistics, setStatistics] = useState<any>(null);
+  const [statisticsLoading, setStatisticsLoading] = useState(false);
+  const [statisticsFilters, setStatisticsFilters] = useState({
+    term: "Term 1",
+    school_year: getCurrentSchoolYear()
+  });
+  
+  const [toast, setToast] = useState<string | null>(null);
+
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const strands = ["STEM", "HUMMS", "ABM", "GAS", "TVL", "ARTS"];
+  const academicStrands = ["STEM", "HUMMS", "ABM", "GAS"];
+  const techProStrands = ["ICT", "Cookery"];
+  const allStrands = [...academicStrands, ...techProStrands];
   const terms = ["Term 1", "Term 2", "Term 3"];
 
+  // Load teachers on mount
   useEffect(() => {
-    // Load teachers and students (placeholder - replace with actual API calls)
-    setTeachers([
-      { id: 1, name: "Dr. Rosa Mendoza", department: "Science", hasSchedule: true },
-      { id: 2, name: "Mr. Carlos Reyes", department: "Mathematics", hasSchedule: false },
-      { id: 3, name: "Ms. Clara Tan", department: "English", hasSchedule: true },
-    ]);
-    setStudents([
-      { id: 1, name: "Juan Dela Cruz", student_id: "2026001234", strand: "STEM", track: "Science", term: "Term 1", hasSchedule: true },
-      { id: 2, name: "Maria Santos", student_id: "2026001235", strand: "HUMMS", track: "Humanities", term: "Term 1", hasSchedule: false },
-      { id: 3, name: "Pedro Garcia", student_id: "2026001236", strand: "ABM", track: "Business", term: "Term 2", hasSchedule: true },
-    ]);
+    loadTeachers();
   }, []);
 
-  const handleAddTeacherSchedule = () => {
-    console.log("Adding teacher schedule:", teacherScheduleForm);
-    setShowAddTeacherSchedule(false);
-    setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: "" });
+  // Load students when tab changes
+  useEffect(() => {
+    if (activeTab === "student") {
+      loadStudents();
+    }
+  }, [activeTab]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function loadTeachers() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setTeachersLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/scheduling/teachers`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTeachers(data.teachers || []);
+      }
+    } catch (err) {
+      showToast("❌ Failed to load teachers");
+    } finally {
+      setTeachersLoading(false);
+    }
+  }
+
+  async function loadStudents() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setStudentsLoading(true);
+    try {
+      // Use the same API as StudentsPanel - gets all enrolled students
+      const response = await fetch(`${API_BASE}/api/admin/students`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Load schedule count for each student
+        const studentsWithSchedules = await Promise.all(
+          data.students.map(async (student: any) => {
+            const schedRes = await fetch(`${API_BASE}/api/admin/scheduling/students/${student.student_id}/schedules`, {
+              headers: { Authorization: `Bearer ${token}` },
+              credentials: "include",
+            });
+            const schedData = await schedRes.json();
+            return {
+              student_id: student.student_id,
+              full_name: student.full_name,
+              profile_picture_url: student.photo_url,  // Backend returns photo_url
+              strand: student.pathway || student.strand,
+              track: student.pathway && ['STEM', 'HUMMS', 'ABM', 'GAS'].includes(student.pathway) 
+                ? 'Academic Track' 
+                : student.pathway && ['ICT', 'Cookery'].includes(student.pathway)
+                  ? 'TechPro Track'
+                  : 'Academic Track',
+              term: 'Term 1', // Default term, adjust if needed
+              hasSchedule: schedData.total > 0,
+              scheduleCount: schedData.total
+            };
+          })
+        );
+        setStudents(studentsWithSchedules);
+      }
+    } catch (err) {
+      showToast("❌ Failed to load students");
+    } finally {
+      setStudentsLoading(false);
+    }
+  }
+
+  async function handleAddTeacherSchedule() {
+    if (!selectedTeacher || !teacherScheduleForm.subject || !teacherScheduleForm.room || 
+        !teacherScheduleForm.day || !teacherScheduleForm.timeStart || !teacherScheduleForm.timeEnd ||
+        !teacherScheduleForm.strand || !teacherScheduleForm.track || !teacherScheduleForm.term) {
+      showToast("❌ Please fill in all fields");
+      return;
+    }
+
+    // Feature 5: Check for room conflicts
+    const conflict = await checkRoomConflict(
+      teacherScheduleForm.room,
+      teacherScheduleForm.day,
+      teacherScheduleForm.timeStart,
+      teacherScheduleForm.timeEnd
+    );
+
+    if (conflict) {
+      const confirmCreate = confirm(
+        `⚠️ Room Conflict Detected!\n\n` +
+        `${teacherScheduleForm.room} is already occupied on ${teacherScheduleForm.day} at ${teacherScheduleForm.timeStart}-${teacherScheduleForm.timeEnd}\n\n` +
+        `Conflicting schedule: ${conflict.subject_name} (${conflict.teacher_name})\n\n` +
+        `Do you want to create this schedule anyway?`
+      );
+      
+      if (!confirmCreate) {
+        return; // Cancel creation
+      }
+    }
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          teacher_id: selectedTeacher.id,
+          subject_name: teacherScheduleForm.subject,
+          room: teacherScheduleForm.room,
+          day: teacherScheduleForm.day,
+          time_start: teacherScheduleForm.timeStart,
+          time_end: teacherScheduleForm.timeEnd,
+          track: teacherScheduleForm.track,
+          strand: teacherScheduleForm.strand,
+          term: teacherScheduleForm.term,
+          school_year: getCurrentSchoolYear(),
+          max_capacity: 40
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("✅ Schedule added successfully");
+        setShowAddTeacherSchedule(false);
+        setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "Academic Track", term: "Term 1" });
+        loadTeachers(); // Reload to update schedule count
+      } else {
+        showToast(`❌ ${data.error || "Failed to add schedule"}`);
+      }
+    } catch (err) {
+      showToast("❌ Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEnrollStudent() {
+    if (!selectedStudent || !selectedScheduleId) {
+      showToast("❌ Please select a schedule");
+      return;
+    }
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules/${selectedScheduleId}/enroll`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          student_ids: [selectedStudent.student_id]
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("✅ Student enrolled successfully");
+        setShowEnrollSchedule(false);
+        setSelectedScheduleId("");
+        loadStudents(); // Reload to update schedule count
+      } else {
+        showToast(`❌ ${data.error || "Failed to enroll student"}`);
+      }
+    } catch (err) {
+      showToast("❌ Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Priority 2: Bulk Enroll Students
+  async function handleBulkEnrollStudents() {
+    if (!bulkEnrollScheduleId || selectedStudentIds.length === 0) {
+      showToast("❌ Please select a schedule and at least one student");
+      return;
+    }
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules/${bulkEnrollScheduleId}/enroll-bulk`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            student_ids: selectedStudentIds
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast(`✅ ${data.enrolled} student(s) enrolled successfully${data.skipped > 0 ? ` (${data.skipped} already enrolled)` : ''}`);
+        setShowBulkEnroll(false);
+        setSelectedStudentIds([]);
+        setBulkEnrollScheduleId("");
+        loadStudents(); // Reload to update schedule counts
+      } else {
+        if (data.incompatible) {
+          showToast(`❌ Track/Strand mismatch: ${data.incompatible.length} student(s) incompatible`);
+        } else {
+          showToast(`❌ ${data.error || "Failed to enroll students"}`);
+        }
+      }
+    } catch (err) {
+      showToast("❌ Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadAvailableSchedules(student: any) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules?track=${encodeURIComponent(student.track)}&strand=${encodeURIComponent(student.strand)}&term=${encodeURIComponent(student.term)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableSchedules(data.schedules || []);
+      }
+    } catch (err) {
+      console.error("Failed to load schedules");
+    }
+  }
+
+  // Feature 1: Load Teacher's Schedules
+  async function loadTeacherSchedules(teacher: any) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSchedulesLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/teachers/${teacher.id}/schedules`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTeacherSchedules(data.schedules || []);
+      }
+    } catch (err) {
+      showToast("❌ Failed to load teacher schedules");
+    } finally {
+      setSchedulesLoading(false);
+    }
+  }
+
+  // Feature 2: Edit Teacher Schedule
+  async function handleEditTeacherSchedule() {
+    if (!selectedSchedule) return;
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules/${selectedSchedule.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            subject_name: teacherScheduleForm.subject,
+            room: teacherScheduleForm.room,
+            day: teacherScheduleForm.day,
+            time_start: teacherScheduleForm.timeStart,
+            time_end: teacherScheduleForm.timeEnd,
+            track: teacherScheduleForm.track,
+            strand: teacherScheduleForm.strand,
+            term: teacherScheduleForm.term,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        showToast("✅ Schedule updated successfully");
+        setShowEditTeacherSchedule(false);
+        // Keep view modal open and refresh data
+        if (selectedTeacher) {
+          loadTeacherSchedules(selectedTeacher);
+        }
+        loadTeachers(); // Refresh teacher list
+      } else {
+        const error = await response.json();
+        showToast(`❌ ${error.error || "Failed to update schedule"}`);
+      }
+    } catch (err) {
+      showToast("❌ Failed to update schedule");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Feature 3: Delete Teacher Schedule
+  async function handleDeleteSchedule() {
+    if (!selectedSchedule) return;
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules/${selectedSchedule.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        showToast("✅ Schedule deleted successfully");
+        setShowDeleteConfirmation(false);
+        // Keep view modal open and refresh data
+        if (selectedTeacher) {
+          loadTeacherSchedules(selectedTeacher);
+        }
+        loadTeachers(); // Refresh teacher list
+      } else {
+        const error = await response.json();
+        showToast(`❌ ${error.error || "Failed to delete schedule"}`);
+      }
+    } catch (err) {
+      showToast("❌ Failed to delete schedule");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Feature 4: Load Student's Schedules
+  async function loadStudentSchedules(student: any) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setSchedulesLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/students/${student.student_id}/schedules`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setStudentSchedules(data.schedules || []);
+      }
+    } catch (err) {
+      showToast("❌ Failed to load student schedules");
+    } finally {
+      setSchedulesLoading(false);
+    }
+  }
+
+  // Feature 4: Unenroll Student from Schedule
+  async function handleUnenrollStudent(scheduleId: number) {
+    if (!selectedStudent) return;
+
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules/${scheduleId}/students/${selectedStudent.student_id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        showToast("✅ Student unenrolled successfully");
+        loadStudentSchedules(selectedStudent);
+        loadStudents(); // Refresh student list
+      } else {
+        const error = await response.json();
+        showToast(`❌ ${error.error || "Failed to unenroll student"}`);
+      }
+    } catch (err) {
+      showToast("❌ Failed to unenroll student");
+    }
+  }
+
+  // Feature 5: Check for Room Conflicts
+  async function checkRoomConflict(room: string, day: string, timeStart: string, timeEnd: string, excludeScheduleId?: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return null;
+
+    try {
+      // Get all schedules for this room and day
+      const response = await fetch(
+        `${API_BASE}/api/admin/scheduling/schedules`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const conflicts = data.schedules.filter((s: any) => {
+          // Skip the current schedule when editing
+          if (excludeScheduleId && s.id === excludeScheduleId) return false;
+          
+          // Must be same room and day
+          if (s.room !== room || s.day !== day) return false;
+          
+          // Check time overlap
+          const existingStart = s.time_start.slice(0, 5);
+          const existingEnd = s.time_end.slice(0, 5);
+          
+          return (
+            (timeStart >= existingStart && timeStart < existingEnd) ||
+            (timeEnd > existingStart && timeEnd <= existingEnd) ||
+            (timeStart <= existingStart && timeEnd >= existingEnd)
+          );
+        });
+
+        return conflicts.length > 0 ? conflicts[0] : null;
+      }
+    } catch (err) {
+      console.error("Failed to check room conflict");
+    }
+    return null;
+  }
+
+  // Update strand options based on track
+  const getStrandOptions = () => {
+    if (teacherScheduleForm.track === "Academic Track") {
+      return academicStrands;
+    } else if (teacherScheduleForm.track === "TechPro Track") {
+      return techProStrands;
+    }
+    return allStrands;
   };
 
-  const handleEditTeacherSchedule = () => {
-    console.log("Editing teacher schedule:", teacherScheduleForm);
-    setShowEditTeacherSchedule(false);
-    setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "", term: "", schoolYear: "" });
-  };
-
-  const handleEnrollSchedule = () => {
-    console.log("Enrolling student schedule:", studentScheduleForm);
-    setShowEnrollSchedule(false);
-    setStudentScheduleForm({ teacher: "", subject: "", schedule: "", term: "", schoolYear: "" });
-  };
-
-  const handleEditStudentSchedule = () => {
-    console.log("Editing student schedule:", studentScheduleForm);
-    setShowEditStudentSchedule(false);
-    setStudentScheduleForm({ teacher: "", subject: "", schedule: "", term: "", schoolYear: "" });
-  };
+  // Filter teachers by search and schedule status
+  const filteredTeachers = teachers.filter(teacher => {
+    // Search filter
+    const matchesSearch = !teacherSearchQuery || 
+      teacher.full_name.toLowerCase().includes(teacherSearchQuery.toLowerCase()) ||
+      teacher.teacher_id.toLowerCase().includes(teacherSearchQuery.toLowerCase()) ||
+      (teacher.email && teacher.email.toLowerCase().includes(teacherSearchQuery.toLowerCase()));
+    
+    // Schedule filter
+    let matchesFilter = true;
+    if (teacherFilter === "with") {
+      matchesFilter = teacher.schedule_count > 0;
+    } else if (teacherFilter === "without") {
+      matchesFilter = !teacher.schedule_count || teacher.schedule_count === 0;
+    }
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const filteredStudents = students.filter(s => {
-    if (studentFilter === "scheduled") return s.hasSchedule;
-    if (studentFilter === "unscheduled") return !s.hasSchedule;
-    return true;
+    // Search filter
+    const matchesSearch = !studentSearchQuery || 
+      s.full_name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+      s.student_id.toLowerCase().includes(studentSearchQuery.toLowerCase());
+    
+    // Schedule filter
+    let matchesFilter = true;
+    if (studentFilter === "scheduled") {
+      matchesFilter = s.hasSchedule;
+    } else if (studentFilter === "unscheduled") {
+      matchesFilter = !s.hasSchedule;
+    }
+    
+    return matchesSearch && matchesFilter;
   });
 
   return (
@@ -3902,51 +5670,168 @@ function SchedulingPanel() {
           className={`btn ${activeTab === "teacher" ? "btn-primary" : "btn-outline-primary"}`}
           onClick={() => setActiveTab("teacher")}
         >
-          Teacher Schedule
+          📋 Teachers
         </button>
         <button 
           className={`btn ${activeTab === "student" ? "btn-primary" : "btn-outline-primary"}`}
           onClick={() => setActiveTab("student")}
         >
-          Student Schedule
+          👨‍🎓 Students
+        </button>
+        <button 
+          className={`btn ${activeTab === "timetable" ? "btn-primary" : "btn-outline-primary"}`}
+          onClick={() => setActiveTab("timetable")}
+        >
+          📅 Timetable
+        </button>
+        <button 
+          className={`btn ${activeTab === "statistics" ? "btn-primary" : "btn-outline-primary"}`}
+          onClick={() => setActiveTab("statistics")}
+        >
+          📊 Statistics
         </button>
       </div>
       
       {/* Teacher Schedule */}
+      {/* Teacher Schedule */}
       {activeTab === "teacher" && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4">
-            <h5 className="fw-bold mb-3">Teacher List</h5>
-            <div className="d-flex flex-column gap-3">
-              {teachers.map(teacher => (
-                <div key={teacher.id} className="d-flex align-items-center justify-content-between p-3 border rounded-3">
-                  <div>
-                    <div className="fw-semibold">{teacher.name}</div>
-                    <div className="text-muted small">{teacher.department}</div>
-                  </div>
-                  <div className="d-flex gap-2">
-                    <button 
-                      className="btn btn-sm btn-success"
-                      onClick={() => {
-                        setSelectedTeacher(teacher);
-                        setShowAddTeacherSchedule(true);
-                      }}
-                    >
-                      Add Schedule
-                    </button>
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => {
-                        setSelectedTeacher(teacher);
-                        setShowEditTeacherSchedule(true);
-                      }}
-                    >
-                      Edit Schedule
-                    </button>
-                  </div>
+            {/* Search and Filters */}
+            <div className="row g-3 mb-4">
+              <div className="col-md-6">
+                <div className="input-group">
+                  <span className="input-group-text bg-white border-end-0">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                  </span>
+                  <input 
+                    type="text" 
+                    className="form-control border-start-0" 
+                    placeholder="Search by name, ID, or email..."
+                    value={teacherSearchQuery}
+                    onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                  />
                 </div>
-              ))}
+              </div>
+              <div className="col-md-6">
+                <div className="btn-group w-100" role="group">
+                  <button 
+                    className={`btn ${teacherFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setTeacherFilter("all")}
+                  >
+                    All Teachers
+                  </button>
+                  <button 
+                    className={`btn ${teacherFilter === "with" ? "btn-success" : "btn-outline-success"}`}
+                    onClick={() => setTeacherFilter("with")}
+                  >
+                    With Schedule
+                  </button>
+                  <button 
+                    className={`btn ${teacherFilter === "without" ? "btn-warning" : "btn-outline-warning"}`}
+                    onClick={() => setTeacherFilter("without")}
+                  >
+                    Without Schedule
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {teachersLoading ? (
+              <div className="text-center py-4 text-muted">
+                <div className="spinner-border spinner-border-sm me-2" />
+                Loading teachers...
+              </div>
+            ) : filteredTeachers.length === 0 ? (
+              <div className="text-center py-4 text-muted small">
+                {teacherSearchQuery ? `No teachers found matching "${teacherSearchQuery}"` : 
+                 teacherFilter === "with" ? "No teachers with schedules found." :
+                 teacherFilter === "without" ? "No teachers without schedules found." :
+                 "No teachers found. Ask principal to add teachers first."}
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr className="border-bottom">
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Name</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Teacher ID</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Email</th>
+                      <th className="fw-semibold text-muted small pb-3 text-center" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Assigned</th>
+                      <th className="fw-semibold text-muted small pb-3 text-end" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTeachers.map(teacher => (
+                      <tr key={teacher.id} className="border-bottom">
+                        <td className="py-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                              style={{ width: 32, height: 32, fontSize: 11 }}>
+                              {teacher.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                            </div>
+                            <div>
+                              <div className="fw-semibold" style={{ fontSize: '0.875rem' }}>{teacher.full_name}</div>
+                              <div className="text-muted" style={{ fontSize: '0.75rem' }}>{teacher.department}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className="font-monospace text-muted" style={{ fontSize: '0.8125rem' }}>{teacher.teacher_id}</span>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-muted" style={{ fontSize: '0.8125rem' }}>{teacher.email || 'N/A'}</span>
+                        </td>
+                        <td className="py-3 text-center">
+                          {teacher.schedule_count > 0 ? (
+                            <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}>
+                              ✓ {teacher.schedule_count}
+                            </span>
+                          ) : (
+                            <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}>
+                              ✗ None
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <div className="d-flex gap-2 justify-content-end">
+                            {teacher.schedule_count > 0 && (
+                              <button 
+                                className="btn btn-sm btn-outline-primary"
+                                style={{ fontSize: '0.8125rem', padding: '0.25rem 0.75rem' }}
+                                onClick={() => {
+                                  setSelectedTeacher(teacher);
+                                  loadTeacherSchedules(teacher);
+                                  setShowViewTeacherSchedules(true);
+                                }}
+                              >
+                                View
+                              </button>
+                            )}
+                            <button 
+                              className="btn btn-sm btn-success"
+                              style={{ fontSize: '0.8125rem', padding: '0.25rem 0.75rem' }}
+                              onClick={() => {
+                                setSelectedTeacher(teacher);
+                                setTeacherScheduleForm({
+                                  subject: "", room: "", day: "", timeStart: "", timeEnd: "", 
+                                  strand: "", track: "Academic Track", term: "Term 1"
+                                });
+                                setShowAddTeacherSchedule(true);
+                              }}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -3955,78 +5840,207 @@ function SchedulingPanel() {
       {activeTab === "student" && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="fw-bold mb-0">Enrolled Students</h5>
-              <div className="btn-group btn-group-sm" role="group">
-                <button 
-                  className={`btn ${studentFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
-                  onClick={() => setStudentFilter("all")}
-                >
-                  All
-                </button>
-                <button 
-                  className={`btn ${studentFilter === "scheduled" ? "btn-success" : "btn-outline-success"}`}
-                  onClick={() => setStudentFilter("scheduled")}
-                >
-                  With Schedule
-                </button>
-                <button 
-                  className={`btn ${studentFilter === "unscheduled" ? "btn-warning" : "btn-outline-warning"}`}
-                  onClick={() => setStudentFilter("unscheduled")}
-                >
-                  No Schedule
-                </button>
+            {/* Bulk Enroll Button */}
+            <div className="d-flex justify-content-end mb-3">
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setShowBulkEnroll(true);
+                  setSelectedStudentIds([]);
+                  setBulkEnrollScheduleId("");
+                  loadAvailableSchedules({ track: "", strand: "", term: "Term 1" });
+                }}
+              >
+                ➕ Bulk Enroll Students
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="row g-3 mb-4">
+              <div className="col-md-6">
+                <div className="input-group">
+                  <span className="input-group-text bg-white border-end-0">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                  </span>
+                  <input 
+                    type="text" 
+                    className="form-control border-start-0" 
+                    placeholder="Search by name or student ID..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="btn-group w-100" role="group">
+                  <button 
+                    className={`btn ${studentFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setStudentFilter("all")}
+                  >
+                    All Students
+                  </button>
+                  <button 
+                    className={`btn ${studentFilter === "scheduled" ? "btn-success" : "btn-outline-success"}`}
+                    onClick={() => setStudentFilter("scheduled")}
+                  >
+                    With Schedule
+                  </button>
+                  <button 
+                    className={`btn ${studentFilter === "unscheduled" ? "btn-warning" : "btn-outline-warning"}`}
+                    onClick={() => setStudentFilter("unscheduled")}
+                  >
+                    No Schedule
+                  </button>
+                </div>
               </div>
             </div>
             
-            <div className="d-flex flex-column gap-3">
-              {filteredStudents.map(student => (
-                <div key={student.id} className="d-flex align-items-center justify-content-between p-3 border rounded-3">
-                  <div className="flex-grow-1">
-                    <div className="fw-semibold">{student.name}</div>
-                    <div className="text-muted small">
-                      {student.student_id} • {student.strand}/{student.track} • {student.term}
-                    </div>
-                  </div>
-                  <div className="d-flex gap-2">
-                    <button 
-                      className="btn btn-sm btn-success"
-                      onClick={() => {
-                        setSelectedStudent(student);
-                        setShowEnrollSchedule(true);
-                      }}
-                    >
-                      Enroll Schedule
-                    </button>
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => {
-                        setSelectedStudent(student);
-                        setShowEditStudentSchedule(true);
-                      }}
-                    >
-                      Edit Schedule
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {studentsLoading ? (
+              <div className="text-center py-4 text-muted">
+                <div className="spinner-border spinner-border-sm me-2" />
+                Loading students...
+              </div>
+            ) : filteredStudents.length === 0 ? (
+              <div className="text-center py-4 text-muted small">
+                {studentSearchQuery ? `No students found matching "${studentSearchQuery}"` :
+                 studentFilter === "scheduled" ? "No students with schedules." :
+                 studentFilter === "unscheduled" ? "No students without schedules." :
+                 "No approved enrolled students found."}
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr className="border-bottom">
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Name</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Student ID</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Track/Strand</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Term</th>
+                      <th className="fw-semibold text-muted small pb-3 text-center" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Enrolled</th>
+                      <th className="fw-semibold text-muted small pb-3 text-end" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStudents.map(student => (
+                      <tr key={student.student_id} className="border-bottom">
+                        <td className="py-3">
+                          <div className="d-flex align-items-center gap-2">
+                            {student.profile_picture_url ? (
+                              <img 
+                                src={student.profile_picture_url} 
+                                alt={student.full_name}
+                                className="rounded-circle flex-shrink-0"
+                                style={{ width: 32, height: 32, objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div 
+                                className="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center text-info fw-bold flex-shrink-0" 
+                                style={{ width: 32, height: 32, fontSize: 11 }}>
+                                {student.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                              </div>
+                            )}
+                            <div className="fw-semibold" style={{ fontSize: '0.875rem' }}>
+                              {student.full_name.replace(/,\s*$/, '').trim()}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className="font-monospace text-muted" style={{ fontSize: '0.8125rem' }}>{student.student_id}</span>
+                        </td>
+                        <td className="py-3">
+                          <div>
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>{student.track}</div>
+                            <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: '0.7rem' }}>{student.strand}</span>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-muted" style={{ fontSize: '0.8125rem' }}>{student.term}</span>
+                        </td>
+                        <td className="py-3 text-center">
+                          {student.scheduleCount > 0 ? (
+                            <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}>
+                              ✓ {student.scheduleCount}
+                            </span>
+                          ) : (
+                            <span className="badge bg-warning-subtle text-warning border border-warning-subtle" style={{ fontSize: '0.75rem', padding: '0.375rem 0.75rem' }}>
+                              ✗ None
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <div className="d-flex gap-2 justify-content-end">
+                            {student.scheduleCount > 0 && (
+                              <button 
+                                className="btn btn-sm btn-outline-primary"
+                                style={{ fontSize: '0.8125rem', padding: '0.25rem 0.75rem' }}
+                                onClick={() => {
+                                  setSelectedStudent(student);
+                                  loadStudentSchedules(student);
+                                  setShowViewStudentSchedules(true);
+                                }}
+                              >
+                                View
+                              </button>
+                            )}
+                            <button 
+                              className="btn btn-sm btn-success"
+                              style={{ fontSize: '0.8125rem', padding: '0.25rem 0.75rem' }}
+                              onClick={() => {
+                                setSelectedStudent(student);
+                                loadAvailableSchedules(student);
+                                setSelectedScheduleId("");
+                                setShowEnrollSchedule(true);
+                              }}
+                            >
+                              + Enroll
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Weekly Timetable View */}
+      {activeTab === "timetable" && (
+        <TimetableView 
+          filters={timetableFilters}
+          setFilters={setTimetableFilters}
+          showToast={showToast}
+        />
+      )}
+
+      {/* Statistics Dashboard */}
+      {activeTab === "statistics" && (
+        <StatisticsDashboard 
+          filters={statisticsFilters}
+          setFilters={setStatisticsFilters}
+          showToast={showToast}
+        />
+      )}
+
       {/* Add Teacher Schedule Modal */}
-      {showAddTeacherSchedule && (
+      {showAddTeacherSchedule && selectedTeacher && (
         <>
           <div className="modal-backdrop fade show" onClick={() => setShowAddTeacherSchedule(false)} />
           <div className="modal fade show d-block" tabIndex={-1}>
             <div className="modal-dialog modal-lg">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">Add Schedule - {selectedTeacher?.name}</h5>
+                  <h5 className="modal-title">Add Schedule - {selectedTeacher.full_name}</h5>
                   <button type="button" className="btn-close" onClick={() => setShowAddTeacherSchedule(false)} />
                 </div>
                 <div className="modal-body">
+                  <div className="alert alert-info small mb-3">
+                    <strong>School Year:</strong> {getCurrentSchoolYear()} (Auto-calculated)
+                  </div>
                   <div className="row g-3">
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Subject</label>
@@ -4078,6 +6092,23 @@ function SchedulingPanel() {
                       />
                     </div>
                     <div className="col-md-6">
+                      <label className="form-label fw-semibold">Track</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.track}
+                        onChange={(e) => {
+                          setTeacherScheduleForm({
+                            ...teacherScheduleForm, 
+                            track: e.target.value,
+                            strand: "" // Reset strand when track changes
+                          });
+                        }}
+                      >
+                        <option value="Academic Track">Academic Track</option>
+                        <option value="TechPro Track">TechPro Track</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Strand</label>
                       <select 
                         className="form-select"
@@ -4085,45 +6116,198 @@ function SchedulingPanel() {
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
                       >
                         <option value="">Select Strand</option>
-                        {strands.map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                        {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
                       </select>
                     </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Track</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. Science"
-                        value={teacherScheduleForm.track}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, track: e.target.value})}
-                      />
-                    </div>
-                    <div className="col-md-6">
+                    <div className="col-md-12">
                       <label className="form-label fw-semibold">Term</label>
                       <select 
                         className="form-select"
                         value={teacherScheduleForm.term}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, term: e.target.value})}
                       >
-                        <option value="">Select Term</option>
                         {terms.map(term => <option key={term} value={term}>{term}</option>)}
                       </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">School Year</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. 2025-2026"
-                        value={teacherScheduleForm.schoolYear}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, schoolYear: e.target.value})}
-                      />
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowAddTeacherSchedule(false)}>Cancel</button>
-                  <button type="button" className="btn btn-primary" onClick={handleAddTeacherSchedule}>Add Schedule</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowAddTeacherSchedule(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={handleAddTeacherSchedule}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving..." : "Add Schedule"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Enroll Student Schedule Modal */}
+      {showEnrollSchedule && selectedStudent && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowEnrollSchedule(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Enroll Schedule - {selectedStudent.full_name}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEnrollSchedule(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3 p-3 bg-light rounded">
+                    <div className="small text-muted">Student Info</div>
+                    <div className="fw-semibold">{selectedStudent.student_id}</div>
+                    <div className="small">{selectedStudent.strand}/{selectedStudent.track} • {selectedStudent.term}</div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Select Schedule</label>
+                    <select 
+                      className="form-select"
+                      value={selectedScheduleId}
+                      onChange={(e) => setSelectedScheduleId(e.target.value)}
+                    >
+                      <option value="">Select Schedule</option>
+                      {availableSchedules.map(schedule => (
+                        <option key={schedule.id} value={schedule.id}>
+                          {schedule.subject_name} - {schedule.teacher_name} 
+                          ({schedule.day} {schedule.time_start.slice(0,5)}-{schedule.time_end.slice(0,5)}) 
+                          [{schedule.enrolled_count}/{schedule.max_capacity}]
+                        </option>
+                      ))}
+                    </select>
+                    {availableSchedules.length === 0 && (
+                      <div className="text-muted small mt-2">
+                        No available schedules for {selectedStudent.track} - {selectedStudent.strand}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEnrollSchedule(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={handleEnrollStudent}
+                    disabled={saving || !selectedScheduleId}
+                  >
+                    {saving ? "Enrolling..." : "Enroll Schedule"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* View Teacher Schedules Modal */}
+      {showViewTeacherSchedules && selectedTeacher && !showEditTeacherSchedule && !showDeleteConfirmation && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowViewTeacherSchedules(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-primary text-white">
+                  <div>
+                    <h5 className="modal-title mb-0">{selectedTeacher.full_name} - Schedules</h5>
+                    <div className="small opacity-75">{selectedTeacher.department}</div>
+                  </div>
+                  <button type="button" className="btn-close btn-close-white" onClick={() => setShowViewTeacherSchedules(false)} />
+                </div>
+                <div className="modal-body">
+                  {schedulesLoading ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border spinner-border-sm me-2" />
+                      Loading schedules...
+                    </div>
+                  ) : teacherSchedules.length === 0 ? (
+                    <div className="text-center py-4 text-muted">
+                      No schedules assigned yet.
+                    </div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Day</th>
+                            <th>Time</th>
+                            <th>Subject</th>
+                            <th>Room</th>
+                            <th>Track/Strand</th>
+                            <th>Term</th>
+                            <th>Students</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teacherSchedules.map((schedule) => (
+                            <tr key={schedule.id}>
+                              <td className="fw-medium">{schedule.day}</td>
+                              <td className="small">{schedule.time_start.slice(0,5)} - {schedule.time_end.slice(0,5)}</td>
+                              <td>{schedule.subject_name}</td>
+                              <td>{schedule.room}</td>
+                              <td className="small">{schedule.track}<br/><span className="badge bg-secondary-subtle text-secondary">{schedule.strand}</span></td>
+                              <td>{schedule.term}</td>
+                              <td>
+                                <span className={`badge ${schedule.enrolled_count >= schedule.max_capacity * 0.9 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} border`}>
+                                  {schedule.enrolled_count}/{schedule.max_capacity}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="d-flex gap-1">
+                                  <button 
+                                    className="btn btn-sm btn-outline-warning"
+                                    onClick={() => {
+                                      setSelectedSchedule(schedule);
+                                      setTeacherScheduleForm({
+                                        subject: schedule.subject_name,
+                                        room: schedule.room,
+                                        day: schedule.day,
+                                        timeStart: schedule.time_start.slice(0,5),
+                                        timeEnd: schedule.time_end.slice(0,5),
+                                        strand: schedule.strand,
+                                        track: schedule.track,
+                                        term: schedule.term
+                                      });
+                                      setShowEditTeacherSchedule(true);
+                                    }}
+                                    title="Edit"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button 
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => {
+                                      setSelectedSchedule(schedule);
+                                      setShowDeleteConfirmation(true);
+                                    }}
+                                    title="Delete"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowViewTeacherSchedules(false)}>
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
@@ -4132,14 +6316,14 @@ function SchedulingPanel() {
       )}
 
       {/* Edit Teacher Schedule Modal */}
-      {showEditTeacherSchedule && (
+      {showEditTeacherSchedule && selectedSchedule && (
         <>
           <div className="modal-backdrop fade show" onClick={() => setShowEditTeacherSchedule(false)} />
-          <div className="modal fade show d-block" tabIndex={-1}>
-            <div className="modal-dialog modal-lg">
+          <div className="modal fade show d-block" tabIndex={-1} style={{ zIndex: 1060 }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Schedule - {selectedTeacher?.name}</h5>
+                <div className="modal-header bg-warning text-dark">
+                  <h5 className="modal-title">Edit Schedule</h5>
                   <button type="button" className="btn-close" onClick={() => setShowEditTeacherSchedule(false)} />
                 </div>
                 <div className="modal-body">
@@ -4149,7 +6333,6 @@ function SchedulingPanel() {
                       <input 
                         type="text" 
                         className="form-control" 
-                        placeholder="e.g. Mathematics"
                         value={teacherScheduleForm.subject}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, subject: e.target.value})}
                       />
@@ -4159,7 +6342,6 @@ function SchedulingPanel() {
                       <input 
                         type="text" 
                         className="form-control" 
-                        placeholder="e.g. Room 101"
                         value={teacherScheduleForm.room}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, room: e.target.value})}
                       />
@@ -4171,7 +6353,6 @@ function SchedulingPanel() {
                         value={teacherScheduleForm.day}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, day: e.target.value})}
                       >
-                        <option value="">Select Day</option>
                         {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
                       </select>
                     </div>
@@ -4194,6 +6375,23 @@ function SchedulingPanel() {
                       />
                     </div>
                     <div className="col-md-6">
+                      <label className="form-label fw-semibold">Track</label>
+                      <select 
+                        className="form-select"
+                        value={teacherScheduleForm.track}
+                        onChange={(e) => {
+                          setTeacherScheduleForm({
+                            ...teacherScheduleForm, 
+                            track: e.target.value,
+                            strand: ""
+                          });
+                        }}
+                      >
+                        <option value="Academic Track">Academic Track</option>
+                        <option value="TechPro Track">TechPro Track</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Strand</label>
                       <select 
                         className="form-select"
@@ -4201,45 +6399,23 @@ function SchedulingPanel() {
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
                       >
                         <option value="">Select Strand</option>
-                        {strands.map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                        {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
                       </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Track</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. Science"
-                        value={teacherScheduleForm.track}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, track: e.target.value})}
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Term</label>
-                      <select 
-                        className="form-select"
-                        value={teacherScheduleForm.term}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, term: e.target.value})}
-                      >
-                        <option value="">Select Term</option>
-                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">School Year</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. 2025-2026"
-                        value={teacherScheduleForm.schoolYear}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, schoolYear: e.target.value})}
-                      />
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditTeacherSchedule(false)}>Cancel</button>
-                  <button type="button" className="btn btn-primary" onClick={handleEditTeacherSchedule}>Save Changes</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditTeacherSchedule(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-warning" 
+                    onClick={handleEditTeacherSchedule}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving..." : "Update Schedule"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -4247,88 +6423,50 @@ function SchedulingPanel() {
         </>
       )}
 
-      {/* Enroll Student Schedule Modal */}
-      {showEnrollSchedule && (
+      {/* Delete Schedule Confirmation Modal */}
+      {showDeleteConfirmation && selectedSchedule && (
         <>
-          <div className="modal-backdrop fade show" onClick={() => setShowEnrollSchedule(false)} />
-          <div className="modal fade show d-block" tabIndex={-1}>
-            <div className="modal-dialog">
+          <div className="modal-backdrop fade show" onClick={() => setShowDeleteConfirmation(false)} />
+          <div className="modal fade show d-block" tabIndex={-1} style={{ zIndex: 1070 }}>
+            <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Enroll Schedule - {selectedStudent?.name}</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowEnrollSchedule(false)} />
+                <div className="modal-header bg-danger text-white">
+                  <h5 className="modal-title">⚠️ Delete Schedule?</h5>
+                  <button type="button" className="btn-close btn-close-white" onClick={() => setShowDeleteConfirmation(false)} />
                 </div>
                 <div className="modal-body">
-                  <div className="mb-3 p-3 bg-light rounded">
-                    <div className="small text-muted">Student Info</div>
-                    <div className="fw-semibold">{selectedStudent?.student_id}</div>
-                    <div className="small">{selectedStudent?.strand}/{selectedStudent?.track} • {selectedStudent?.term}</div>
+                  <div className="mb-3">
+                    <strong>{selectedSchedule.subject_name}</strong>
+                    <div className="small text-muted">
+                      {selectedSchedule.day} • {selectedSchedule.time_start.slice(0,5)} - {selectedSchedule.time_end.slice(0,5)} • {selectedSchedule.room}
+                    </div>
                   </div>
                   
-                  <div className="row g-3">
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Teacher</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.teacher}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, teacher: e.target.value})}
-                      >
-                        <option value="">Select Teacher</option>
-                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
+                  {selectedSchedule.enrolled_count > 0 ? (
+                    <div className="alert alert-warning">
+                      <strong>Warning:</strong> This schedule has <strong>{selectedSchedule.enrolled_count} enrolled student(s)</strong>.
+                      <br/>Deleting will automatically unenroll all students.
                     </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Subject</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.subject}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, subject: e.target.value})}
-                      >
-                        <option value="">Select Subject</option>
-                        <option value="math">Mathematics</option>
-                        <option value="english">English</option>
-                        <option value="science">Science</option>
-                      </select>
+                  ) : (
+                    <div className="alert alert-info">
+                      This schedule has no enrolled students.
                     </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Schedule (Day & Time)</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.schedule}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schedule: e.target.value})}
-                      >
-                        <option value="">Select Schedule</option>
-                        <option value="mon-8-10">Monday 8:00 AM - 10:00 AM</option>
-                        <option value="tue-10-12">Tuesday 10:00 AM - 12:00 PM</option>
-                        <option value="wed-1-3">Wednesday 1:00 PM - 3:00 PM</option>
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Term</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.term}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, term: e.target.value})}
-                      >
-                        <option value="">Select Term</option>
-                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">School Year</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. 2025-2026"
-                        value={studentScheduleForm.schoolYear}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schoolYear: e.target.value})}
-                      />
-                    </div>
-                  </div>
+                  )}
+                  
+                  <p className="mb-0">Are you sure you want to delete this schedule?</p>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowEnrollSchedule(false)}>Cancel</button>
-                  <button type="button" className="btn btn-primary" onClick={handleEnrollSchedule}>Enroll Schedule</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteConfirmation(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-danger" 
+                    onClick={handleDeleteSchedule}
+                    disabled={saving}
+                  >
+                    {saving ? "Deleting..." : "Delete Schedule"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -4336,97 +6474,274 @@ function SchedulingPanel() {
         </>
       )}
 
-      {/* Edit Student Schedule Modal */}
-      {showEditStudentSchedule && (
+      {/* View Student Schedules Modal */}
+      {showViewStudentSchedules && selectedStudent && (
         <>
-          <div className="modal-backdrop fade show" onClick={() => setShowEditStudentSchedule(false)} />
+          <div className="modal-backdrop fade show" onClick={() => setShowViewStudentSchedules(false)} />
           <div className="modal fade show d-block" tabIndex={-1}>
-            <div className="modal-dialog">
+            <div className="modal-dialog modal-xl modal-dialog-scrollable">
               <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Schedule - {selectedStudent?.name}</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowEditStudentSchedule(false)} />
+                <div className="modal-header bg-info text-white">
+                  <div>
+                    <h5 className="modal-title mb-0">{selectedStudent.full_name} - Enrolled Schedules</h5>
+                    <div className="small opacity-75">{selectedStudent.student_id} • {selectedStudent.track} - {selectedStudent.strand}</div>
+                  </div>
+                  <button type="button" className="btn-close btn-close-white" onClick={() => setShowViewStudentSchedules(false)} />
                 </div>
                 <div className="modal-body">
-                  <div className="mb-3 p-3 bg-light rounded">
-                    <div className="small text-muted">Student Info</div>
-                    <div className="fw-semibold">{selectedStudent?.student_id}</div>
-                    <div className="small">{selectedStudent?.strand}/{selectedStudent?.track} • {selectedStudent?.term}</div>
-                  </div>
-                  
-                  <div className="row g-3">
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Teacher</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.teacher}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, teacher: e.target.value})}
-                      >
-                        <option value="">Select Teacher</option>
-                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
+                  {schedulesLoading ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border spinner-border-sm me-2" />
+                      Loading schedules...
                     </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Subject</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.subject}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, subject: e.target.value})}
-                      >
-                        <option value="">Select Subject</option>
-                        <option value="math">Mathematics</option>
-                        <option value="english">English</option>
-                        <option value="science">Science</option>
-                      </select>
+                  ) : studentSchedules.length === 0 ? (
+                    <div className="text-center py-4 text-muted">
+                      No schedules enrolled yet.
                     </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Schedule (Day & Time)</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.schedule}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schedule: e.target.value})}
-                      >
-                        <option value="">Select Schedule</option>
-                        <option value="mon-8-10">Monday 8:00 AM - 10:00 AM</option>
-                        <option value="tue-10-12">Tuesday 10:00 AM - 12:00 PM</option>
-                        <option value="wed-1-3">Wednesday 1:00 PM - 3:00 PM</option>
-                      </select>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Day</th>
+                            <th>Time</th>
+                            <th>Subject</th>
+                            <th>Room</th>
+                            <th>Teacher</th>
+                            <th>Track/Strand</th>
+                            <th>Term</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {studentSchedules.map((schedule: any) => (
+                            <tr key={schedule.schedule_id}>
+                              <td className="fw-medium">{schedule.day}</td>
+                              <td className="small">{schedule.time_start.slice(0,5)} - {schedule.time_end.slice(0,5)}</td>
+                              <td>{schedule.subject_name}</td>
+                              <td>{schedule.room}</td>
+                              <td>{schedule.teacher_name}</td>
+                              <td className="small">{schedule.track}<br/><span className="badge bg-secondary-subtle text-secondary">{schedule.strand}</span></td>
+                              <td>{schedule.term}</td>
+                              <td>
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => {
+                                    if (confirm(`Unenroll from ${schedule.subject_name}?`)) {
+                                      handleUnenrollStudent(schedule.schedule_id);
+                                    }
+                                  }}
+                                  title="Unenroll"
+                                >
+                                  ❌ Unenroll
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Term</label>
-                      <select 
-                        className="form-select"
-                        value={studentScheduleForm.term}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, term: e.target.value})}
-                      >
-                        <option value="">Select Term</option>
-                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">School Year</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="e.g. 2025-2026"
-                        value={studentScheduleForm.schoolYear}
-                        onChange={(e) => setStudentScheduleForm({...studentScheduleForm, schoolYear: e.target.value})}
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditStudentSchedule(false)}>Cancel</button>
-                  <button type="button" className="btn btn-primary" onClick={handleEditStudentSchedule}>Save Changes</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowViewStudentSchedules(false)}>
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </>
+      )}
+
+      {/* Bulk Enroll Students Modal */}
+      {showBulkEnroll && (
+        <>
+          <div className="modal-backdrop fade show" onClick={() => setShowBulkEnroll(false)} />
+          <div className="modal fade show d-block" tabIndex={-1}>
+            <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-primary text-white">
+                  <h5 className="modal-title">Bulk Enroll Students</h5>
+                  <button type="button" className="btn-close btn-close-white" onClick={() => setShowBulkEnroll(false)} />
+                </div>
+                <div className="modal-body">
+                  {/* Select Schedule */}
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Select Schedule</label>
+                    <select 
+                      className="form-select"
+                      value={bulkEnrollScheduleId}
+                      onChange={(e) => setBulkEnrollScheduleId(e.target.value)}
+                    >
+                      <option value="">Choose a schedule...</option>
+                      {availableSchedules.map(schedule => (
+                        <option key={schedule.id} value={schedule.id}>
+                          {schedule.subject_name} - {schedule.teacher_name} 
+                          ({schedule.day} {schedule.time_start.slice(0,5)}-{schedule.time_end.slice(0,5)}) 
+                          - {schedule.track}/{schedule.strand}
+                          [{schedule.enrolled_count}/{schedule.max_capacity} slots]
+                        </option>
+                      ))}
+                    </select>
+                    {availableSchedules.length === 0 && (
+                      <div className="text-muted small mt-2">
+                        No available schedules. Adjust filters or create schedules first.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Student Selection */}
+                  {bulkEnrollScheduleId && (
+                    <div>
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <label className="form-label fw-semibold mb-0">Select Students ({selectedStudentIds.length} selected)</label>
+                        <div>
+                          <button 
+                            className="btn btn-sm btn-outline-primary me-2"
+                            onClick={() => setSelectedStudentIds(filteredStudents.map(s => s.student_id))}
+                          >
+                            Select All
+                          </button>
+                          <button 
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => setSelectedStudentIds([])}
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                        <table className="table table-hover table-sm">
+                          <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
+                            <tr>
+                              <th style={{ width: '50px' }}>
+                                <input 
+                                  type="checkbox"
+                                  className="form-check-input"
+                                  checked={selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedStudentIds(filteredStudents.map(s => s.student_id));
+                                    } else {
+                                      setSelectedStudentIds([]);
+                                    }
+                                  }}
+                                />
+                              </th>
+                              <th>Name</th>
+                              <th>Student ID</th>
+                              <th>Track/Strand</th>
+                              <th>Term</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredStudents.map(student => {
+                              const selectedSchedule = availableSchedules.find(s => s.id.toString() === bulkEnrollScheduleId);
+                              const isCompatible = selectedSchedule && 
+                                student.track === selectedSchedule.track && 
+                                student.strand === selectedSchedule.strand;
+                              
+                              return (
+                                <tr 
+                                  key={student.student_id}
+                                  className={!isCompatible ? 'table-warning' : ''}
+                                >
+                                  <td>
+                                    <input 
+                                      type="checkbox"
+                                      className="form-check-input"
+                                      checked={selectedStudentIds.includes(student.student_id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedStudentIds([...selectedStudentIds, student.student_id]);
+                                        } else {
+                                          setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.student_id));
+                                        }
+                                      }}
+                                      disabled={!isCompatible}
+                                    />
+                                  </td>
+                                  <td>
+                                    <div className="d-flex align-items-center gap-2">
+                                      {student.profile_picture_url ? (
+                                        <img 
+                                          src={student.profile_picture_url} 
+                                          alt={student.full_name}
+                                          className="rounded-circle flex-shrink-0"
+                                          style={{ width: 28, height: 28, objectFit: 'cover' }}
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.nextElementSibling;
+                                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                                          }}
+                                        />
+                                      ) : null}
+                                      <div 
+                                        className="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center text-info fw-bold flex-shrink-0" 
+                                        style={{ 
+                                          width: 28, 
+                                          height: 28, 
+                                          fontSize: 10,
+                                          display: student.profile_picture_url ? 'none' : 'flex'
+                                        }}>
+                                        {student.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                                      </div>
+                                      <span>{student.full_name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="font-monospace small">{student.student_id}</td>
+                                  <td>
+                                    {student.track} / {student.strand}
+                                    {!isCompatible && <span className="badge bg-warning ms-2">Mismatch</span>}
+                                  </td>
+                                  <td>{student.term}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {selectedStudentIds.length > 0 && (
+                        <div className="alert alert-info mt-3">
+                          <strong>{selectedStudentIds.length} student(s)</strong> will be enrolled in the selected schedule.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowBulkEnroll(false)}>
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary" 
+                    onClick={handleBulkEnrollStudents}
+                    disabled={saving || !bulkEnrollScheduleId || selectedStudentIds.length === 0}
+                  >
+                    {saving ? "Enrolling..." : `Enroll ${selectedStudentIds.length} Student(s)`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="position-fixed bottom-0 end-0 p-3" style={{ zIndex: 1050 }}>
+          <div className="alert alert-dark mb-0 shadow-lg">{toast}</div>
+        </div>
       )}
     </div>
   );
 }
+
+
 
 /*  Announcements Panel  */
 function AnnouncementsPanel() {
@@ -4753,7 +7068,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     switch (activeNav) {
       case "students":      return <StudentsPanel />;
       case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} role={role} />;
-      case "grades":        return <GradesPanel />;
+      case "grades":        return <GradesPanel role={role} />;
       case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
       case "documents":     return <AdminDocumentsPanel />;
       case "enrollment":    return <EnrollmentPanel role={role} />;

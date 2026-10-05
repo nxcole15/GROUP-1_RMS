@@ -102,7 +102,49 @@ async function getMySchedule(req, res, next) {
     const { student_id } = req.student;
     const db = require("../../config/db");
 
-    // Find any approved enrollment for this student directly
+    // Try NEW scheduling system first (student_schedule_enrollments + teacher_schedules)
+    const [scheduleRows] = await db.query(
+      `SELECT 
+        sse.teacher_schedule_id,
+        ts.subject_name,
+        ts.strand,
+        ts.track,
+        ts.day,
+        ts.time_start,
+        ts.time_end,
+        ts.room,
+        t.full_name AS teacher_name,
+        t.teacher_id,
+        CONCAT(ts.subject_name, ' (', ts.strand, ')') AS code
+       FROM student_schedule_enrollments sse
+       JOIN teacher_schedules ts ON ts.id = sse.teacher_schedule_id
+       JOIN teachers t ON t.id = ts.teacher_id
+       WHERE sse.student_id = ?
+       ORDER BY FIELD(ts.day,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'), ts.time_start`,
+      [student_id]
+    );
+
+    // If new system has data, use it
+    if (scheduleRows.length > 0) {
+      const schedule = scheduleRows.map(row => ({
+        id: row.teacher_schedule_id,
+        subject_id: row.teacher_schedule_id,
+        code: row.code,
+        subject_name: row.subject_name,
+        teacher_name: row.teacher_name,
+        teacher_id: row.teacher_id,
+        strand: row.strand,
+        track: row.track,
+        day: row.day,
+        time_start: row.time_start,
+        time_end: row.time_end,
+        room: row.room
+      }));
+
+      return res.json({ schedule });
+    }
+
+    // FALLBACK: Try OLD enrollment system (enrollments + subjects + schedule)
     const [enrollRows] = await db.query(
       `SELECT e.id FROM enrollments e
        WHERE e.student_id = ? AND e.status = 'approved'
@@ -111,16 +153,19 @@ async function getMySchedule(req, res, next) {
     );
 
     if (!enrollRows[0]) {
+      console.log('No approved enrollment found');
       return res.json({ schedule: [] });
     }
 
+    const EnrollmentModel = require('./enrollmentModel');
     const enrollment = await EnrollmentModel.findById(enrollRows[0].id);
 
     if (!enrollment || !enrollment.subjects?.length) {
+      console.log('No subjects in enrollment');
       return res.json({ schedule: [] });
     }
 
-    const [rows] = await db.query(
+    const [oldScheduleRows] = await db.query(
       `SELECT sc.id, sc.subject_id, sc.day, sc.time_start, sc.time_end, sc.room,
               s.code, s.name AS subject_name, t.full_name AS teacher_name
        FROM schedule sc
@@ -131,8 +176,12 @@ async function getMySchedule(req, res, next) {
       [enrollment.subjects]
     );
 
-    res.json({ schedule: rows });
-  } catch (err) { next(err); }
+    console.log('Returning OLD system schedule:', oldScheduleRows.length);
+    res.json({ schedule: oldScheduleRows });
+  } catch (err) { 
+    console.error('getMySchedule error:', err);
+    next(err); 
+  }
 }
 
 module.exports = { getMyEnrollment, getAvailableSubjects, submitEnrollment, getMySchedule };
