@@ -3610,9 +3610,10 @@ function AdminRequestsPanel({ role }: { role?: string }) {
     const token = localStorage.getItem("inform_admin_token");
     if (!token) { showToast("Session expired. Please log in again."); return; }
     
-    console.log('toggleTerm called:', { term, open, endpoint: `${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}` });
-    
+    // Optimistically update UI
     setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 1 : 0 } : c));
+    
+    // Use the grade-requests endpoints (for Grade Request system, not Grade Submission)
     fetch(`${API_BASE}/api/grade-requests/principal/${open ? "open" : "close"}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -3620,16 +3621,15 @@ function AdminRequestsPanel({ role }: { role?: string }) {
       body: JSON.stringify({ term }),
     })
       .then(r => {
-        console.log('toggleTerm response:', r.status, r.statusText);
         return r.ok ? r.json() : Promise.reject(r.status);
       })
       .then((data) => { 
-        console.log('toggleTerm success:', data);
         showToast(open ? `${term} opened.` : `${term} closed.`); 
         reload(); 
       })
       .catch((err) => {
         console.error('toggleTerm error:', err);
+        // Revert on error
         setTermConfig(prev => prev.map(c => c.term === term ? { ...c, is_open: open ? 0 : 1 } : c));
         showToast("Failed to update term.");
       });

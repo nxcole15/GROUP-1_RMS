@@ -16,8 +16,6 @@ async function getStudentsWithGradesForClass(req, res, next) {
     const { subject_name, strand, term } = req.query;
     const teacherDbId = req.teacher?.id;
 
-    console.log(`[getStudentsWithGradesForClass] Loading students for: ${subject_name} - ${strand} - ${term}`);
-
     // Validation
     if (!subject_name || !strand || !term) {
       return res.status(400).json({
@@ -60,8 +58,6 @@ async function getStudentsWithGradesForClass(req, res, next) {
       ORDER BY s.full_name ASC
     `, [subject_name, strand, term, teacherDbId, subject_name, strand, term]);
 
-    console.log(`[getStudentsWithGradesForClass] Found ${students.length} students`);
-
     // Get submission batch status
     const [batchResult] = await pool.query(`
       SELECT 
@@ -81,6 +77,7 @@ async function getStudentsWithGradesForClass(req, res, next) {
     // Check if submission window is open
     const [submissionConfig] = await pool.query(`
       SELECT 
+        is_open,
         start_date,
         end_date,
         manual_override
@@ -92,20 +89,9 @@ async function getStudentsWithGradesForClass(req, res, next) {
     const config = submissionConfig[0];
     const now = new Date();
     
-    // Determine if window is open based on manual_override or date range
-    let isOpen = false;
-    if (config) {
-      if (config.manual_override === 'open') {
-        isOpen = true;
-      } else if (config.manual_override === 'closed') {
-        isOpen = false;
-      } else if (config.start_date && config.end_date) {
-        // Check if current date is within the range
-        const startDate = new Date(config.start_date);
-        const endDate = new Date(config.end_date);
-        isOpen = now >= startDate && now <= endDate;
-      }
-    }
+    // Primary check: use is_open field (set by backend when opening/closing)
+    // This is the source of truth set by admin actions
+    let isOpen = config?.is_open === 1 || false;
     
     const daysRemaining = config?.end_date ? Math.ceil((new Date(config.end_date) - now) / (1000 * 60 * 60 * 24)) : 0;
 
@@ -125,7 +111,6 @@ async function getStudentsWithGradesForClass(req, res, next) {
       }
     });
   } catch (err) {
-    console.error('[getStudentsWithGradesForClass] Error:', err);
     next(err);
   }
 }
@@ -363,27 +348,15 @@ async function submitGradesBatch(req, res, next) {
 
     // Check if grade submission is open for this term
     const [submissionConfig] = await conn.query(
-      `SELECT manual_override, start_date, end_date 
+      `SELECT is_open, manual_override, start_date, end_date 
        FROM grade_submission_config 
        WHERE term = ?`,
       [term]
     );
 
-    // Determine if window is open based on manual_override or date range
+    // Primary check: use is_open field (source of truth)
     const config = submissionConfig[0];
-    let isOpen = false;
-    if (config) {
-      if (config.manual_override === 'open') {
-        isOpen = true;
-      } else if (config.manual_override === 'closed') {
-        isOpen = false;
-      } else if (config.start_date && config.end_date) {
-        const now = new Date();
-        const startDate = new Date(config.start_date);
-        const endDate = new Date(config.end_date);
-        isOpen = now >= startDate && now <= endDate;
-      }
-    }
+    const isOpen = config?.is_open === 1;
 
     if (!isOpen) {
       await conn.rollback();
