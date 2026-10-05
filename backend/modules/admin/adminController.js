@@ -848,17 +848,23 @@ async function setGradeSubmissionSchedule(req, res, next) {
       return res.status(400).json({ error: "End date must be after start date." });
     }
 
+    // Determine if we're currently in the scheduled window
+    const now = new Date();
+    const isCurrentlyOpen = now >= start && now <= end ? 1 : 0;
+
     await db.query(`
       UPDATE grade_submission_config
       SET 
+        is_open = ?,
         start_date = ?,
         end_date = ?,
         manual_override = 'none',
+        opened_at = ${isCurrentlyOpen ? 'NOW()' : 'NULL'},
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
       WHERE term = ?
-    `, [startMysql, endMysql, req.admin.admin_id, notes || null, term]);
+    `, [isCurrentlyOpen, startMysql, endMysql, req.admin.admin_id, notes || null, term]);
 
     res.json({ message: "Grade submission schedule set successfully." });
   } catch (err) {
@@ -882,7 +888,9 @@ async function openGradeSubmissionNow(req, res, next) {
     await db.query(`
       UPDATE grade_submission_config
       SET 
+        is_open = 1,
         manual_override = 'open',
+        opened_at = NOW(),
         start_date = NULL,
         end_date = NULL,
         last_modified_by = ?,
@@ -913,6 +921,7 @@ async function closeGradeSubmissionNow(req, res, next) {
     await db.query(`
       UPDATE grade_submission_config
       SET 
+        is_open = 0,
         manual_override = 'closed',
         start_date = NULL,
         end_date = NULL,
@@ -943,6 +952,7 @@ async function clearGradeSubmissionSchedule(req, res, next) {
     await db.query(`
       UPDATE grade_submission_config
       SET 
+        is_open = 0,
         start_date = NULL,
         end_date = NULL,
         manual_override = 'none',
