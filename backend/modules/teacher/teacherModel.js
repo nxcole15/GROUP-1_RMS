@@ -43,12 +43,24 @@ const TeacherModel = {
 
   async getStudentsInClasses(teacher_id) {
     const [rows] = await db.query(
-      `SELECT DISTINCT st.student_id, st.full_name, st.email
+      `SELECT 
+         st.student_id, 
+         st.full_name, 
+         st.pathway, 
+         st.grade_level, 
+         st.email,
+         ea.photo_url,
+         ea.track,
+         ea.strand,
+         ts.subject_name,
+         ts.term,
+         CONCAT(ea.track, ' - ', ea.strand) as track_strand
        FROM students st
-       JOIN enrollments e ON e.student_id = st.student_id
-       JOIN enrollment_subjects es ON es.enrollment_id = e.id
-       JOIN subjects s ON s.id = es.subject_id
-       WHERE s.teacher_id = (SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1)
+       INNER JOIN student_schedule_enrollments sse ON st.student_id = sse.student_id
+       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
+       INNER JOIN teachers t ON ts.teacher_id = t.id
+       LEFT JOIN enrollment_applications ea ON st.student_id = ea.generated_student_id
+       WHERE t.teacher_id = ?
        ORDER BY st.full_name`,
       [teacher_id]
     );

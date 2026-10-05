@@ -11,7 +11,6 @@ const db = require("../../config/db");
 async function getDashboardData(req, res, next) {
   try {
     const studentId = req.student.student_id;
-    console.log("Fetching dashboard for student:", studentId);
 
     // Get basic student info from the JWT token first as fallback
     const basicStudent = {
@@ -63,7 +62,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       averageGrade = gradesRows[0]?.average_grade || 0;
     } catch (err) {
-      console.log("Grades table might not exist yet:", err.message);
+      // Grades table might not exist yet
     }
 
     // Get tuition/payment data (handle missing tables)
@@ -77,7 +76,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       totalPaid = paymentsRows[0]?.total_paid || 0;
     } catch (err) {
-      console.log("Payments table might not exist yet:", err.message);
+      // Payments table might not exist yet
     }
 
     // Get total tuition fee (handle missing table)
@@ -92,7 +91,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       totalTuition = tuitionRows[0]?.total_tuition || 0;
     } catch (err) {
-      console.log("Student_tuition table might not exist yet:", err.message);
+      // Student_tuition table might not exist yet
     }
 
     // Get pending document requests count (handle missing table)
@@ -105,7 +104,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       pendingDocs = docsRows[0]?.pending_count || 0;
     } catch (err) {
-      console.log("Document_requests table might not exist yet:", err.message);
+      // Document_requests table might not exist yet
     }
 
     // Get recent grades (handle missing table)
@@ -124,7 +123,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       recentGradesRows = rows;
     } catch (err) {
-      console.log("Grades table might not exist yet:", err.message);
+      // Grades table might not exist yet
     }
 
     res.json({
@@ -198,7 +197,49 @@ async function getProfileData(req, res, next) {
   }
 }
 
+/**
+ * GET /api/student/schedules
+ * Returns student's enrolled schedules
+ */
+async function getStudentSchedules(req, res, next) {
+  try {
+    const studentId = req.student.student_id;
+
+    const [schedules] = await db.query(`
+      SELECT 
+        ts.id as schedule_id,
+        ts.subject_name,
+        ts.room,
+        ts.day,
+        ts.time_start,
+        ts.time_end,
+        ts.track,
+        ts.strand,
+        ts.term,
+        ts.school_year,
+        t.full_name as teacher_name,
+        t.department,
+        sse.enrolled_at
+      FROM student_schedule_enrollments sse
+      INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
+      INNER JOIN teachers t ON ts.teacher_id = t.id
+      WHERE sse.student_id = ?
+      ORDER BY ts.day, ts.time_start ASC
+    `, [studentId]);
+
+    res.json({
+      student_id: studentId,
+      schedules,
+      total: schedules.length
+    });
+  } catch (err) {
+    console.error("Error fetching student schedules:", err);
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardData,
-  getProfileData
+  getProfileData,
+  getStudentSchedules
 };

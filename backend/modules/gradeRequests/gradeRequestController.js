@@ -53,11 +53,27 @@ async function studentSubmitRequest(req, res, next) {
       return res.status(403).json({ error: `Grade requests are currently closed for ${term}.` });
     }
 
-    // Get teacher for this subject
-    const [subRows] = await db.query(
-      "SELECT teacher_id FROM subjects WHERE id = ? LIMIT 1", [subject_id]
+    // Get teacher for this subject/schedule
+    // Try NEW system first (teacher_schedules)
+    const [scheduleRows] = await db.query(
+      "SELECT teacher_id, subject_name FROM teacher_schedules WHERE id = ? LIMIT 1", [subject_id]
     );
-    if (!subRows[0]) return res.status(404).json({ error: "Subject not found." });
+    
+    let teacher_id, subject_name;
+    
+    if (scheduleRows[0]) {
+      // NEW system
+      teacher_id = scheduleRows[0].teacher_id;
+      subject_name = scheduleRows[0].subject_name;
+    } else {
+      // Fallback to OLD system (subjects table)
+      const [subRows] = await db.query(
+        "SELECT teacher_id, name FROM subjects WHERE id = ? LIMIT 1", [subject_id]
+      );
+      if (!subRows[0]) return res.status(404).json({ error: "Subject not found." });
+      teacher_id = subRows[0].teacher_id;
+      subject_name = subRows[0].name;
+    }
 
     // Check for duplicate
     const [existing] = await db.query(
@@ -69,17 +85,16 @@ async function studentSubmitRequest(req, res, next) {
 
     const request = await GradeRequestModel.create({
       student_id, subject_id,
-      teacher_id: subRows[0].teacher_id, term
+      teacher_id, term
     });
 
     // Notify the teacher
-    const [teacherRow] = await db.query(`SELECT teacher_id FROM teachers WHERE id = ? LIMIT 1`, [subRows[0].teacher_id]);
+    const [teacherRow] = await db.query(`SELECT teacher_id FROM teachers WHERE id = ? LIMIT 1`, [teacher_id]);
     if (teacherRow[0]) {
-      const [subName] = await db.query(`SELECT name FROM subjects WHERE id = ? LIMIT 1`, [subject_id]);
       await notifyStaff(
         teacherRow[0].teacher_id, "teacher",
         "New Grade Request",
-        `${student_id} has requested a grade for ${subName[0]?.name || "a subject"} — ${term}.`
+        `${student_id} has requested a grade for ${subject_name} — ${term}.`
       );
     }
 
@@ -106,6 +121,7 @@ async function teacherSubmitGrade(req, res, next) {
   try {
     const { id } = req.params;
     const { score, remarks } = req.body;
+    
     if (score === undefined) return res.status(400).json({ error: "score is required." });
     if (score < 0 || score > 100) return res.status(400).json({ error: "Score must be between 0 and 100." });
 
@@ -116,19 +132,22 @@ async function teacherSubmitGrade(req, res, next) {
     }
 
     const s = Number(score);
-    const updated = await GradeRequestModel.updateStatus(id, "registrar_review", {
+    // NEW FLOW: Skip registrar, go directly to principal
+    const updated = await GradeRequestModel.updateStatus(id, "principal_review", {
         score: s, remarks: remarks || ""
     });
 
-    // Notify all registrars
+    // Notify all principals
     await notifyAllAdmins(
-      "registrar",
+      "principal",
       "Grade Submitted for Review",
       `${request.student_name} — ${request.subject_name} (${request.term}): Score ${s}. Awaiting your review.`
     );
 
-    res.json({ message: "Grade submitted. Sent to Registrar for review.", request: updated });
-  } catch (err) { next(err); }
+    res.json({ message: "Grade submitted to Principal for review.", request: updated });
+  } catch (err) { 
+    next(err); 
+  }
 }
 
 async function teacherReleaseGrade(req, res, next) {
@@ -136,8 +155,9 @@ async function teacherReleaseGrade(req, res, next) {
     const { id } = req.params;
     const request = await GradeRequestModel.findById(id);
     if (!request) return res.status(404).json({ error: "Request not found." });
-    if (request.status !== "registrar_released") {
-      return res.status(409).json({ error: "Request is not ready for teacher release." });
+    // NEW FLOW: Accept from principal_approved instead of registrar_released
+    if (request.status !== "principal_approved") {
+      return res.status(409).json({ error: "Request is not ready for teacher release. Must be approved by Principal first." });
     }
     const updated = await GradeRequestModel.updateStatus(id, "released_to_student");
 
@@ -317,7 +337,10 @@ async function getRequestConfig(req, res, next) {
   try {
     const [rows] = await db.query("SELECT * FROM grade_request_config ORDER BY id");
     res.json({ config: rows });
-  } catch (err) { next(err); }
+  } catch (err) { 
+    console.error('getRequestConfig error:', err);
+    next(err); 
+  }
 }
 
 /* ── Staff Notifications ── */

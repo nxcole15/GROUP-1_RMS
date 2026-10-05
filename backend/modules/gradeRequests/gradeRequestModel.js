@@ -7,11 +7,15 @@ const GradeRequestModel = {
 
   async findAll() {
     const [rows] = await db.query(
-      `SELECT gr.*, s.full_name AS student_name, sub.name AS subject_name,
-              sub.code AS subject_code, t.full_name AS teacher_name
+      `SELECT gr.*, 
+              s.full_name AS student_name, 
+              COALESCE(ts.subject_name, sub.name) AS subject_name,
+              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
+              t.full_name AS teacher_name
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        ORDER BY gr.created_at DESC`
     );
@@ -20,10 +24,13 @@ const GradeRequestModel = {
 
   async findByStudent(student_id) {
     const [rows] = await db.query(
-      `SELECT gr.*, sub.name AS subject_name, sub.code AS subject_code,
+      `SELECT gr.*, 
+              COALESCE(ts.subject_name, sub.name) AS subject_name,
+              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
               t.full_name AS teacher_name
        FROM grade_requests gr
-       JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        WHERE gr.student_id = ?
        ORDER BY gr.created_at DESC`,
@@ -34,11 +41,14 @@ const GradeRequestModel = {
 
   async findByTeacher(teacher_id) {
     const [rows] = await db.query(
-      `SELECT gr.*, s.full_name AS student_name, sub.name AS subject_name,
-              sub.code AS subject_code
+      `SELECT gr.*, 
+              s.full_name AS student_name, 
+              COALESCE(ts.subject_name, sub.name) AS subject_name,
+              COALESCE(CONCAT(ts.subject_name, ' (', ts.strand, ')'), sub.code) AS subject_code
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        WHERE gr.teacher_id = ?
        ORDER BY gr.created_at DESC`,
       [teacher_id]
@@ -48,11 +58,15 @@ const GradeRequestModel = {
 
   async findById(id) {
     const [rows] = await db.query(
-      `SELECT gr.*, s.full_name AS student_name, sub.name AS subject_name,
-              sub.code AS subject_code, t.full_name AS teacher_name
+      `SELECT gr.*, 
+              s.full_name AS student_name, 
+              COALESCE(ts.subject_name, sub.name) AS subject_name,
+              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
+              t.full_name AS teacher_name
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN subjects sub ON sub.id = gr.subject_id
+       LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        WHERE gr.id = ? LIMIT 1`,
       [id]
