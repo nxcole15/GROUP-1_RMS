@@ -1,0 +1,11 @@
+
+> my-app@0.1.0 build
+> next build
+
+ ⚠ Runtime config is deprecated and the `publicRuntimeConfig` configuration option will be removed in Next.js 16.
+ ⚠ Runtime config is deprecated and the `serverRuntimeConfig` configuration option will be removed in Next.js 16.
+   ▲ Next.js 15.5.23
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+Terminate batch job (Y/N)? ^C

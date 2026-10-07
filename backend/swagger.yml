@@ -1,0 +1,590 @@
+openapi: 3.0.0
+info:
+  title: INFORM - Record Management System API
+  version: 1.0.0
+  description: >
+    API documentation for the Cebu Far East Institute
+    Student Information System (INFORM RMS).
+    Handles authentication, grades, attendance, enrollment,
+    payments, and document requests.
+
+servers:
+  - url: http://localhost:4000
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter JWT token obtained from login
+
+tags:
+  - name: Authentication
+    description: Login and logout for all user types
+  - name: Student
+    description: Student profile and records
+  - name: Grades
+    description: Student grade viewing
+  - name: Attendance
+    description: Student attendance records
+  - name: Enrollment
+    description: Enrollment submission and subject listing
+  - name: Payments
+    description: Payment submission and history
+  - name: Documents
+    description: Document request management
+  - name: Notifications
+    description: Student notifications
+  - name: Admin
+    description: Admin management operations
+  - name: Teacher
+    description: Teacher grade and attendance management
+
+paths:
+
+  # ── AUTHENTICATION ──────────────────────────────────────────
+  /api/auth/universal-login:
+    post:
+      tags: [Authentication]
+      summary: Universal login for all users
+      description: >
+        Detects user role from ID format automatically.
+        Student IDs are numeric (e.g. 20240001),
+        Teacher IDs start with T (e.g. T001),
+        Admin IDs start with ADMIN (e.g. ADMIN001).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, password]
+              properties:
+                id:
+                  type: string
+                  example: "20240001"
+                password:
+                  type: string
+                  example: "Jamie@2026"
+      responses:
+        "200":
+          description: Login successful — returns role and JWT token
+        "401":
+          description: Invalid ID or password
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Student logout
+      responses:
+        "200":
+          description: Logged out successfully
+
+  /api/auth/me:
+    get:
+      tags: [Student]
+      summary: Get current student profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Student profile data
+        "401":
+          description: Not authenticated
+
+  # ── ADMIN ───────────────────────────────────────────────────
+  /api/admin/login:
+    post:
+      tags: [Authentication]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [admin_id, password]
+              properties:
+                admin_id:
+                  type: string
+                  example: "ADMIN001"
+                password:
+                  type: string
+                  example: "Admin@2026"
+      responses:
+        "200":
+          description: Admin login successful
+        "401":
+          description: Invalid credentials
+
+  /api/admin/logout:
+    post:
+      tags: [Authentication]
+      summary: Admin logout
+      responses:
+        "200":
+          description: Logged out successfully
+
+  /api/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Get admin dashboard — pending counts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard stats
+
+  /api/admin/students/search:
+    get:
+      tags: [Admin]
+      summary: Search students by name or ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+          description: Search query
+      responses:
+        "200":
+          description: List of matching students
+
+  /api/admin/enrollments:
+    get:
+      tags: [Admin]
+      summary: Get all pending enrollments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of pending enrollments
+
+  /api/admin/enrollments/{id}/approve:
+    patch:
+      tags: [Admin]
+      summary: Approve an enrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Enrollment approved
+        "404":
+          description: Not found
+
+  /api/admin/enrollments/{id}/reject:
+    patch:
+      tags: [Admin]
+      summary: Reject an enrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejection_reason]
+              properties:
+                rejection_reason:
+                  type: string
+                  example: "Incomplete requirements"
+      responses:
+        "200":
+          description: Enrollment rejected
+
+  /api/admin/payments:
+    get:
+      tags: [Admin]
+      summary: Get all pending payments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of pending payments
+
+  /api/admin/payments/{id}/verify:
+    patch:
+      tags: [Admin]
+      summary: Verify a payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payment verified
+
+  /api/admin/documents:
+    get:
+      tags: [Admin]
+      summary: Get all pending document requests
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of pending documents
+
+  /api/admin/documents/{id}/approve:
+    patch:
+      tags: [Admin]
+      summary: Approve a document request
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_release_date]
+              properties:
+                expected_release_date:
+                  type: string
+                  example: "2026-07-01"
+      responses:
+        "200":
+          description: Document approved
+
+  /api/admin/documents/{id}/reject:
+    patch:
+      tags: [Admin]
+      summary: Reject a document request
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejection_reason]
+              properties:
+                rejection_reason:
+                  type: string
+      responses:
+        "200":
+          description: Document rejected
+
+  # ── TEACHER ─────────────────────────────────────────────────
+  /api/teacher/login:
+    post:
+      tags: [Authentication]
+      summary: Teacher login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teacher_id, password]
+              properties:
+                teacher_id:
+                  type: string
+                  example: "T001"
+                password:
+                  type: string
+                  example: "password"
+      responses:
+        "200":
+          description: Login successful
+        "401":
+          description: Invalid credentials
+
+  /api/teacher/logout:
+    post:
+      tags: [Authentication]
+      summary: Teacher logout
+      responses:
+        "200":
+          description: Logged out successfully
+
+  /api/teacher/dashboard:
+    get:
+      tags: [Teacher]
+      summary: Get teacher dashboard data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Teacher dashboard
+
+  /api/teacher/grades:
+    post:
+      tags: [Teacher]
+      summary: Submit a student grade
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [student_id, subject_id, percentage]
+              properties:
+                student_id:
+                  type: string
+                  example: "20240001"
+                subject_id:
+                  type: integer
+                  example: 1
+                percentage:
+                  type: number
+                  example: 92
+      responses:
+        "201":
+          description: Grade submitted
+
+  /api/teacher/grades/{subject_id}:
+    get:
+      tags: [Teacher]
+      summary: Get all grades for a subject
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: subject_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of grades
+
+  /api/teacher/attendance:
+    post:
+      tags: [Teacher]
+      summary: Update student attendance
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [student_id, subject_id, total_meetings, days_present]
+              properties:
+                student_id:
+                  type: string
+                  example: "20240001"
+                subject_id:
+                  type: integer
+                  example: 1
+                total_meetings:
+                  type: integer
+                  example: 20
+                days_present:
+                  type: integer
+                  example: 18
+      responses:
+        "201":
+          description: Attendance updated
+
+  /api/teacher/attendance/{subject_id}:
+    get:
+      tags: [Teacher]
+      summary: Get attendance records for a subject
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: subject_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Attendance records
+
+  # ── STUDENT ROUTES ──────────────────────────────────────────
+  /api/grades:
+    get:
+      tags: [Grades]
+      summary: Get current student grades with GWA
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Student grades and GWA
+
+  /api/attendance:
+    get:
+      tags: [Attendance]
+      summary: Get current student attendance
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Attendance records with warnings
+
+  /api/enrollment:
+    get:
+      tags: [Enrollment]
+      summary: Get student enrollment for current term
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Enrollment record
+    post:
+      tags: [Enrollment]
+      summary: Submit enrollment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjects]
+              properties:
+                subjects:
+                  type: array
+                  items:
+                    type: integer
+                  example: [1, 2, 3]
+      responses:
+        "201":
+          description: Enrollment submitted
+        "409":
+          description: Already enrolled this term
+
+  /api/enrollment/subjects:
+    get:
+      tags: [Enrollment]
+      summary: Get available subjects with capacity
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of subjects
+
+  /api/payments:
+    get:
+      tags: [Payments]
+      summary: Get student payment history and summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Payments and balance summary
+    post:
+      tags: [Payments]
+      summary: Submit a payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fee_item, amount]
+              properties:
+                fee_item:
+                  type: string
+                  example: "Tuition Fee"
+                amount:
+                  type: number
+                  example: 5000
+      responses:
+        "201":
+          description: Payment submitted
+
+  /api/documents:
+    get:
+      tags: [Documents]
+      summary: Get student document requests
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Document requests
+    post:
+      tags: [Documents]
+      summary: Submit a document request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [document_type, purpose, copies]
+              properties:
+                document_type:
+                  type: string
+                  example: "Transcript of Records"
+                purpose:
+                  type: string
+                  example: "For scholarship application"
+                copies:
+                  type: integer
+                  example: 2
+      responses:
+        "201":
+          description: Document request submitted
+
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: Get student notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications and unread count
+
+  /api/notifications/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All marked as read
+
+  /api/health:
+    get:
+      tags: [Authentication]
+      summary: Health check
+      responses:
+        "200":
+          description: Server is running
