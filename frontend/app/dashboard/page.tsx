@@ -277,75 +277,160 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
   ];
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Welcome */}
-      <div className="rounded-3 p-4" style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {student?.full_name ?? "Student"}</h2>
-        <p className="text-white-50 small mb-0">{student?.student_id ?? "STU-2024-001"} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {student?.term ?? "Term 1"} SY 2025-2026</p>
-        <div className="d-flex gap-2 mt-3 flex-wrap">
-          <span className="badge bg-white bg-opacity-20 text-black border border-white border-opacity-25 d-inline-flex align-items-center gap-1"><Icon name="check" size={12} /> Active Student</span>
-          <span className="badge bg-warning bg-opacity-20 text-white border border-warning border-opacity-25 d-inline-flex align-items-center gap-1"><Icon name="calendar" size={12} /> Enrollment Open</span>
+    <div className="d-flex flex-column gap-0">
+      {/* ── Welcome Banner ───────────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)",
+        borderRadius: "16px 16px 0 0",
+        padding: "32px 32px 80px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"absolute", top:20, right:80, width:70, height:70, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.7rem" }}>
+            Welcome back, {student?.full_name ?? "Student"}
+          </h1>
+          <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
+            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {student?.term ?? "Term 1"} SY 2025-2026
+          </p>
+          <div className="d-flex gap-2 flex-wrap">
+            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+              ✅ Active Student
+            </span>
+            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
+              📅 Enrollment Open
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="row g-3">
-        {[
-          { label:"General Average", value:`${avgGrade}%`,          icon:"chart" as IconName, cls:"border-primary-subtle bg-primary-subtle",   val:"text-primary"  },
-          { label:"Tuition Paid",    value:peso(totalPaid),         icon:"peso" as IconName,  cls:"border-success-subtle bg-success-subtle", val:"text-success"  },
-          { label:"Balance Due",     value:peso(balanceDue),        icon:"clock" as IconName, cls:"border-warning-subtle bg-warning-subtle", val:"text-warning" },
-          { label:"Pending Docs",    value:String(pendingDocs),     icon:"file" as IconName,  cls:"border-info-subtle bg-info-subtle",         val:"text-info"     },
-        ].map(s => (
-          <div key={s.label} className="col-6 col-lg-3">
-            <div className={`card border rounded-3 h-100 ${s.cls}`}>
-              <div className="card-body p-3">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="text-muted small">{s.label}</span>
-                  <span className={s.val}><Icon name={s.icon} size={18} /></span>
-                </div>
-                <div className={`fw-black fs-3 ${s.val}`}>{s.value}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* ── Content pulled up ────────────────────────────────────── */}
+      <div className="d-flex flex-column gap-4" style={{ marginTop:"-52px", padding:"0 4px 4px" }}>
 
-      {/* Recent grades + JOBERT */}
-      <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
-            <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="fw-bold small text-dark mb-0">Recent Grades</h3>
-                <button onClick={() => setPanel("grades")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>View all <Icon name="arrowRight" size={12} /></button>
-              </div>
-              <div className="d-flex flex-column gap-3">
-                {gradeData.slice(0,4).map((g,i) => (
-                  <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="flex-grow-1 overflow-hidden">
-                      <div className="small fw-semibold text-dark text-truncate">{g.subject}</div>
-                      <div className="progress mt-1" style={{ height:4 }}><div className="progress-bar bg-primary" style={{ width:`${g.term1.pct}%` }} /></div>
+        {/* Stat cards — 3 cards (General Average removed) */}
+        <div className="row g-3">
+          {[
+            {
+              label: "Tuition Paid", value: peso(totalPaid),
+              gradient: "linear-gradient(135deg,#059669,#10b981)", shadow: "rgba(5,150,105,0.35)",
+              bgLight: "#f0fdf4", textColor: "#059669",
+              icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
+            },
+            {
+              label: "Balance Due", value: peso(balanceDue),
+              gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)", shadow: "rgba(245,158,11,0.35)",
+              bgLight: "#fffbeb", textColor: "#d97706",
+              icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            },
+            {
+              label: "Pending Docs", value: String(pendingDocs),
+              gradient: "linear-gradient(135deg,#3b82f6,#06b6d4)", shadow: "rgba(59,130,246,0.35)",
+              bgLight: "#eff6ff", textColor: "#2563eb",
+              icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+            },
+          ].map(s => (
+            <div key={s.label} className="col-12 col-sm-4">
+              <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}` }}>
+                      {s.icon}
                     </div>
-                    <span className="fw-black small text-primary">{g.term1.grade}</span>
+                    <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
+                      <div className="fw-bold" style={{ fontSize:"0.68rem", color:s.textColor }}>Live</div>
+                    </div>
                   </div>
-                ))}
+                  <div className="fw-black" style={{ fontSize:"1.55rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
+                  <div className="text-muted mt-1" style={{ fontSize:"0.78rem" }}>{s.label}</div>
+                </div>
+                <div style={{ height:3, background:s.gradient }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent Grades + Ask JOBERT */}
+        <div className="row g-4">
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 shadow-sm rounded-4 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-2 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Grades</h3>
+                  </div>
+                  <button onClick={() => setPanel("grades")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
+                    View all <Icon name="arrowRight" size={12} />
+                  </button>
+                </div>
+                {gradeData.length === 0 ? (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                      style={{ width:52, height:52, background:"#f1f5f9" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                      </svg>
+                    </div>
+                    <p className="text-muted small mb-0">No grades available yet</p>
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column gap-3">
+                    {gradeData.slice(0,4).map((g,i) => (
+                      <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <div className="small fw-semibold text-dark text-truncate">{g.subject}</div>
+                          <div className="progress mt-1" style={{ height:4, borderRadius:4 }}>
+                            <div className="progress-bar" style={{ width:`${g.term1.pct}%`, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }} />
+                          </div>
+                        </div>
+                        <span className="fw-black small" style={{ color:"#6366f1" }}>{g.term1.grade}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 shadow-sm rounded-4 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-2 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#2563eb,#3b82f6)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/>
+                    </svg>
+                  </div>
+                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Ask JOBERT</h3>
+                </div>
+                <p className="text-muted small mb-3">Get instant answers about your grades, schedule, tuition, and more.</p>
+                <div className="d-flex flex-column gap-2">
+                  {["Explain my GWA","How do I pay tuition?","How to request a TOR?"].map(s => (
+                    <button key={s} onClick={() => onAskJobert(s)}
+                      className="btn text-start rounded-3 d-flex align-items-center gap-2"
+                      style={{ fontSize:12, background:"#f8fafc", border:"1px solid #e2e8f0", color:"#475569" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                      </svg>
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
-            <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="bot" size={16} /> Ask JOBERT</h3>
-              <p className="text-muted small mb-3">Get instant answers about your grades, schedule, tuition, and more.</p>
-              <div className="d-flex flex-column gap-2">
-                {["Explain my GWA","How do I pay tuition?","How to request a TOR?"].map(s => (
-                  <button key={s} onClick={() => onAskJobert(s)} className="btn btn-light btn-sm text-start border rounded-3 d-flex align-items-center gap-2" style={{ fontSize:12 }}><Icon name="message" size={14} /> {s}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
@@ -811,33 +896,32 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
   }
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Header */}
-      <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-        <div>
-          <h2 className="fw-black fs-4 text-dark mb-1">My Grades</h2>
-          <p className="text-muted small mb-0">School Year {schoolYear}</p>
+    <div className="d-flex flex-column gap-3">
+      {/* Header + status indicator grouped — no gap between them */}
+      <div>
+        <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-2">
+          <div>
+            <h2 className="fw-black fs-4 text-dark mb-1">My Grades</h2>
+            <p className="text-muted small mb-0">School Year {schoolYear}</p>
+          </div>
+          <GradeColorLegend />
         </div>
-        <GradeColorLegend />
+
+        {/* Status indicator directly below heading — no extra gap */}
+        {isRequestOpen ? (
+          <div className="d-flex align-items-center gap-2 mt-1">
+            <span className="d-inline-block rounded-circle bg-success" style={{ width:8, height:8 }} />
+            <span className="fw-bold small text-dark">Grade Request Window Open — {termLabel}</span>
+          </div>
+        ) : (
+          <div className="d-flex align-items-center gap-2 mt-1">
+            <span className="d-inline-block rounded-circle bg-danger" style={{ width:8, height:8 }} />
+            <span className="fw-bold small text-muted">Grade Request Window Closed — {termLabel}</span>
+          </div>
+        )}
       </div>
 
-      {/* Green indicator with text - only show when request window is open */}
-      {isRequestOpen && (
-        <div className="d-flex align-items-center gap-2">
-          <span className="d-inline-block rounded-circle bg-success" style={{ width: 8, height: 8 }}></span>
-          <span className="fw-bold small text-dark">Grade Request Window Open - {termLabel}</span>
-        </div>
-      )}
-
-      {/* Red indicator with text - only show when request window is closed */}
-      {!isRequestOpen && (
-        <div className="d-flex align-items-center gap-2">
-          <span className="d-inline-block rounded-circle bg-danger" style={{ width: 8, height: 8 }}></span>
-          <span className="fw-bold small text-muted">Grade Request Window Closed - {termLabel}</span>
-        </div>
-      )}
-
-      {/* Blue notification box with instructional text - only show when request window is open */}
+      {/* Blue instructional box — only when request window is open */}
       {isRequestOpen && (
         <div className="rounded-3 p-3 d-flex align-items-start gap-3"
           style={{ background:"rgba(99,102,241,0.06)", border:"1.5px solid rgba(99,102,241,0.25)" }}>
@@ -1324,10 +1408,32 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
 /* -- Documents View -- */
 function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
-  const [requests, setRequests] = useState(documentRequests);
-  const [selectedDoc, setSelectedDoc] = useState<string|null>(null);
+  const [requests, setRequests]     = useState(documentRequests);
+  const [showModal, setShowModal]   = useState(false);
+  const [selectedType, setSelectedType] = useState("");
+  const [purpose, setPurpose]       = useState("");
+  const [copies, setCopies]         = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast]           = useState<string|null>(null);
   const [docsLoading, setDocsLoading] = useState(false);
-  const [docsError, setDocsError] = useState(false);
+  const [docsError, setDocsError]   = useState(false);
+
+  const DOCUMENT_CATALOG = [
+    { type:"School Form 10 (Form 137)",              price:"₱250.00",       days:"10-15 working days" },
+    { type:"School Form 9 - Report Card (1st copy)", price:"Free of charge", days:"2-3 working days"   },
+    { type:"School Form 9 - Report Card (2nd copy)", price:"₱150.00",       days:"2-3 working days"   },
+    { type:"Diploma (1st copy)",                     price:"Free of charge", days:"10-15 working days" },
+    { type:"Diploma (succeeding copies)",            price:"₱500.00",       days:"10-15 working days" },
+    { type:"Certificate of Enrollment",              price:"₱100.00",       days:"3-5 working days"   },
+    { type:"Certificate of Graduation",              price:"₱100.00",       days:"3-5 working days"   },
+    { type:"Certificate of Grades (GWA)",            price:"₱100.00",       days:"3-5 working days"   },
+    { type:"Certificate of Good Moral",              price:"₱50.00",        days:"3-5 working days"   },
+    { type:"ESC Certificate / SHS-Voucher Cert.",    price:"₱100.00",       days:"3-5 working days"   },
+    { type:"Official Grade Slip (Employment/Any Purpose)", price:"₱100.00", days:"3-5 working days"   },
+    { type:"CTC - Form 137 (scanned)",               price:"₱25 colored / ₱20 B&W", days:"1 day"     },
+    { type:"CTC - Report Card / Grade Slip",         price:"₱25 colored / ₱20 B&W", days:"1 day"     },
+    { type:"CTC - NSO Cert. of Live Birth",          price:"₱25 colored / ₱20 B&W", days:"1 day"     },
+  ];
 
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
@@ -1341,13 +1447,13 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.documents?.length) {
-          setRequests(data.documents.map((d: {id:number;reference_number:string;document_type:string;purpose:string;copies:number;status:string;expected_release_date:string|null;created_at:string}) => ({
+          setRequests(data.documents.map((d: {id:number;document_type:string;purpose:string;copies:number;status:string;expected_release_date:string|null;created_at:string}) => ({
             id: d.id,
             type: d.document_type,
             status: d.status === "approved" ? "approved" : d.status === "rejected" ? "rejected" : "pending",
             requestedAt: new Date(d.created_at).toLocaleDateString("en-PH",{month:"long",day:"numeric",year:"numeric"}),
             approvedAt: d.status === "approved" ? d.expected_release_date : null,
-            approvedBy: d.status === "approved" ? "Admin" : null,
+            approvedBy: d.status === "approved" ? "Registrar" : null,
             releaseDate: d.expected_release_date,
             downloadUrl: d.status === "approved" ? "#" : null,
           })));
@@ -1357,132 +1463,290 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       .finally(() => setDocsLoading(false));
   }, []);
 
-  const approved = requests.filter(r => r.status==="approved");
-  const pending  = requests.filter(r => r.status==="pending");
+  function openModal() { setSelectedType(""); setPurpose(""); setCopies(1); setShowModal(true); }
 
-  function requestDocument(type: string) {
+  async function submitRequest() {
+    if (!selectedType) { setToast("⚠️ Please select a document type."); setTimeout(()=>setToast(null),3000); return; }
+    setSubmitting(true);
     const token = localStorage.getItem("inform_token");
-
-    // Optimistic UI update
-    if (!requests.some(r => r.type===type && r.status==="pending")) {
-      setRequests(prev => [...prev, { id:Date.now(), type, status:"pending", requestedAt:new Date().toLocaleDateString("en-PH",{month:"long",day:"numeric",year:"numeric"}), approvedAt:null, approvedBy:null, releaseDate:null, downloadUrl:null }]);
-    }
-    setSelectedDoc(null);
-
-    // Real API call if backend is live
+    // Optimistic UI
+    setRequests(prev => [...prev, { id:Date.now(), type:selectedType, status:"pending",
+      requestedAt:new Date().toLocaleDateString("en-PH",{month:"long",day:"numeric",year:"numeric"}),
+      approvedAt:null, approvedBy:null, releaseDate:null, downloadUrl:null }]);
+    setShowModal(false);
     if (token && !token.startsWith("demo_")) {
-      fetch(`${API_BASE}/api/documents`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          document_type: type === "TOR" ? "Transcript of Records" : type === "Certificate" ? "Certificate of Enrollment" : "Good Moral Certificate",
-          purpose: "Personal use",
-          copies: 1,
-        }),
-      }).catch(() => {}); // UI already updated, ignore errors
+      await fetch(`${API_BASE}/api/documents`, {
+        method:"POST",
+        headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+        credentials:"include",
+        body: JSON.stringify({ document_type: selectedType, purpose: purpose||"Personal use", copies }),
+      }).catch(()=>{});
     }
+    setToast("✅ Document request submitted!");
+    setTimeout(()=>setToast(null), 3000);
+    setSubmitting(false);
   }
 
-  return (
-    <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Documents</h2><p className="text-muted small mb-0">Request and download official documents</p></div>
-      <div>
-        <p className="text-muted text-uppercase small fw-semibold mb-3" style={{ letterSpacing:"0.08em" }}>Available Documents</p>
-        <div className="row g-3">
-          {availableDocuments.map(doc => {
-            const alreadyPending = requests.some(r => r.type===doc.type && r.status==="pending");
-            return (
-              <div key={doc.id} className="col-12 col-sm-6 col-lg-4">
-                <div className="card border-0 shadow-sm rounded-3 h-100" style={{ cursor:alreadyPending?"default":"pointer", transition:"transform 0.15s" }}
-                  onMouseEnter={e => { if(!alreadyPending)(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform=""; }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start gap-3 mb-3">
-                      <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:44, height:44, fontSize:22 }}>{}</div>
-                      <div><div className="fw-bold small text-dark">{doc.name}</div><div className="text-muted" style={{ fontSize:11 }}>{doc.description}</div></div>
-                    </div>
-                    {alreadyPending
-                      ? <span className="badge bg-warning-subtle text-warning border border-warning-subtle w-100 py-2">Request Pending</span>
-                      : <button onClick={() => setSelectedDoc(doc.type)} className="btn btn-primary btn-sm w-100" style={{ fontSize:11 }}>Request Document</button>
-                    }
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+  const pending  = requests.filter(r => r.status==="pending");
+  const approved = requests.filter(r => r.status==="approved");
+  const rejected = requests.filter(r => r.status==="rejected");
 
-      {/* Confirm modal */}
-      {selectedDoc && (
-        <div className="modal d-block" style={{ background:"rgba(0,0,0,0.5)", zIndex:9999 }} onClick={() => setSelectedDoc(null)}>
-          <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
-            <div className="modal-content rounded-3 border-0 shadow-lg">
-              <div className="modal-body p-4">
-                <h5 className="fw-bold text-dark mb-2">Request {availableDocuments.find(d=>d.type===selectedDoc)?.name}?</h5>
-                <p className="text-muted small mb-4">This request will be sent to the Registrar&apos;s Office for approval.</p>
-                <div className="d-flex gap-2">
-                  <button onClick={() => requestDocument(selectedDoc)} className="btn btn-primary flex-grow-1">Confirm Request</button>
-                  <button onClick={() => setSelectedDoc(null)} className="btn btn-outline-secondary flex-grow-1">Cancel</button>
-                </div>
-              </div>
-            </div>
+  return (
+    <div className="d-flex flex-column gap-0">
+
+      {/* Toast */}
+      {toast && (
+        <div className="position-fixed top-0 start-50 translate-middle-x" style={{ zIndex:9999, marginTop:20 }}>
+          <div className="d-flex align-items-center gap-3 px-4 py-3 rounded-4 shadow-lg"
+            style={{ background: toast.startsWith("⚠️") ? "#fef2f2" : "#f0fdf4", border: toast.startsWith("⚠️") ? "1px solid #fecaca" : "1px solid #bbf7d0", minWidth:320 }}>
+            <span style={{ fontSize:20 }}>{toast.startsWith("⚠️") ? "⚠️" : "✅"}</span>
+            <span className="fw-semibold" style={{ color: toast.startsWith("⚠️") ? "#dc2626" : "#16a34a", fontSize:14 }}>
+              {toast.replace(/^(⚠️|✅)\s*/,"")}
+            </span>
           </div>
         </div>
       )}
 
-      {docsLoading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
-      {docsError && <div className="alert alert-warning small">Could not load data. Showing cached data.</div>}
+      {/* Banner */}
+      <div style={{ background:"linear-gradient(135deg,#ec4899 0%,#8b5cf6 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-50, right:-50, width:200, height:200, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-40, right:140, width:130, height:130, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.6rem" }}>Documents</h1>
+          <p className="mb-0" style={{ color:"rgba(255,255,255,0.75)" }}>Request official school documents from the Registrar&apos;s Office</p>
+        </div>
+      </div>
 
-      {pending.length>0 && (
+      {/* Content */}
+      <div className="d-flex flex-column gap-4" style={{ marginTop:"-52px", paddingBottom:8 }}>
+
+        {/* Request button card */}
+        <div className="card border-0 shadow-lg rounded-4">
+          <div className="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <h5 className="fw-bold mb-1" style={{ color:"#1e293b" }}>Need a document?</h5>
+              <p className="text-muted small mb-0">Submit a request and the Registrar&apos;s Office will process it for you.</p>
+            </div>
+            <button onClick={openModal}
+              className="btn fw-semibold d-flex align-items-center gap-2"
+              style={{ background:"linear-gradient(135deg,#ec4899,#8b5cf6)", color:"white", border:"none", borderRadius:10, padding:"10px 24px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Request Document
+            </button>
+          </div>
+        </div>
+
+        {docsLoading && <div className="text-center py-4"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}
+        {docsError && <div className="rounded-3 p-3 small" style={{ background:"#fffbeb", border:"1px solid #fef08a", color:"#92400e" }}>Could not load latest data. Showing cached results.</div>}
+
+        {/* My Requests */}
+        {(pending.length > 0 || approved.length > 0 || rejected.length > 0) && (
+          <div>
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <div className="d-flex align-items-center justify-content-center rounded-3"
+                style={{ width:32, height:32, background:"linear-gradient(135deg,#ec4899,#8b5cf6)" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+              </div>
+              <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>My Requests</h3>
+              <span className="badge rounded-pill ms-1" style={{ background:"#f5f3ff", color:"#7c3aed", border:"1px solid #ddd6fe", fontSize:"0.72rem" }}>
+                {requests.length} total
+              </span>
+            </div>
+            <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+              <div className="table-responsive">
+                <table className="table table-hover mb-0">
+                  <thead style={{ background:"#f8fafc" }}>
+                    <tr>
+                      <th className="small fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em", color:"#64748b", paddingTop:14, paddingBottom:14 }}>Document Type</th>
+                      <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Requested</th>
+                      <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Release Date</th>
+                      <th className="small fw-semibold text-uppercase pe-4 text-end" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...pending, ...approved, ...rejected].map(r => (
+                      <tr key={r.id}>
+                        <td className="ps-4 small fw-semibold text-dark align-middle">{r.type}</td>
+                        <td className="small text-muted align-middle d-none d-md-table-cell">{r.requestedAt}</td>
+                        <td className="small text-muted align-middle d-none d-md-table-cell">{r.releaseDate || "—"}</td>
+                        <td className="pe-4 text-end align-middle">
+                          {r.status === "approved" && <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontSize:"0.72rem" }}>Approved</span>}
+                          {r.status === "pending"  && <span className="badge rounded-pill px-3 py-2" style={{ background:"#fffbeb", color:"#d97706", border:"1px solid #fef08a", fontSize:"0.72rem" }}>Pending</span>}
+                          {r.status === "rejected" && <span className="badge rounded-pill px-3 py-2" style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fecaca", fontSize:"0.72rem" }}>Rejected</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document price list */}
         <div>
-          <p className="text-muted text-uppercase small fw-semibold mb-3" style={{ letterSpacing:"0.08em" }}>Pending Requests</p>
-          <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="d-flex align-items-center justify-content-center rounded-3"
+              style={{ width:32, height:32, background:"linear-gradient(135deg,#3b82f6,#06b6d4)" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Document Fees & Processing Time</h3>
+          </div>
+          <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div className="table-responsive">
               <table className="table table-hover mb-0">
-                <thead className="table-light">
+                <thead style={{ background:"linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
                   <tr>
-                    <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Document</th>
-                    <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Requested</th>
-                    <th className="small text-muted fw-semibold text-uppercase pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
+                    <th className="small fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em", color:"#1d4ed8", paddingTop:14, paddingBottom:14 }}>Type of Document</th>
+                    <th className="small fw-semibold text-uppercase text-center" style={{ letterSpacing:"0.05em", color:"#1d4ed8" }}>Price</th>
+                    <th className="small fw-semibold text-uppercase text-center pe-4" style={{ letterSpacing:"0.05em", color:"#1d4ed8" }}>Processing</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pending.map(r => (
-                    <tr key={r.id}>
-                      <td className="ps-4 small fw-medium text-dark">{r.type}</td>
-                      <td className="small text-muted">{r.requestedAt}</td>
-                      <td className="pe-4"><span className="badge bg-warning-subtle text-warning border border-warning-subtle">Pending</span></td>
+                  {DOCUMENT_CATALOG.map((doc, i) => (
+                    <tr key={i} style={{ borderBottom:"1px solid #f1f5f9" }}>
+                      <td className="ps-4 small fw-medium text-dark align-middle py-3">{doc.type}</td>
+                      <td className="small text-center align-middle py-3">
+                        <span className="fw-semibold" style={{ color: doc.price.includes("Free") ? "#16a34a" : "#1d4ed8" }}>{doc.price}</span>
+                      </td>
+                      <td className="pe-4 small text-center text-muted align-middle py-3">{doc.days}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <div className="px-4 py-3" style={{ background:"#f8fafc", borderTop:"1px solid #e2e8f0" }}>
+              <p className="text-muted mb-0" style={{ fontSize:"0.78rem" }}>
+                * For certificates (3–5 working days): release is immediate if signatories are available.
+                CTC (1 day): release is immediate except when in-charge is not available.
+              </p>
+            </div>
           </div>
         </div>
-      )}
 
-      {approved.length>0 && (
-        <div>
-          <p className="text-muted text-uppercase small fw-semibold mb-3" style={{ letterSpacing:"0.08em" }}>Approved Documents</p>
-          <div className="d-flex flex-column gap-2">
-            {approved.map(r => (
-              <div key={r.id} className="card border-0 shadow-sm rounded-3">
-                <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width:40, height:40 }}><Icon name="checkCircle" size={20} /></div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{r.type}</div>
-                    <div className="text-muted" style={{ fontSize:11 }}>Approved by {r.approvedBy} - {r.approvedAt} - Ready: {r.releaseDate}</div>
+        <button onClick={() => onAskJobert("How do I request a document from the Registrar?")}
+          className="btn btn-sm d-inline-flex align-items-center gap-2 align-self-start"
+          style={{ background:"#f5f3ff", color:"#7c3aed", border:"1px solid #ddd6fe", borderRadius:8, fontSize:12 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/>
+          </svg>
+          Ask JOBERT about documents
+        </button>
+
+      </div>
+
+      {/* Request Document Modal */}
+      {showModal && (
+        <div className="modal d-block" style={{ background:"rgba(0,0,0,0.5)", zIndex:9999 }} onClick={() => setShowModal(false)}>
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+              {/* Modal header */}
+              <div style={{ background:"linear-gradient(135deg,#ec4899,#8b5cf6)", padding:"24px 28px 20px" }}>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <h5 className="fw-bold text-white mb-1">Request a Document</h5>
+                    <p className="mb-0" style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>Choose from the available document types below</p>
                   </div>
-                  <a href={r.downloadUrl||"#"} className="btn btn-success btn-sm d-inline-flex align-items-center gap-1" style={{ fontSize:11 }}><Icon name="download" size={12} /> Download</a>
+                  <button onClick={() => setShowModal(false)}
+                    className="btn rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width:32, height:32, background:"rgba(255,255,255,0.2)", border:"none", color:"white", padding:0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
-            ))}
+
+              <div className="modal-body p-4">
+                {/* Document type selector */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
+                    Document Type <span className="text-danger">*</span>
+                  </label>
+                  <div className="row g-2 mt-1" style={{ maxHeight:280, overflowY:"auto", paddingRight:4 }}>
+                    {DOCUMENT_CATALOG.map((doc, i) => (
+                      <div key={i} className="col-12 col-md-6">
+                        <label className="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
+                          style={{
+                            border: selectedType === doc.type ? "2px solid #8b5cf6" : "1.5px solid #e2e8f0",
+                            background: selectedType === doc.type ? "#f5f3ff" : "white",
+                            cursor:"pointer", transition:"all 0.15s"
+                          }}>
+                          <input type="radio" name="doctype" value={doc.type} checked={selectedType===doc.type}
+                            onChange={() => setSelectedType(doc.type)} className="mt-1 flex-shrink-0" />
+                          <div>
+                            <div className="fw-semibold" style={{ fontSize:"0.82rem", color:"#1e293b", lineHeight:1.4 }}>{doc.type}</div>
+                            <div className="d-flex gap-2 mt-1 flex-wrap">
+                              <span style={{ fontSize:"0.72rem", color: doc.price.includes("Free") ? "#16a34a" : "#2563eb", fontWeight:600 }}>{doc.price}</span>
+                              <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>• {doc.days}</span>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Purpose */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
+                    Purpose <span className="text-muted fw-normal">(optional)</span>
+                  </label>
+                  <input type="text" className="form-control rounded-3" placeholder="e.g., Employment, Scholarship, Personal use"
+                    value={purpose} onChange={e => setPurpose(e.target.value)}
+                    style={{ border:"1.5px solid #e2e8f0" }} />
+                </div>
+
+                {/* Copies */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
+                    Number of Copies
+                  </label>
+                  <div className="d-flex align-items-center gap-3">
+                    <button onClick={() => setCopies(c => Math.max(1,c-1))}
+                      className="btn rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                      style={{ width:36, height:36, background:"#f1f5f9", border:"1.5px solid #e2e8f0", color:"#475569", padding:0 }}>−</button>
+                    <span className="fw-bold" style={{ fontSize:"1.1rem", minWidth:24, textAlign:"center" }}>{copies}</span>
+                    <button onClick={() => setCopies(c => c+1)}
+                      className="btn rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                      style={{ width:36, height:36, background:"#f1f5f9", border:"1.5px solid #e2e8f0", color:"#475569", padding:0 }}>+</button>
+                  </div>
+                </div>
+
+                {/* Info note */}
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3 mb-4" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-1">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p className="mb-0 small" style={{ color:"#1d4ed8" }}>
+                    Your request will be sent to the Registrar&apos;s Office for processing. You will be notified once it&apos;s ready for pickup.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="d-flex gap-2">
+                  <button onClick={submitRequest} disabled={submitting || !selectedType}
+                    className="btn fw-semibold flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+                    style={{ background: !selectedType ? "#e2e8f0" : "linear-gradient(135deg,#ec4899,#8b5cf6)", color: !selectedType ? "#94a3b8" : "white", border:"none", borderRadius:10, padding:"12px" }}>
+                    {submitting ? <><span className="spinner-border spinner-border-sm" /> Submitting...</> : "Submit Request"}
+                  </button>
+                  <button onClick={() => setShowModal(false)}
+                    className="btn fw-semibold px-4"
+                    style={{ border:"1.5px solid #e2e8f0", color:"#64748b", borderRadius:10, background:"white" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-      <button onClick={() => onAskJobert("How do I request a Transcript of Records?")} className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}><Icon name="bot" size={14} /> Ask JOBERT about documents</button>
     </div>
   );
 }
@@ -1580,124 +1844,209 @@ function ProfilePanel({ student }: { student?: {
   }, []);
 
   return (
-    <div className="d-flex flex-column gap-4">
-      <div>
-        <h2 className="fw-black fs-4 text-dark mb-1">My Profile</h2>
-        <p className="text-muted small mb-0">View your personal information</p>
+    <div className="d-flex flex-column gap-0">
+
+      {/* ── Banner ─────────────────────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)",
+        borderRadius: "16px 16px 0 0",
+        padding: "32px 32px 80px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.6rem" }}>My Profile</h1>
+          <p className="mb-0" style={{ color:"rgba(255,255,255,0.7)" }}>View your personal information</p>
+        </div>
       </div>
 
-      <div className="row g-4">
-        {/* Profile Card */}
-        <div className="col-12 col-lg-4">
-          <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div className="card-body p-0">
-              {/* Cover */}
-              <div className="position-relative" style={{ height: "120px", background: "linear-gradient(135deg, #6366f1, #7c3aed)" }}>
-                <div className="position-absolute top-50 start-50 translate-middle" style={{ marginTop: "40px" }}>
-                  <div className="position-relative">
-                    <div className="rounded-circle border border-4 border-white bg-white overflow-hidden" style={{ width: "120px", height: "120px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+      {/* ── Cards pulled up over banner ─────────────────────────────── */}
+      <div className="container-fluid px-0" style={{ marginTop:"-52px", paddingBottom:32 }}>
+        <div className="row g-4 mx-0">
+
+          {/* Left: Profile Card */}
+          <div className="col-12 col-lg-4">
+            <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
+              <div className="card-body p-0">
+                {/* Cover */}
+                <div className="position-relative" style={{ height:"120px", background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                  <div className="position-absolute top-50 start-50 translate-middle" style={{ marginTop:"40px" }}>
+                    <div className="rounded-circle border border-4 border-white overflow-hidden"
+                      style={{ width:"110px", height:"110px", boxShadow:"0 6px 20px rgba(99,102,241,0.4)" }}>
                       {student?.photo_url ? (
-                        <img src={student.photo_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={student.photo_url} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                       ) : (
-                        <div className="d-flex align-items-center justify-content-center h-100 w-100 text-white fw-bold" style={{ fontSize: 32, background: "linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                        <div className="d-flex align-items-center justify-content-center h-100 w-100 text-white fw-bold"
+                          style={{ fontSize:32, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
                           {student?.full_name.split(" ").map(n => n[0]).join("").slice(0,2) || "??"}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Info */}
-              <div className="pt-5 px-4 pb-4 text-center">
-                <h3 className="fw-bold text-dark mb-1">{student?.full_name || "Loading..."}</h3>
-                <p className="text-muted small mb-3">{student?.student_id || ""}</p>
-                <div className="d-flex justify-content-center gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="fw-bold text-dark">Member Since</div>
-                    <div className="text-muted small">{profileData?.enrollment_date ? new Date(profileData.enrollment_date).getFullYear() : "N/A"}</div>
+                {/* Info */}
+                <div className="pt-5 px-4 pb-4 text-center">
+                  <h3 className="fw-bold text-dark mb-1" style={{ marginTop:32 }}>{student?.full_name || "Loading..."}</h3>
+                  <p className="text-muted small mb-3">{student?.student_id || ""}</p>
+
+                  <div className="d-flex justify-content-center gap-2 flex-wrap mb-4">
+                    <span className="badge rounded-pill px-3 py-2"
+                      style={{ background:"rgba(99,102,241,0.12)", color:"#6366f1", border:"1px solid rgba(99,102,241,0.3)", fontWeight:600 }}>
+                      {student?.pathway || "Student"}
+                    </span>
+                    <span className="badge rounded-pill px-3 py-2"
+                      style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>
+                      Active
+                    </span>
                   </div>
-                  <div className="border-start"></div>
-                  <div className="text-center">
-                    <div className="fw-bold text-dark">Status</div>
-                    <div className="text-success small fw-semibold">Active</div>
+
+                  {/* Stats */}
+                  <div className="row g-2">
+                    <div className="col-6">
+                      <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                        <div className="fw-bold mb-0" style={{ fontSize:"1.1rem", color:"#6366f1" }}>
+                          {profileData?.enrollment_date ? new Date(profileData.enrollment_date).getFullYear() : "—"}
+                        </div>
+                        <div className="text-muted" style={{ fontSize:"0.7rem" }}>Member Since</div>
+                      </div>
+                    </div>
+                    <div className="col-6">
+                      <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                        <div className="fw-bold mb-0" style={{ fontSize:"1.1rem", color:"#16a34a" }}>Active</div>
+                        <div className="text-muted" style={{ fontSize:"0.7rem" }}>Status</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Profile Information */}
-        <div className="col-12 col-lg-8">
-          <div className="card border-0 shadow-sm rounded-4">
-            <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h3 className="fw-bold text-dark mb-0">Profile Information</h3>
-                <span className="badge bg-info-subtle text-info border border-info-subtle">Read-Only</span>
-              </div>
-              <p className="text-muted small mb-4">To update your information, please contact the Registrar's Office</p>
+          {/* Right: Profile Information */}
+          <div className="col-12 col-lg-8">
+            <div className="card border-0 shadow-lg rounded-4 h-100">
+              <div className="card-body p-4 p-md-5">
 
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Full Name</label>
-                  <input type="text" className="form-control" value={student?.full_name || ""} disabled />
+                {/* Card header */}
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:44, height:44, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-0" style={{ color:"#1e293b" }}>Profile Information</h5>
+                      <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your personal details</p>
+                    </div>
+                  </div>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontSize:"0.75rem" }}>Read-Only</span>
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Student ID</label>
-                  <input type="text" className="form-control" value={student?.student_id || ""} disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Email</label>
-                  <input type="email" className="form-control" value={student?.email || ""} disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Phone</label>
-                  <input type="text" className="form-control" value={profileData?.phone || "N/A"} disabled />
-                </div>
-                <div className="col-12">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Address</label>
-                  <input type="text" className="form-control" value={profileData?.address || "N/A"} disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Course</label>
-                  <input type="text" className="form-control" value={student?.pathway || ""} disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Year Level</label>
-                  <input type="text" className="form-control" value={`Grade ${student?.grade_level || ""}` } disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Date of Birth</label>
-                  <input type="text" className="form-control" value={profileData?.date_of_birth ? new Date(profileData.date_of_birth).toLocaleDateString() : "N/A"} disabled />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>LRN</label>
-                  <input type="text" className="form-control" value={student?.lrn || "N/A"} disabled />
-                </div>
-                {profileData?.guardian_name && (
-                  <>
+
+                {/* Personal section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6366f1,#7c3aed)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
+                  </div>
+                  <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Guardian Name</label>
-                      <input type="text" className="form-control" value={profileData.guardian_name} disabled />
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Full Name</label>
+                      <input type="text" className="form-control rounded-3" value={student?.full_name || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>Guardian Contact</label>
-                      <input type="text" className="form-control" value={profileData.guardian_phone || "N/A"} disabled />
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Student ID</label>
+                      <input type="text" className="form-control rounded-3" value={student?.student_id || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
-                  </>
-                )}
-              </div>
-
-              <div className="alert alert-info mt-4 d-flex align-items-start gap-2" style={{ fontSize: 13 }}>
-                <Icon name="alert" size={18} className="flex-shrink-0 mt-1" />
-                <div>
-                  <strong>Need to update your information?</strong><br />
-                  Please visit the Registrar's Office or email registrar@cfei.edu.ph with your updated details.
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Date of Birth</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.date_of_birth ? new Date(profileData.date_of_birth).toLocaleDateString() : "N/A"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>LRN</label>
+                      <input type="text" className="form-control rounded-3" value={student?.lrn || "N/A"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Contact section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Email</label>
+                      <input type="email" className="form-control rounded-3" value={student?.email || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Phone</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.phone || "N/A"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Address</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.address || "N/A"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#10b981,#059669)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Academic Details</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Course / Track</label>
+                      <input type="text" className="form-control rounded-3" value={student?.pathway || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Year Level</label>
+                      <input type="text" className="form-control rounded-3" value={`Grade ${student?.grade_level || ""}`} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    {profileData?.guardian_name && (
+                      <>
+                        <div className="col-md-6">
+                          <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Guardian Name</label>
+                          <input type="text" className="form-control rounded-3" value={profileData.guardian_name} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Guardian Contact</label>
+                          <input type="text" className="form-control rounded-3" value={profileData.guardian_phone || "N/A"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info alert */}
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                    style={{ width:32, height:32, background:"#dbeafe" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                      Please visit the Registrar&apos;s Office or email{" "}
+                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
+                      with your updated details.
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

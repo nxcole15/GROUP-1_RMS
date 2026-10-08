@@ -143,6 +143,7 @@ const navItems = [
   { id:"documents",     label:"Documents"         },
   { id:"enrollment",    label:"Enrollment"        },
   { id:"announcements", label:"Announcements"     },
+  { id:"profile",       label:"My Profile"        },
 ];
 
 function initials(name: string) { 
@@ -211,34 +212,47 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {filteredNavItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
-              className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 ${active === item.id ? "text-white" : ""}`}
-              style={{ 
-                color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", 
-                background: active === item.id ? "#4f46e5" : "transparent",
+              className="btn text-start d-flex align-items-center px-3 py-2 rounded-3 border-0"
+              style={{
+                color: active === item.id ? "#fff" : "rgba(255,255,255,0.55)",
+                background: active === item.id ? "linear-gradient(135deg,#4f46e5,#6366f1)" : "transparent",
+                fontWeight: active === item.id ? 600 : 500,
+                fontSize: 13.5,
                 justifyContent: "flex-start",
-                whiteSpace: "nowrap"
+                whiteSpace: "nowrap",
+                transition: "all 0.15s",
+                boxShadow: active === item.id ? "0 2px 12px rgba(79,70,229,0.4)" : "none",
+                borderLeft: active === item.id ? "3px solid rgba(255,255,255,0.4)" : "3px solid transparent",
               }}
               title={item.label}>
-              <NavIcon id={item.id} />
               <span>{item.label}</span>
             </button>
           ))}
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
-          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
-            {/* Admin info row */}
-            <div className="d-flex align-items-center gap-3">
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>{config.initials}</div>
+        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid rgba(255,255,255,0.08)" }}>
+          <div className="rounded-3 p-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 2px 8px rgba(99,102,241,0.4)" }}>
+                {config.initials}
+              </div>
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}</div>
-                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{config.email}</div>
+                <div className="text-white fw-semibold text-truncate" style={{ fontSize:13 }}>
+                  {adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}
+                </div>
+                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.35)", fontSize:11 }}>{config.email}</div>
               </div>
             </div>
-            {/* Logout button below */}
-            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize: 12, borderRadius: 8 }} title="Log out">
-              Logout
+            <button
+              onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }}
+              className="btn w-100 fw-semibold"
+              style={{ fontSize:12, borderRadius:8, background:"rgba(220,38,38,0.15)", color:"#fca5a5", border:"1px solid rgba(220,38,38,0.3)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.28)"; (e.currentTarget as HTMLButtonElement).style.color="#fff"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.15)"; (e.currentTarget as HTMLButtonElement).style.color="#fca5a5"; }}
+            >
+              Log Out
             </button>
           </div>
         </div>
@@ -248,7 +262,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
 }
 
 /*  Overview  */
-function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; hideBanner?: boolean }) {
+function Overview({ setActive, hideBanner, adminName }: { setActive: (s: string) => void; hideBanner?: boolean; adminName?: string | null }) {
     // Calculate current school year
   const getCurrentSchoolYear = () => {
     const now = new Date();
@@ -336,68 +350,108 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
 
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Welcome banner */}
+    <div className="d-flex flex-column gap-0">
+      {/* ── Banner ──────────────────────────────────────────────────── */}
       {!hideBanner && (
-      <div className="rounded-3 p-4"
-        style={{ background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 8px 32px rgba(99,102,241,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">
-          Welcome back, {adminInfo?.full_name || '...'}
-        </h2>
-        <p className="mb-3" style={{ color:"rgba(255,255,255,0.6)", fontSize:13 }}>
-          {adminInfo?.role === 'principal' ? 'Principal' : adminInfo?.role ? 'Administrator' : '...'} · Full Access · SY {getCurrentSchoolYear()}
-        </p>
-        {pendingStats && pendingStats.total > 0 && (
-          <div className="d-flex gap-2 flex-wrap">
-            <span className="fw-semibold px-3 py-2 rounded-3" style={{ background: "#dc2626", color: "#fff", fontSize: 12 }}>
-              {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
-            </span>
+        <div style={{
+          background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)",
+          borderRadius: "16px 16px 0 0",
+          padding: "32px 32px 80px",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+          <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+          <div style={{ position:"absolute", top:30, right:90, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+          <div style={{ position:"relative", zIndex:1 }}>
+            <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
+              Welcome back, {adminName || adminInfo?.full_name || "..."}
+            </h1>
+            <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
+              {adminInfo?.role === "principal" ? "Principal" : adminInfo?.role ? "Administrator" : "..."} · Full Access · SY {getCurrentSchoolYear()}
+            </p>
+            <div className="d-flex gap-2 flex-wrap">
+              <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+                ✅ System Online
+              </span>
+              {pendingStats && pendingStats.total > 0 && (
+                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(220,38,38,0.75)", color:"white", border:"1px solid rgba(220,38,38,0.5)", fontSize:"0.78rem" }}>
+                  ⚠️ {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
       )}
+
+      {/* ── Content ─────────────────────────────────────────────────── */}
+      <div className="container-fluid px-3 px-md-4" style={{ marginTop: !hideBanner ? "-52px" : 0, paddingBottom: 32 }}>
 
       {/* Stats */}
       {!hideBanner && (
-      <div className="row g-3">
-        {[
-          { label:"Active Students",     value: dashboardStats?.activeStudents ?? "...",    icon:"students" as IconName, cls:"border-success-subtle bg-success-subtle",  val:"text-success" },
-          { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "...",        icon:"chart" as IconName,    cls:"border-purple-subtle bg-purple-subtle",    val:"text-purple"  },
-          { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "...",         icon:"enrollment" as IconName, cls:"border-warning-subtle bg-warning-subtle",  val:"text-warning" },
-          { label:"Pending Payments",    value: pendingStats?.payments ?? "...",            icon:"tuition" as IconName,  cls:"border-danger-subtle bg-danger-subtle",    val:"text-danger"  },
-        ].map(s => (
-          <div key={s.label} className="col-6 col-lg-3">
-            <div className={`card border rounded-3 h-100 ${s.cls}`}>
-              <div className="card-body p-3">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="text-muted small">{s.label}</span>
-                  <span className={s.val}><Icon name={s.icon} size={18} /></span>
+        <div className="row g-3 mb-4">
+          {[
+            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6366f1,#818cf8)", shadow:"rgba(99,102,241,0.35)", bgLight:"#eef2ff", textColor:"#4f46e5",
+              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#8b5cf6,#a78bfa)", shadow:"rgba(139,92,246,0.35)", bgLight:"#f5f3ff", textColor:"#7c3aed",
+              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+            { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#f59e0b,#fbbf24)", shadow:"rgba(245,158,11,0.35)", bgLight:"#fffbeb", textColor:"#d97706",
+              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
+            { label:"Pending Payments",    value: pendingStats?.payments ?? "—",          gradient:"linear-gradient(135deg,#ef4444,#f87171)", shadow:"rgba(239,68,68,0.35)",   bgLight:"#fef2f2", textColor:"#dc2626",
+              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
+          ].map(s => (
+            <div key={s.label} className="col-6 col-lg-3">
+              <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}` }}>
+                      {s.icon}
+                    </div>
+                    <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
+                      <div className="fw-bold" style={{ fontSize:"0.68rem", color:s.textColor }}>Live</div>
+                    </div>
+                  </div>
+                  <div className="fw-black" style={{ fontSize:"1.65rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
+                  <div className="text-muted mt-1" style={{ fontSize:"0.78rem" }}>{s.label}</div>
                 </div>
-                <div className={`fw-black fs-3 ${s.val}`}>{s.value}</div>
+                <div style={{ height:3, background:s.gradient }} />
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
 
-      {/* Recent activity + announcements */}
-      <div className="row g-4">
+      {/* Recent activity + enrollment insights */}
+      <div className="row g-4 mb-4">
         <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
+          <div className="card border-0 shadow-sm rounded-4 h-100">
             <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="activity" size={14} /> Recent Activity</h3>
-              <div className="d-flex flex-column gap-3">
+              <div className="d-flex align-items-center gap-2 mb-4">
+                <div className="d-flex align-items-center justify-content-center rounded-3"
+                  style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Activity</h3>
+              </div>
+              <div className="d-flex flex-column gap-2">
                 {recentActivity.length === 0 ? (
-                  <div className="text-center py-4 text-muted" style={{ fontSize: 13 }}>
-                    No recent activity
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3" style={{ width:52, height:52, background:"#f1f5f9" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </div>
+                    <p className="text-muted small mb-0">No recent activity</p>
                   </div>
                 ) : (
                   recentActivity.map((a, i) => (
-                    <div key={i} className="d-flex align-items-center gap-3">
+                    <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
+                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                        style={{ width:34, height:34, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
                       <div className="flex-grow-1 overflow-hidden">
                         <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
-                        <div className="text-muted" style={{ fontSize:11 }}>{a.name}</div>
+                        <div className="text-muted text-truncate" style={{ fontSize:11 }}>{a.name}</div>
                       </div>
                       <span className="text-muted flex-shrink-0" style={{ fontSize:11 }}>{a.time}</span>
                     </div>
@@ -408,190 +462,80 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
           </div>
         </div>
 
-        {/* Big chart beside announcements */}
+        {/* Enrollment Insights */}
         <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
+          <div className="card border-0 shadow-sm rounded-4 h-100">
             <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="fw-bold small text-dark mb-0">Enrollment Insights</h3>
-                <button onClick={() => setActive("enrollment")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>Open <Icon name="arrowRight" size={12} /></button>
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  </div>
+                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Enrollment Insights</h3>
+                </div>
+                <button onClick={() => setActive("enrollment")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
+                  Open <Icon name="arrowRight" size={12} />
+                </button>
               </div>
-
-              <div className="mb-3">
-                <div className="d-flex gap-2 mt-2" style={{ flexWrap: "wrap" }}>
-                  <div style={{ minWidth: 160 }}>
-                    <label className="small" style={{ color: "#475569" }}>Track</label>
-                    <select
-                      value={chartTrack}
-                      onChange={(e) => setChartTrack(e.target.value as (typeof trackOptions)[number]["value"])}
-
-                      className="form-select form-select-sm rounded-3"
-                      style={{ background: "rgba(255,255,255,0.9)" }}
-                    >
-                      {trackOptions.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={{ minWidth: 140 }}>
-                    <label className="small" style={{ color: "#475569" }}>Grade</label>
-                    <select
-                      value={chartGrade}
-                      onChange={(e) => setChartGrade(e.target.value as (typeof gradeOptions)[number]["value"])}
-
-                      className="form-select form-select-sm rounded-3"
-                      style={{ background: "rgba(255,255,255,0.9)" }}
-                    >
-                      {gradeOptions.map((g) => (
-                        <option key={g.value} value={g.value}>{g.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={{ minWidth: 160 }}>
-                    <label className="small" style={{ color: "#475569" }}>Gender</label>
-                    <select
-                      value={chartGender}
-                      onChange={(e) => setChartGender(e.target.value as (typeof genderOptions)[number]["value"])}
-
-                      className="form-select form-select-sm rounded-3"
-                      style={{ background: "rgba(255,255,255,0.9)" }}
-                    >
-                      {genderOptions.map((g) => (
-                        <option key={g.value} value={g.value}>{g.label}</option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="d-flex gap-2 mb-3 flex-wrap">
+                <div style={{ flex:"1 1 110px" }}>
+                  <select value={chartTrack} onChange={e => setChartTrack(e.target.value as typeof chartTrack)} className="form-select form-select-sm rounded-3" style={{ fontSize:12 }}>
+                    {trackOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex:"1 1 90px" }}>
+                  <select value={chartGrade} onChange={e => setChartGrade(e.target.value as typeof chartGrade)} className="form-select form-select-sm rounded-3" style={{ fontSize:12 }}>
+                    {gradeOptions.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex:"1 1 90px" }}>
+                  <select value={chartGender} onChange={e => setChartGender(e.target.value as typeof chartGender)} className="form-select form-select-sm rounded-3" style={{ fontSize:12 }}>
+                    {genderOptions.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  </select>
                 </div>
               </div>
-
               {(() => {
-                // Filter enrollmentInsights based on selected filters
-                const filteredData = enrollmentInsights.filter((item) => {
-                  const matchTrack = chartTrack === "all" ? true : item.track === chartTrack;
-                  const matchGrade = chartGrade === "all" ? true : String(item.grade_level) === chartGrade;
-                  const matchGender = chartGender === "all" ? true : (item.gender || "").toLowerCase () === chartGender.toLowerCase ();
+                const filteredData = enrollmentInsights.filter(item => {
+                  const matchTrack  = chartTrack  === "all" ? true : item.track === chartTrack;
+                  const matchGrade  = chartGrade  === "all" ? true : String(item.grade_level) === chartGrade;
+                  const matchGender = chartGender === "all" ? true : (item.gender || "").toLowerCase() === chartGender.toLowerCase();
                   return matchTrack && matchGrade && matchGender;
                 });
-
-                // Group by track (for x-axis)
                 const trackMapping = [
-                  { fullName: "Academic Track - STEM", shortName: "STEM" },
-                  { fullName: "Academic Track - HUMSS", shortName: "HUMSS" },
-                  { fullName: "Academic Track - ABM", shortName: "ABM" },
-                  { fullName: "TECH-PRO - ICT", shortName: "ICT" },
-                  { fullName: "TECH-PRO - Cookery", shortName: "Cookery" },
+                  { fullName:"Academic Track - STEM",  shortName:"STEM"    },
+                  { fullName:"Academic Track - HUMSS", shortName:"HUMSS"   },
+                  { fullName:"Academic Track - ABM",   shortName:"ABM"     },
+                  { fullName:"TECH-PRO - ICT",         shortName:"ICT"     },
+                  { fullName:"TECH-PRO - Cookery",     shortName:"Cookery" },
                 ];
-                
-                const countsByTrack = trackMapping.map((t) => {
-                  return {
-                    track: t.shortName, // Use short name for display
-                    fullTrack: t.fullName, // Keep full name for tooltip
-                    count: filteredData
-                      .filter((item) => item.track === t.fullName)
-                      .reduce((sum, item) => sum + item.count, 0),
-                  };
-                });
-
-                const maxCount = Math.max(1, ...countsByTrack.map((c) => c.count));
-
+                const countsByTrack = trackMapping.map(t => ({
+                  track: t.shortName, fullTrack: t.fullName,
+                  count: filteredData.filter(item => item.track === t.fullName).reduce((sum, item) => sum + item.count, 0),
+                }));
+                const maxCount = Math.max(1, ...countsByTrack.map(c => c.count));
+                const barColors = ["#6366f1","#8b5cf6","#a78bfa","#059669","#10b981"];
                 return (
                   <div>
-                    {/* Chart header */}
-                    <div className="d-flex align-items-center justify-content-between mb-4">
-                      <div>
-                        <div className="fw-bold" style={{ color: "#0f172a", fontSize: 13 }}>Enrolled Students by Track</div>
-                        <div className="small" style={{ color: "#94a3b8", marginTop: 2 }}>
-                          Academic Year {getCurrentSchoolYear()}
-                        </div>
-                      </div>
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="rounded-2 d-inline-block" style={{ width: 10, height: 10, background: "linear-gradient(135deg, #1d4ed8, #60a5fa)" }} />
-                        <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>Enrollment count</span>
-                      </div>
-                    </div>
-
-                    {/* Chart body */}
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                      {/* Y-axis */}
-                      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-end", height: 180, paddingBottom: 32, minWidth: 20 }}>
-                        {[maxCount, Math.round(maxCount * 0.5), 0].map((v, i) => (
-                          <span key={i} style={{ fontSize: 10, color: "#cbd5e1", fontWeight: 600, lineHeight: 1 }}>{v}</span>
-                        ))}
-                      </div>
-
-                      {/* Bars area */}
-                      <div style={{ flex: 1, position: "relative" }}>
-                        {/* Horizontal grid lines */}
-                        {[0, 50, 100].map((pct) => (
-                          <div key={pct} style={{
-                            position: "absolute", left: 0, right: 0,
-                            bottom: `calc(32px + ${pct / 100} * 148px)`,
-                            height: pct === 0 ? 1.5 : 1,
-                            background: pct === 0 ? "#e2e8f0" : "#f1f5f9",
-                            zIndex: 0
-                          }} />
-                        ))}
-
-                        {/* Bars */}
-                        <div style={{ display: "flex", alignItems: "flex-end", height: 180, gap: 12, paddingBottom: 32, position: "relative", zIndex: 1 }}>
-                          {countsByTrack.map((c, i) => {
-                            const h = c.count === 0 ? 3 : Math.max(8, Math.round((c.count / maxCount) * 148));
-                            const delay = i * 70;
-                            const colors = [
-                              { from: "#2563eb", to: "#93c5fd" },
-                              { from: "#1d4ed8", to: "#60a5fa" },
-                              { from: "#1e40af", to: "#3b82f6" },
-                              { from: "#1e3a8a", to: "#2563eb" },
-                            ];
-                            const col = colors[i % colors.length];
-                            return (
-                              <div key={c.track} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", gap: 4 }}>
-                                {/* Value label */}
-                                <span style={{ fontSize: 11, fontWeight: 700, color: c.count > 0 ? "#1d4ed8" : "#cbd5e1", marginBottom: 2 }}>
-                                  {c.count}
-                                </span>
-                                {/* Bar */}
-                                <div
-                                  title={`${c.fullTrack}: ${c.count} student${c.count !== 1 ? "s" : ""}`}
-                                  style={{
-                                    width: "60%",
-                                    minWidth: 28,
-                                    height: h,
-                                    borderRadius: "4px 4px 2px 2px",
-                                    background: c.count === 0
-                                      ? "#f1f5f9"
-                                      : `linear-gradient(180deg, ${col.from}, ${col.to})`,
-                                    boxShadow: c.count > 0 ? `0 2px 12px rgba(37,99,235,0.25)` : "none",
-                                    transformOrigin: "bottom",
-                                    animation: `scaleIn 500ms cubic-bezier(0.34,1.2,0.64,1) ${delay}ms both`,
-                                  }}
-                                />
-                    o            {/* X label */}
-                                <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", marginTop: 6, textAlign: "center", lineHeight: 1.2 }}>
-                                  {c.track}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer stats */}
-                    <div className="d-flex justify-content-between align-items-center mt-3 pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
-                      <div className="d-flex gap-3">
-                        {countsByTrack.map((c) => (
-                          <div key={c.track} className="text-center">
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>{c.count}</div>
-                            <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 500 }}>{c.track}</div>
+                    <div style={{ display:"flex", gap:8, alignItems:"flex-end", height:150 }}>
+                      {countsByTrack.map((c, i) => {
+                        const h = c.count === 0 ? 3 : Math.max(10, Math.round((c.count / maxCount) * 110));
+                        return (
+                          <div key={c.track} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", gap:4 }}>
+                            <span style={{ fontSize:11, fontWeight:700, color: c.count > 0 ? barColors[i] : "#cbd5e1" }}>{c.count}</span>
+                            <div title={`${c.fullTrack}: ${c.count}`} style={{ width:"60%", minWidth:22, height:h, borderRadius:"4px 4px 2px 2px",
+                              background: c.count === 0 ? "#f1f5f9" : barColors[i],
+                              boxShadow: c.count > 0 ? `0 3px 12px ${barColors[i]}55` : "none" }} />
+                            <span style={{ fontSize:10, fontWeight:600, color:"#94a3b8", textAlign:"center", lineHeight:1.2 }}>{c.track}</span>
                           </div>
-                        ))}
-                      </div>
-                      <div className="text-end">
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{countsByTrack.reduce((a, c) => a + c.count, 0)}</div>
-                        <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 500 }}>Total Enrolled</div>
+                        );
+                      })}
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-3 pt-3" style={{ borderTop:"1px solid #f1f5f9" }}>
+                      <span className="text-muted" style={{ fontSize:11 }}>SY {getCurrentSchoolYear()}</span>
+                      <div className="fw-bold text-end" style={{ fontSize:13, color:"#1e293b" }}>
+                        {countsByTrack.reduce((a, c) => a + c.count, 0)}
+                        <span className="text-muted fw-normal ms-1" style={{ fontSize:11 }}>Total Enrolled</span>
                       </div>
                     </div>
                   </div>
@@ -602,33 +546,56 @@ function Overview({ setActive, hideBanner }: { setActive: (s: string) => void; h
         </div>
       </div>
 
-      {/* Announcements row (kept) */}
+      {/* Announcements */}
       <div className="row g-4 mt-0">
         <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
+          <div className="card border-0 shadow-sm rounded-4 h-100">
             <div className="card-body p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3 className="fw-bold small text-dark mb-0">Active Announcements</h3>
-                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>View all <Icon name="arrowRight" size={12} /></button>
-              </div>
-              <div className="d-flex flex-column gap-2">
-                {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
-                  <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3 bg-light border border-transparent" style={{ cursor:"pointer" }}>
-                    <span className="text-primary flex-shrink-0 mt-1"><Icon name="announcements" size={16} /></span>
-                    <div className="flex-grow-1 overflow-hidden">
-                      <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
-                      <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
-                    </div>
+              <div className="d-flex align-items-center justify-content-between mb-4">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
+                    </svg>
                   </div>
-                ))}
+                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Active Announcements</h3>
+                </div>
+                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
+                  View all <Icon name="arrowRight" size={12} />
+                </button>
               </div>
+              {announcements.filter(a => a.status === "Active").length === 0 ? (
+                <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center mb-3" style={{ width:52, height:52, background:"#fef9c3" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
+                    </svg>
+                  </div>
+                  <p className="text-muted small mb-0">No active announcements</p>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
+                    <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3" style={{ background:"#fffbeb", border:"1px solid #fef08a" }}>
+                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style={{ width:28, height:28, background:"#fef08a" }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 000 6h20v-6z"/></svg>
+                      </div>
+                      <div className="flex-grow-1 overflow-hidden">
+                        <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
+                        <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-
-        <div className="col-12 col-lg-6"></div>
+        <div className="col-12 col-lg-6" />
       </div>
 
+      </div>
     </div>
   );
 }
@@ -3846,38 +3813,6 @@ function AdminRequestsPanel({ role }: { role?: string }) {
         </div>
       )}
 
-      {/* Released - waiting on teacher final release */}
-      {released.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="clock" size={14} /> Released - Awaiting Teacher Final Release</h3>
-          <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div className="table-responsive">
-              <table className="table table-hover mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                    <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Teacher</th>
-                    <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
-                    <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing: "0.05em" }}>Score</th>
-                    <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {released.map((req: any) => (
-                    <tr key={req.id}>
-                      <td className="ps-4 small fw-medium text-dark">{req.student_name || req.student}</td>
-                      <td className="d-none d-sm-table-cell small text-muted">{req.teacher_name || req.teacher}</td>
-                      <td className="d-none d-lg-table-cell small text-muted">{req.subject_name || req.subject}</td>
-                      <td className="text-end small fw-bold text-success">{req.score}%</td>
-                      <td className="text-end pe-4"><span className={`badge ${badgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusText(req.status)}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* All requests log */}
       <div>
@@ -4584,18 +4519,16 @@ function SubmittedGradesList() {
               <h3 className="fw-bold mb-1">Submitted Grades</h3>
               <p className="text-muted small mb-0">View all grade submissions from teachers</p>
             </div>
-            <div className="btn-group" role="group">
-              {["Term 1", "Term 2", "Term 3"].map((term) => (
-                <button
-                  key={term}
-                  type="button"
-                  className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-primary'} btn-sm`}
-                  onClick={() => setSelectedTerm(term)}
-                >
-                  {term.replace("Term ", "")}
-                </button>
-              ))}
-            </div>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "auto" }}
+              value={selectedTerm}
+              onChange={e => setSelectedTerm(e.target.value)}
+            >
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
           </div>
 
           {/* Filters */}
@@ -6935,6 +6868,189 @@ function ReportsPanel() {
   );
 }
 
+/* ── Principal / Admin Profile Panel ──────────────────────────────── */
+function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null; role?: string }) {
+  const name  = adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : "Admin");
+  const email = role === "principal" ? "principal@cfei.edu.ph"
+              : role === "registrar"  ? "registrar@cfei.edu.ph"
+              : "admin@cfei.edu.ph";
+  const initials2 = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "PR";
+  const roleLabel = role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting Officer" : "Administrator";
+
+  const infoItems = [
+    {
+      label: "Email", value: email, bg: "#ede9fe",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+    },
+    {
+      label: "Role", value: roleLabel, bg: "#dbeafe",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    },
+    {
+      label: "Access Level", value: "Full Access", bg: "#dcfce7",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+    },
+  ];
+
+  return (
+    <div className="d-flex flex-column gap-0">
+      {/* Banner */}
+      <div style={{ background:"linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.6rem" }}>My Profile</h1>
+          <p className="mb-0" style={{ color:"rgba(255,255,255,0.7)" }}>Your personal &amp; professional information</p>
+        </div>
+      </div>
+
+      {/* Cards pulled up over banner */}
+      <div className="container-fluid px-3 px-md-4" style={{ marginTop:"-52px", paddingBottom:32 }}>
+        <div className="row g-4">
+
+          {/* Left: Profile Card */}
+          <div className="col-12 col-lg-4">
+            <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
+              <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow:"0 6px 20px rgba(79,70,229,0.4)", border:"4px solid white" }}>
+                  {initials2}
+                </div>
+                <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{name}</h4>
+                <p className="text-muted small mb-3">{email}</p>
+                <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(79,70,229,0.1)", color:"#4f46e5", border:"1px solid rgba(79,70,229,0.25)", fontWeight:600 }}>{roleLabel}</span>
+                  <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>Active</span>
+                </div>
+                <div className="w-100 row g-2 mb-3">
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#4f46e5" }}>Full</div>
+                      <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access</div>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#16a34a" }}>Active</div>
+                      <div className="text-muted" style={{ fontSize:"0.7rem" }}>Status</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 pb-4">
+                <hr style={{ borderColor:"#e2e8f0" }} />
+                <div className="d-flex flex-column gap-3">
+                  {infoItems.map(item => (
+                    <div key={item.label} className="d-flex align-items-center gap-3">
+                      <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width:34, height:34, background:item.bg }}>
+                        {item.icon}
+                      </div>
+                      <div style={{ overflow:"hidden" }}>
+                        <div className="text-muted" style={{ fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>{item.label}</div>
+                        <div className="fw-semibold text-truncate" style={{ fontSize:"0.84rem", color:"#1e293b" }}>{item.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Details Card */}
+          <div className="col-12 col-lg-8">
+            <div className="card border-0 shadow-lg rounded-4 h-100">
+              <div className="card-body p-4 p-md-5">
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-0" style={{ color:"#1e293b" }}>Profile Information</h5>
+                      <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
+                    </div>
+                  </div>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontSize:"0.75rem" }}>Read-Only</span>
+                </div>
+
+                {/* Personal */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Full Name</label>
+                      <input type="text" className="form-control rounded-3" value={name} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Role</label>
+                      <input type="text" className="form-control rounded-3" value={roleLabel} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Email Address</label>
+                      <input type="email" className="form-control rounded-3" value={email} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Access */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#10b981,#059669)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Access Details</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Access Level</label>
+                      <input type="text" className="form-control rounded-3" value="Full Access" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Status</label>
+                      <input type="text" className="form-control rounded-3" value="Active" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#16a34a", fontWeight:600 }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info alert */}
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#dbeafe" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                      Please contact the system administrator or email{" "}
+                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
+                      with your updated details.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /*  Page  */
 export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly, hideTopbarControls, hideRequests, gradeRequestsContent, role, bannerHeight }: { hideBanner?: boolean; onSidebarExpandChange?: (expanded: boolean) => void; readOnly?: boolean; hideTopbarControls?: boolean; hideRequests?: boolean; gradeRequestsContent?: React.ReactNode; role?: string; bannerHeight?: number } = {}) {
   const [activeNav, setActiveNav]   = useState("overview");
@@ -7076,7 +7192,8 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "announcements": return <AnnouncementsPanel />;
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
-      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} />;
+      case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
+      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} />;
     }
   }
 
