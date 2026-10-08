@@ -1,6 +1,10 @@
 -- ============================================================
 -- Smart Student Service – MySQL Schema
 -- Run once to create all tables.
+-- 
+-- IMPORTANT: This is the BASE schema for fresh installations.
+-- If you already have a database, use migration files instead!
+-- See: backend/database/migrations/README.md
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS smart_student_service
