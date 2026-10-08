@@ -864,7 +864,7 @@ function StudentsPanel() {
                     <td className="d-none d-sm-table-cell font-mono text-muted small">{s.id}</td>
                     <td className="d-none d-lg-table-cell text-muted small">{s.track} Grade {s.grade}</td>
                     <td className="d-none d-lg-table-cell fw-bold text-primary small">
-                      {s.gwa > 0 ? s.gwa.toFixed(2) : <span className="text-muted">--</span>}
+                      {s.gwa != null && s.gwa > 0 ? Number(s.gwa).toFixed(2) : <span className="text-muted">--</span>}
                     </td>
                     <td className="d-none d-lg-table-cell text-muted small">
                       {s.room > 0 ? (
