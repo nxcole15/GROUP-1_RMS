@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { API_BASE } from "../../lib/auth";
@@ -118,15 +118,16 @@ function isDeadlinePassed() {
   return new Date() > TEACHER_TERM_DEADLINES[getActiveTerm()];
 }
 
-type Panel = "overview"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog";
+type Panel = "overview"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog"|"profile";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
-  { id: "overview",       label: "Overview",        icon: "overview" },
-  { id: "schedule",       label: "My Schedule",      icon: "calendar" },
-  { id: "students",       label: "My Students",      icon: "students" },
-  { id: "grades",         label: "Submit Grades",    icon: "chart" },
-  { id: "requests",       label: "Grade Requests",   icon: "requests" },
-  { id: "documents",      label: "Document Requests",        icon: "documents" },
+  { id: "overview",       label: "Overview",          icon: "overview" },
+  { id: "schedule",       label: "My Schedule",        icon: "calendar" },
+  { id: "students",       label: "My Students",        icon: "students" },
+  { id: "grades",         label: "Submit Grades",      icon: "chart" },
+  { id: "requests",       label: "Grade Requests",     icon: "requests" },
+  { id: "documents",      label: "Document Requests",  icon: "documents" },
+  { id: "profile",        label: "My Profile",         icon: "user" },
 ];
 
 /* -- Sidebar -- */
@@ -153,23 +154,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
 
-        {/* Profile - Right after Teacher Portal */}
-        <div className="px-3 mt-3 mb-2">
-          <Link href="/teacher/profile" className="text-decoration-none">
-            <div className="d-flex align-items-center gap-3 rounded-3 px-3 py-2" style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", transition: "all 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width: 36, height: 36, fontSize: 13, background: "linear-gradient(135deg,#059669,#10b981)" }}>
-                {teacherData.full_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-              </div>
-              <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{teacherData.full_name}</div>
-                <div className="text-truncate" style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>{teacherData.teacher_id}</div>
-              </div>
-              <span style={{ color: "rgba(255,255,255,0.5)" }}><Icon name="arrowRight" size={16} /></span>
-            </div>
-          </Link>
-        </div>
+
 
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -203,88 +188,223 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
   const displayTeacher = teacher ?? teacherData;
   const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
-  const avgGrade = Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length);
+  const avgGrade = grades.length > 0 ? Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length) : 0;
+
+  const stats = [
+    {
+      label: "My Students",
+      value: students.length,
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+      gradient: "linear-gradient(135deg,#6366f1,#818cf8)",
+      shadow: "rgba(99,102,241,0.35)",
+      textColor: "#6366f1",
+      bgLight: "#eef2ff",
+    },
+    {
+      label: "Class Avg. Grade",
+      value: `${avgGrade}%`,
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+      gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)",
+      shadow: "rgba(245,158,11,0.35)",
+      textColor: "#d97706",
+      bgLight: "#fffbeb",
+    },
+    {
+      label: "Pending Requests",
+      value: pendingRequests,
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/></svg>,
+      gradient: "linear-gradient(135deg,#ef4444,#f87171)",
+      shadow: "rgba(239,68,68,0.35)",
+      textColor: "#dc2626",
+      bgLight: "#fef2f2",
+    },
+    {
+      label: "Active Term",
+      value: activeTerm,
+      icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+      gradient: "linear-gradient(135deg,#059669,#10b981)",
+      shadow: "rgba(5,150,105,0.35)",
+      textColor: "#059669",
+      bgLight: "#f0fdf4",
+    },
+  ];
 
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Welcome */}
-      <div className="rounded-3 p-4" style={{ background: "linear-gradient(135deg,#059669,#10b981)", boxShadow: "0 8px 32px rgba(5,150,105,0.25)" }}>
-        <h2 className="text-white fw-black fs-4 mb-1">Welcome back, {displayTeacher.full_name} </h2>
-        <p className="text-white-50 small mb-0">Department: {displayTeacher.department}  {displayTeacher.teacher_id}</p>
-      </div>
+    <div className="d-flex flex-column gap-0">
 
-      {/* Lock banner */}
-      {isGradeLocked && (
-        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
-          <div>
-            <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} Deadline Passed</div>
-            <div className="text-muted small">You have unresolved grade requests. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
+      {/* ── Banner ──────────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg,#059669 0%,#10b981 100%)",
+        borderRadius: "16px 16px 0 0",
+        padding: "32px 32px 80px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* decorative circles */}
+        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:160, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"absolute", top:20, right:80, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div className="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+              <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
+                Welcome back, {displayTeacher.full_name}
+              </h1>
+              <p className="mb-3" style={{ color:"rgba(255,255,255,0.75)" }}>
+                {displayTeacher.department && <span>{displayTeacher.department} · </span>}
+                {displayTeacher.teacher_id && <span>{displayTeacher.teacher_id}</span>}
+              </p>
+              <div className="d-flex gap-2 flex-wrap">
+                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+                  ✅ Active Teacher
+                </span>
+                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>
+                  📅 {activeTerm} · SY 2025-2026
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Stats */}
-      <div className="row g-3">
-        {[
-          { label: "My Students",      value: students.length,    icon: "students", cls: "border-success-subtle bg-success-subtle",   val: "text-success"   },
-          { label: "Class Avg. Grade", value: `${avgGrade}%`,     icon: "chart", cls: "border-warning-subtle bg-warning-subtle",   val: "text-warning"   },
-          { label: "Pending Requests", value: pendingRequests,    icon: "requests", cls: "border-danger-subtle bg-danger-subtle",     val: "text-danger"    },
-        ].map(s => (
-          <div key={s.label} className="col-6 col-lg-4">
-            <div className={`card border rounded-3 h-100 ${s.cls}`}>
-              <div className="card-body p-3">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="text-muted small">{s.label}</span>
-                  <Icon name={s.icon as IconName} size={24} />
+      {/* ── Content pulled up over banner ─────────────── */}
+      <div className="container-fluid px-3 px-md-4" style={{ marginTop:"-52px", paddingBottom:32 }}>
+
+        {/* Lock banner */}
+        {isGradeLocked && (
+          <div className="d-flex align-items-start gap-3 rounded-3 p-3 mb-4"
+            style={{ background:"#fef2f2", border:"1px solid #fecaca" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop:2, flexShrink:0 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div>
+              <div className="fw-bold small text-danger">Grade Submission Locked – {activeTerm} Deadline Passed</div>
+              <div className="text-muted small">You have unresolved grade requests. Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
+            </div>
+          </div>
+        )}
+
+        {/* Stat cards */}
+        <div className="row g-3 mb-4">
+          {stats.map(s => (
+            <div key={s.label} className="col-6 col-lg-3">
+              <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
+                <div className="card-body p-4">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}` }}>
+                      {s.icon}
+                    </div>
+                    <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
+                      <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}>↑ Live</div>
+                    </div>
+                  </div>
+                  <div className="fw-black" style={{ fontSize:"1.6rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
+                  <div className="text-muted mt-1" style={{ fontSize:"0.78rem" }}>{s.label}</div>
                 </div>
-                <div className={`fw-black fs-3 ${s.val}`}>{s.value}</div>
+                {/* accent bottom bar */}
+                <div style={{ height:3, background:s.gradient }} />
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Recent Activity + Class Summary */}
-      <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
-            <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3">Recent Activity</h3>
-              <div className="d-flex flex-column gap-3">
-                {recentActivity.map((a, i) => (
-                  <div key={i} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center flex-shrink-0 text-primary" style={{ width: 36, height: 36 }}><Icon name={a.icon as IconName} size={18} /></div>
-                    <div className="flex-grow-1 overflow-hidden">
-                      <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{a.name}</div>
-                    </div>
-                    <span className="text-muted flex-shrink-0" style={{ fontSize: 11 }}>{a.time}</span>
+        {/* Recent Activity + Class Summary */}
+        <div className="row g-4">
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 shadow-sm rounded-4 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-2 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
                   </div>
-                ))}
+                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Activity</h3>
+                </div>
+                {recentActivity.length > 0 ? (
+                  <div className="d-flex flex-column gap-3">
+                    {recentActivity.map((a, i) => (
+                      <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                          <Icon name={a.icon as IconName} size={16} className="text-white" />
+                        </div>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
+                          <div className="text-muted" style={{ fontSize:11 }}>{a.name}</div>
+                        </div>
+                        <span className="text-muted flex-shrink-0 small">{a.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                      style={{ width:56, height:56, background:"#f1f5f9" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                      </svg>
+                    </div>
+                    <p className="text-muted small mb-0">No recent activity yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 shadow-sm rounded-4 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-2 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                    </svg>
+                  </div>
+                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Class Summary</h3>
+                </div>
+                {subjects.length > 0 ? (
+                  <div className="d-flex flex-column gap-3">
+                    {subjects.map(s => (
+                      <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                          </svg>
+                        </div>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
+                          <div className="text-muted" style={{ fontSize:11 }}>{s.code} · {s.units} units</div>
+                        </div>
+                        <span className="badge rounded-pill px-2 py-1"
+                          style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontSize:"0.75rem" }}>
+                          {s.enrolled}/{s.max}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                      style={{ width:56, height:56, background:"#f1f5f9" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                      </svg>
+                    </div>
+                    <p className="text-muted small mb-0">No subjects assigned yet</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3 h-100">
-            <div className="card-body p-4">
-              <h3 className="fw-bold small text-dark mb-3">Class Summary</h3>
-              <div className="d-flex flex-column gap-3">
-                {subjects.map(s => (
-                  <div key={s.id} className="d-flex align-items-center gap-3">
-                    <div className="rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 36, height: 36 }}><Icon name="book" size={18} /></div>
-                    <div className="flex-grow-1 overflow-hidden">
-                      <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{s.code} – {s.units} units</div>
-                    </div>
-                    <span className="badge bg-success-subtle text-success border border-success-subtle">{s.enrolled}/{s.max}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   );
@@ -547,105 +667,174 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   
   return (
     <div className="d-flex flex-column gap-4">
-      <div>
-        <h2 className="fw-black fs-4 text-dark mb-1">My Students</h2>
-        <p className="text-muted small mb-0">Showing {filtered.length} of {displayStudents.length} students</p>
+      {/* Header - Enhanced - Fixed white box */}
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+        <div className="card-body p-4">
+          <div className="d-flex align-items-center gap-3">
+            <div className="bg-white bg-opacity-25 rounded-3 p-3">
+              <Icon name="students" size={32} />
+            </div>
+            <div className="flex-grow-1 text-white">
+              <h2 className="fw-bold mb-1 fs-3">My Students</h2>
+              <p className="mb-0 opacity-75">Managing {filtered.length} of {displayStudents.length} enrolled students</p>
+            </div>
+            {/* Total count badge - Fixed */}
+            <div className="d-none d-md-block">
+              <div className="text-center px-4 py-3 rounded-3" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
+                <div className="text-white fw-bold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>{displayStudents.length}</div>
+                <div className="text-white opacity-75 small mt-1">Students</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
-      {/* Search Bar */}
-      <div className="input-group shadow-sm" style={{ maxWidth: 400 }}>
-        <span className="input-group-text bg-white"><Icon name="search" size={18} /></span>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or ID..." className="form-control border-start-0" />
-      </div>
-      
-      {/* Filter Dropdowns */}
-      <div className="row g-3">
-        <div className="col-md-5">
-          <label className="form-label small fw-semibold text-muted text-uppercase" style={{ letterSpacing: "0.05em" }}>Subject - Track & Strand</label>
-          <select className="form-select form-select-sm" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
-            <option value="all">All Classes</option>
-            {uniqueClasses.map(cls => (
-              <option key={cls} value={cls}>{cls}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-3">
-          <label className="form-label small fw-semibold text-muted text-uppercase" style={{ letterSpacing: "0.05em" }}>Term</label>
-          <select className="form-select form-select-sm" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}>
-            <option value="all">All Terms</option>
-            <option value="Term 1">Term 1</option>
-            <option value="Term 2">Term 2</option>
-            <option value="Term 3">Term 3</option>
-          </select>
-        </div>
-        <div className="col-md-4 d-flex align-items-end">
-          <button className="btn btn-outline-secondary btn-sm w-100" onClick={clearAllFilters} disabled={!hasActiveFilters}>
-            Clear Filters
-          </button>
+      {/* Search & Filters Card */}
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-4">
+          {/* Search Bar */}
+          <div className="mb-4">
+            <label className="form-label fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+              <Icon name="search" size={18} />
+              <span>Search Students</span>
+            </label>
+            <div className="input-group input-group-lg shadow-sm">
+              <span className="input-group-text bg-light border-end-0">
+                <Icon name="search" size={20} />
+              </span>
+              <input 
+                value={search} 
+                onChange={e => setSearch(e.target.value)} 
+                placeholder="Search by name or student ID..." 
+                className="form-control bg-light border-start-0"
+                style={{ fontSize: '1rem' }}
+              />
+              {search && (
+                <button className="btn bg-light border-start-0" onClick={() => setSearch('')}>
+                  <Icon name="close" size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <hr className="my-4" style={{ opacity: 0.1 }} />
+          
+          {/* Filter Dropdowns */}
+          <div>
+            <label className="form-label fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+              <Icon name="chart" size={18} />
+              <span>Filter Options</span>
+            </label>
+            <div className="row g-3">
+              <div className="col-md-5">
+                <label className="form-label small fw-semibold text-muted mb-2">Subject - Track & Strand</label>
+                <select className="form-select shadow-sm" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} style={{ padding: '10px 14px' }}>
+                  <option value="all">All Classes</option>
+                  {uniqueClasses.map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small fw-semibold text-muted mb-2">Term</label>
+                <select className="form-select shadow-sm" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} style={{ padding: '10px 14px' }}>
+                  <option value="all">All Terms</option>
+                  <option value="Term 1">Term 1</option>
+                  <option value="Term 2">Term 2</option>
+                  <option value="Term 3">Term 3</option>
+                </select>
+              </div>
+              <div className="col-md-4 d-flex align-items-end">
+                <button 
+                  className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" 
+                  onClick={clearAllFilters} 
+                  disabled={!hasActiveFilters}
+                  style={{ padding: '10px 14px' }}
+                >
+                  <Icon name="refresh" size={16} />
+                  <span>Clear Filters</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
       {/* Active Filters Badges */}
       {hasActiveFilters && (
         <div className="d-flex gap-2 flex-wrap align-items-center">
-          <span className="small text-muted fw-semibold">Active filters:</span>
+          <span className="small fw-bold text-dark">Active filters:</span>
           {search !== "" && (
-            <span className="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1">
-              Search: &quot;{search}&quot;
-              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSearch("")} aria-label="Clear search"></button>
+            <span className="badge bg-primary text-white px-3 py-2 d-flex align-items-center gap-2 fw-semibold">
+              Search: "{search}"
+              <button type="button" className="btn-close btn-close-white" style={{ fontSize: 8 }} onClick={() => setSearch("")} aria-label="Clear search"></button>
             </span>
           )}
           {selectedClass !== "all" && (
-            <span className="badge bg-info-subtle text-info border border-info-subtle d-flex align-items-center gap-1">
+            <span className="badge bg-info text-white px-3 py-2 d-flex align-items-center gap-2 fw-semibold">
               {selectedClass}
-              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSelectedClass("all")} aria-label="Clear class"></button>
+              <button type="button" className="btn-close btn-close-white" style={{ fontSize: 8 }} onClick={() => setSelectedClass("all")} aria-label="Clear class"></button>
             </span>
           )}
           {selectedTerm !== "all" && (
-            <span className="badge bg-warning-subtle text-warning border border-warning-subtle d-flex align-items-center gap-1">
+            <span className="badge bg-warning text-white px-3 py-2 d-flex align-items-center gap-2 fw-semibold">
               {selectedTerm}
-              <button type="button" className="btn-close" style={{ fontSize: 8, width: 10, height: 10 }} onClick={() => setSelectedTerm("all")} aria-label="Clear term"></button>
+              <button type="button" className="btn-close btn-close-white" style={{ fontSize: 8 }} onClick={() => setSelectedTerm("all")} aria-label="Clear term"></button>
             </span>
           )}
         </div>
       )}
       
-      {/* Students Table */}
+      {/* Students Table - Enhanced */}
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
-            <thead className="table-light">
+            <thead style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "white" }}>
               <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Name</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>ID</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.05em" }}>Subject</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Track & Strand</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em" }}>Term</th>
-                <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing: "0.05em" }}>Status</th>
+                <th className="py-3 ps-4 fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Student</th>
+                <th className="py-3 fw-bold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.08em" }}>Student ID</th>
+                <th className="py-3 fw-bold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.08em" }}>Subject</th>
+                <th className="py-3 fw-bold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.08em" }}>Track & Strand</th>
+                <th className="py-3 fw-bold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.08em" }}>Term</th>
+                <th className="py-3 fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={6} className="text-center py-4 small text-muted">{displayStudents.length === 0 ? "No students found." : "No students match the selected filters."}</td></tr>
+                ? <tr><td colSpan={6} className="text-center py-5">
+                    <div className="text-muted">
+                      <div className="mb-3">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-25">
+                          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                      </div>
+                      <div className="fw-semibold fs-5">{displayStudents.length === 0 ? "No students found" : "No students match the filters"}</div>
+                      <div className="small mt-2">Try adjusting your search or filter criteria</div>
+                    </div>
+                  </td></tr>
                 : filtered.map((s, idx) => (
                   <tr key={`${s.id}-${s.subject}-${s.term}-${idx}`}>
-                    <td className="ps-4 small fw-medium text-dark">
-                      <div className="d-flex align-items-center gap-2">
+                    <td className="ps-4">
+                      <div className="d-flex align-items-center gap-3 py-2">
                         {s.photo_url && !imageErrors.has(s.id) ? (
-                          <img src={s.photo_url} alt={s.name} className="rounded-circle" style={{ width: 32, height: 32, objectFit: 'cover' }} onError={() => handleImageError(s.id)} />
+                          <img src={s.photo_url} alt={s.name} className="rounded-circle border border-2 border-light shadow-sm" style={{ width: 40, height: 40, objectFit: 'cover' }} onError={() => handleImageError(s.id)} />
                         ) : (
-                          <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style={{ width: 32, height: 32, fontSize: '0.75rem' }}>
+                          <div className="rounded-circle border border-2 border-light shadow-sm d-flex align-items-center justify-content-center fw-bold" style={{ width: 40, height: 40, fontSize: '0.85rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                             {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                         )}
-                        <span>{s.name}</span>
+                        <span className="fw-semibold text-dark">{s.name}</span>
                       </div>
                     </td>
-                    <td className="d-none d-sm-table-cell small text-muted">{s.id}</td>
-                    <td className="d-none d-md-table-cell small text-muted">{s.subject || "-"}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">{s.track_strand || s.pathway}</td>
-                    <td className="d-none d-lg-table-cell small text-muted">{s.term || "-"}</td>
-                    <td><span className={`badge ${s.status === "Active" ? "bg-success-subtle text-success border border-success-subtle" : "bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{s.status}</span></td>
+                    <td className="d-none d-sm-table-cell"><span className="text-muted small">{s.id}</span></td>
+                    <td className="d-none d-md-table-cell"><span className="text-muted small">{s.subject || "-"}</span></td>
+                    <td className="d-none d-lg-table-cell"><span className="text-muted small">{s.track_strand || s.pathway}</span></td>
+                    <td className="d-none d-lg-table-cell"><span className="text-muted small">{s.term || "-"}</span></td>
+                    <td><span className={`badge fw-semibold ${s.status === "Active" ? "bg-success" : "bg-secondary"} text-white px-3 py-2`}>{s.status}</span></td>
                   </tr>
                 ))
               }
@@ -1011,125 +1200,173 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div>
-        <h2 className="fw-black fs-4 text-dark mb-1">Grade Management</h2>
-        <p className="text-muted small mb-0">Submit and manage student grades (internal record)</p>
-      </div>
-
-      {/* Status Alert */}
-      {!isWindowOpen && (
-        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <div style={{ color: "#dc2626", marginTop: 2 }}><Icon name="alert" size={20} /></div>
-          <div>
-            <div className="fw-bold small text-danger">Grade Submission Closed for {selectedTerm}</div>
-            <div className="text-muted small">Contact the principal to open the submission window.</div>
-          </div>
-        </div>
-      )}
-
-      {isWindowOpen && submissionWindow && (
-        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-          <div style={{ color: "#16a34a", marginTop: 2 }}><Icon name="checkCircle" size={20} /></div>
-          <div>
-            <div className="fw-bold small text-success">Grade Submission Open for {selectedTerm}</div>
-            <div className="text-muted small">
-              {submissionWindow.days_remaining > 0 
-                ? `${submissionWindow.days_remaining} days remaining until ${new Date(submissionWindow.end_date).toLocaleDateString()}`
-                : 'Closes today!'}
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+        <div className="card-body p-4 text-white">
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <div className="bg-white bg-opacity-25 rounded-3 p-3">
+              <Icon name="chart" size={28} />
+            </div>
+            <div>
+              <h2 className="fw-bold mb-1 fs-3">Grade Management</h2>
+              <p className="mb-0 opacity-75">Submit and manage student grades (internal record)</p>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Info Banner */}
-      <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-        <div style={{ color: "#2563eb", marginTop: 2 }}><Icon name="alert" size={18} /></div>
-        <div className="small text-muted">
-          <strong>Note:</strong> Submitted grades are recorded internally and not visible to students. 
-          Students must submit grade requests to receive their grades.
-        </div>
       </div>
 
-      {/* Already Approved Alert */}
-      {selectedSubject && allApproved && (
-        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#f0fdf4", border: "1px solid #86efac" }}>
-          <div style={{ color: "#16a34a", marginTop: 2 }}><Icon name="checkCircle" size={20} /></div>
-          <div>
-            <div className="fw-bold small text-success">Grades Already Submitted & Approved</div>
-            <div className="text-muted small">
-              All grades for this class have been submitted and approved. No further action needed.
+      {/* Status Alerts Section */}
+      <div className="d-flex flex-column gap-3">
+        {/* Submission Window Status */}
+        {!isWindowOpen && (
+          <div className="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
+            <div style={{ marginTop: 2 }}>
+              <Icon name="alert" size={22} />
+            </div>
+            <div className="flex-grow-1">
+              <h6 className="alert-heading fw-bold mb-1">Grade Submission Closed for {selectedTerm}</h6>
+              <p className="mb-0 small">Contact the principal to open the submission window.</p>
             </div>
           </div>
+        )}
+
+        {isWindowOpen && submissionWindow && (
+          <div className="alert alert-success border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
+            <div style={{ marginTop: 2 }}>
+              <Icon name="checkCircle" size={22} />
+            </div>
+            <div className="flex-grow-1">
+              <h6 className="alert-heading fw-bold mb-1">Grade Submission Open for {selectedTerm}</h6>
+              <p className="mb-0 small">
+                {submissionWindow.days_remaining > 0 
+                  ? `${submissionWindow.days_remaining} days remaining until ${new Date(submissionWindow.end_date).toLocaleDateString()}`
+                  : 'Closes today!'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Info Note */}
+        <div className="alert alert-info border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
+          <div style={{ marginTop: 2 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div className="flex-grow-1">
+            <p className="mb-0 small">
+              <strong>Note:</strong> Submitted grades are recorded internally and not visible to students. 
+              Students must submit grade requests to receive their grades.
+            </p>
+          </div>
         </div>
-      )}
+
+        {/* Already Approved Status */}
+        {selectedSubject && allApproved && (
+          <div className="alert alert-success border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
+            <div style={{ marginTop: 2 }}>
+              <Icon name="checkCircle" size={22} />
+            </div>
+            <div className="flex-grow-1">
+              <h6 className="alert-heading fw-bold mb-1">Grades Already Submitted & Approved</h6>
+              <p className="mb-0 small">
+                All grades for this class have been submitted and approved. No further action needed.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Class Selector & Term Filter */}
-      <div className="row g-3">
-        <div className="col-md-7">
-          <label className="form-label fw-semibold text-uppercase small mb-2" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>
-            Select Class
-          </label>
-          <select
-            value={selectedSubject || ""}
-            onChange={e => setSelectedSubject(e.target.value)}
-            className="form-select shadow-sm"
-            disabled={loading}
-          >
-            <option value="">-- Select a class --</option>
-            {subjects.filter(s => s.term === selectedTerm).map(subj => (
-              <option key={`${subj.subject_name}|${subj.strand}`} value={`${subj.subject_name}|${subj.strand}`}>
-                {subj.subject_name} - {subj.strand}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-5">
-          <label className="form-label fw-semibold text-uppercase small mb-2" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>
-            Term
-          </label>
-          <div className="btn-group w-100 shadow-sm" role="group">
-            {["Term 1", "Term 2", "Term 3"].map(term => (
-              <button
-                key={term}
-                type="button"
-                className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-primary'}`}
-                onClick={() => {
-                  setSelectedTerm(term);
-                  setSelectedSubject(null);
-                }}
-              >
-                {term.replace("Term ", "")}
-              </button>
-            ))}
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-4">
+          {/* Term Filter - Right-aligned */}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <label className="form-label fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <Icon name="calendar" size={18} />
+                <span>Select Term</span>
+              </label>
+            </div>
+            <div className="btn-group shadow-sm" role="group">
+              {["Term 1", "Term 2", "Term 3"].map(term => (
+                <button
+                  key={term}
+                  type="button"
+                  className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-secondary'} fw-semibold px-4`}
+                  onClick={() => {
+                    setSelectedTerm(term);
+                    setSelectedSubject(null);
+                  }}
+                  style={{ padding: '10px 24px', fontSize: '0.9rem' }}
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <hr className="my-4" style={{ opacity: 0.1 }} />
+
+          {/* Class Selector */}
+          <div>
+            <label className="form-label fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+              <Icon name="book" size={18} />
+              <span>Select Class</span>
+            </label>
+            <select
+              value={selectedSubject || ""}
+              onChange={e => setSelectedSubject(e.target.value)}
+              className="form-select form-select-lg shadow-sm"
+              disabled={loading}
+              style={{ fontSize: '1rem', padding: '14px 18px', borderRadius: '0.5rem' }}
+            >
+              <option value="">-- Select a class --</option>
+              {subjects.filter(s => s.term === selectedTerm).map(subj => (
+                <option key={`${subj.subject_name}|${subj.strand}`} value={`${subj.subject_name}|${subj.strand}`}>
+                  {subj.subject_name} - {subj.strand}
+                </option>
+              ))}
+            </select>
+            {subjects.filter(s => s.term === selectedTerm).length === 0 && (
+              <div className="alert alert-info d-flex align-items-center gap-2 mt-3 mb-0">
+                <Icon name="alert" size={16} />
+                <span className="small">No classes assigned for {selectedTerm}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Progress Card */}
       {selectedSubject && (
-        <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)" }}>
-          <div className="card-body p-4">
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
             <div className="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h3 className="fw-bold mb-1">{selectedSubject.split("|")[0]}</h3>
-                <p className="text-muted small mb-0">{selectedSubject.split("|")[1]} · {selectedTerm}</p>
+              <div className="text-white">
+                <h3 className="fw-bold mb-1 fs-5">{selectedSubject.split("|")[0]}</h3>
+                <p className="mb-0 opacity-75" style={{ fontSize: '0.9rem' }}>
+                  {selectedSubject.split("|")[1]} · {selectedTerm}
+                </p>
               </div>
               {lastAutoSave && timeSinceAutoSave !== null && (
-                <span className="badge bg-success-subtle text-success border border-success-subtle">
+                <span className="badge bg-white text-primary fw-semibold px-3 py-2">
                   💾 Auto-saved {timeSinceAutoSave}s ago
                 </span>
               )}
             </div>
 
             {/* Progress Bar */}
-            <div className="mb-3">
+            <div className="mb-4">
               <div className="d-flex justify-content-between align-items-center mb-2">
-                <span className="small fw-semibold text-dark">Progress</span>
-                <span className="small text-muted">{gradedStudents.length}/{students.length} students ({progressPercentage}%)</span>
+                <span className="small fw-bold text-white">Submission Progress</span>
+                <span className="small text-white opacity-75">
+                  {gradedStudents.length} of {students.length} students ({progressPercentage}%)
+                </span>
               </div>
-              <div className="progress" style={{ height: 12 }}>
+              <div className="progress" style={{ height: 14, background: 'rgba(255,255,255,0.2)' }}>
                 <div
-                  className="progress-bar bg-success"
+                  className="progress-bar bg-white"
                   style={{ width: `${progressPercentage}%` }}
                   role="progressbar"
                 />
@@ -1139,12 +1376,20 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
             {/* Stats */}
             <div className="row g-3">
               <div className="col-6">
-                <div className="text-muted small">Class Average</div>
-                <div className="fw-bold fs-4 text-primary">{classAverage}%</div>
+                <div className="card border-0 bg-white bg-opacity-25 text-white">
+                  <div className="card-body p-3">
+                    <div className="small opacity-75 mb-1">Class Average</div>
+                    <div className="fw-bold fs-3">{classAverage}%</div>
+                  </div>
+                </div>
               </div>
               <div className="col-6">
-                <div className="text-muted small">Total Students</div>
-                <div className="fw-bold fs-4 text-dark">{students.length}</div>
+                <div className="card border-0 bg-white bg-opacity-25 text-white">
+                  <div className="card-body p-3">
+                    <div className="small opacity-75 mb-1">Total Students</div>
+                    <div className="fw-bold fs-3">{students.length}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1153,17 +1398,36 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
 
       {/* Search Bar */}
       {selectedSubject && students.length > 0 && (
-        <div className="input-group shadow-sm">
-          <span className="input-group-text bg-white border-end-0">
-            <Icon name="search" size={18} />
-          </span>
-          <input
-            type="text"
-            className="form-control border-start-0"
-            placeholder="Search students by name or ID..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-3">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light border-end-0">
+                <Icon name="search" size={20} />
+              </span>
+              <input
+                type="text"
+                className="form-control bg-light border-start-0 border-end-0"
+                placeholder="Search students by name or ID..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ fontSize: '1rem' }}
+              />
+              {search && (
+                <button
+                  className="btn bg-light border-start-0"
+                  onClick={() => setSearch('')}
+                  title="Clear search"
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              )}
+            </div>
+            {search && filteredStudents.length > 0 && (
+              <div className="text-muted small mt-2">
+                Found {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1172,13 +1436,13 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
           <div className="table-responsive">
             <table className="table table-hover mb-0">
-              <thead className="table-light">
+              <thead style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
                 <tr>
-                  <th className="ps-4 small fw-semibold text-uppercase" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Student</th>
-                  <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>ID</th>
-                  <th className="small fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Pathway</th>
-                  <th className="small fw-semibold text-uppercase" style={{ letterSpacing: "0.05em", color: "#6b7280" }}>Grade (%)</th>
-                  <th className="pe-4 small fw-semibold text-uppercase text-center" style={{ letterSpacing: "0.05em", color: "#6b7280", width: 60 }}>Status</th>
+                  <th className="ps-4 py-3 small fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Student</th>
+                  <th className="py-3 small fw-bold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.08em" }}>Student ID</th>
+                  <th className="py-3 small fw-bold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.08em" }}>Track/Strand</th>
+                  <th className="py-3 small fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Grade (%)</th>
+                  <th className="pe-4 py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 100 }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1227,23 +1491,37 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                         <td className="d-none d-md-table-cell small text-muted">{student.student_id}</td>
                         <td className="d-none d-lg-table-cell small text-muted">{student.pathway}</td>
                         <td>
-                          <input
-                            type="text"
-                            className={`form-control form-control-sm ${!isValid ? 'is-invalid' : ''}`}
-                            style={{ width: 100 }}
-                            value={gradeValue}
-                            onChange={e => handleGradeChange(student.student_id, e.target.value)}
-                            placeholder="0-100"
-                            disabled={!isWindowOpen || student.submission_status === 'approved'}
-                          />
+                          <div className="d-flex align-items-center gap-2">
+                            <input
+                              type="number"
+                              className={`form-control ${!isValid ? 'is-invalid border-danger' : hasGrade && isValid ? 'border-success' : ''}`}
+                              style={{ 
+                                width: 120, 
+                                fontWeight: hasGrade ? '600' : 'normal',
+                                fontSize: '0.95rem'
+                              }}
+                              value={gradeValue}
+                              onChange={e => handleGradeChange(student.student_id, e.target.value)}
+                              placeholder="0-100"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              disabled={!isWindowOpen || student.submission_status === 'approved'}
+                            />
+                            {hasGrade && isValid && (
+                              <span className="badge bg-success-subtle text-success px-2">✓</span>
+                            )}
+                          </div>
                         </td>
                         <td className="pe-4 text-center">
-                          {hasGrade && isValid ? (
-                            <span className="text-success" title="Grade entered">✅</span>
-                          ) : !isValid ? (
-                            <span className="text-danger" title="Invalid grade">⚠️</span>
+                          {student.submission_status === 'approved' ? (
+                            <span className="badge bg-success text-white fw-semibold">Approved</span>
+                          ) : hasGrade && isValid ? (
+                            <span className="badge bg-info text-white fw-semibold">Ready</span>
+                          ) : !isValid && gradeValue !== '' ? (
+                            <span className="badge bg-danger text-white fw-semibold">Invalid</span>
                           ) : (
-                            <span className="text-muted" title="No grade">⚪</span>
+                            <span className="badge bg-secondary text-white fw-semibold">Pending</span>
                           )}
                         </td>
                       </tr>
@@ -1524,71 +1802,127 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     <div className="d-flex flex-column gap-4">
       {/* Toast */}
       {toast && (
-        <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3 d-flex align-items-center gap-2"
-          style={{ zIndex: 9999, fontSize: 13, minWidth: 280, animation: "fadeInUp 0.3s ease" }}>
-          {toast}
+        <div className="position-fixed bottom-0 end-0 m-4 alert alert-success shadow-lg rounded-3 py-3 px-4 d-flex align-items-center gap-3"
+          style={{ zIndex: 9999, fontSize: 14, minWidth: 300, animation: "fadeInUp 0.3s ease" }}>
+          <Icon name="checkCircle" size={20} />
+          <span>{toast}</span>
         </div>
       )}
 
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Grade Requests</h2><p className="text-muted small mb-0">Student grade requests from all terms</p></div>
+      {/* Header - Enhanced */}
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+        <div className="card-body p-4">
+          <div className="d-flex align-items-center gap-3">
+            <div className="bg-white bg-opacity-25 rounded-3 p-3">
+              <Icon name="requests" size={32} />
+            </div>
+            <div className="flex-grow-1 text-white">
+              <h2 className="fw-bold mb-1 fs-3">Grade Requests</h2>
+              <p className="mb-0 opacity-75">Manage student grade requests from all terms</p>
+            </div>
+            {/* Total count badge - Fixed */}
+            <div className="d-none d-md-block">
+              <div className="text-center px-4 py-3 rounded-3" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
+                <div className="text-white fw-bold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>{requests.length}</div>
+                <div className="text-white opacity-75 small mt-1">Total</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Lock banner */}
+      {/* Lock banner - Enhanced */}
       {isGradeLocked && (
-        <div className="rounded-3 p-3 d-flex align-items-start gap-3" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
-          <div style={{ color: "rgba(220,38,38,0.8)", marginTop: 2 }}><Icon name="alert" size={20} /></div>
-          <div>
-            <div className="fw-bold small text-danger">Actions Locked – {activeTerm} deadline passed</div>
-            <div className="text-muted small">Visit the <strong>Registrar&apos;s Office</strong> to restore access.</div>
+        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
+          <div style={{ marginTop: 4 }}>
+            <Icon name="lock" size={24} />
+          </div>
+          <div className="flex-grow-1">
+            <h6 className="alert-heading fw-bold mb-1">Actions Locked</h6>
+            <p className="mb-0 small">
+              {activeTerm} deadline has passed. Visit the <strong>Registrar's Office</strong> to restore access.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Pipeline workflow diagram */}
-      <div className="card border-0 shadow-sm rounded-3">
-        <div className="card-body p-3">
-          <div className="fw-bold small text-dark mb-3"> Grade Request Pipeline</div>
-          <div className="d-flex align-items-center justify-content-between gap-1 overflow-auto pb-1">
+      {/* Pipeline workflow - Enhanced */}
+      <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
+        <div className="card-body p-4">
+          <div className="d-flex align-items-center gap-2 mb-4">
+            <Icon name="activity" size={20} className="text-primary" />
+            <h3 className="fw-bold mb-0">Grade Request Workflow</h3>
+          </div>
+          <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto pb-2">
             {[
-              { label: "Student\nRequested",    count: newRequests.length,     color: "#f59e0b" },
-              { label: "Teacher\nCalculating",  count: inProgress.length,      color: "#3b82f6" },
-              { label: "Sent to\nAdmin",        count: pendingAdmin.length,    color: "#8b5cf6" },
-              { label: "Admin\nVerified",       count: verifiedByAdmin.length, color: "#10b981" },
-              { label: "Released to\nStudent",  count: released.length,        color: "#059669" },
+              { label: "Student Requested",    count: newRequests.length,     gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "bell" },
+              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "chart" },
+              { label: "Principal Review",     count: pendingAdmin.length,    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: "user" },
+              { label: "Principal Verified",   count: verifiedByAdmin.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
+              { label: "Released to Student",  count: released.length,        gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)", icon: "check" },
             ].map((step, i, arr) => (
-              <div key={i} className="d-flex align-items-center gap-1 flex-shrink-0">
-                <div className="text-center" style={{ minWidth: 80 }}>
-                  <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-black mx-auto mb-1"
-                    style={{ width: 36, height: 36, background: step.color, fontSize: 16 }}>{step.count}</div>
-                  <div style={{ fontSize: 10, color: "#64748b", whiteSpace: "pre-line", lineHeight: 1.2 }}>{step.label}</div>
+              <div key={i} className="d-flex align-items-center gap-3 flex-shrink-0">
+                <div className="text-center" style={{ minWidth: 110 }}>
+                  <div className="rounded-3 d-flex flex-column align-items-center justify-content-center text-white p-3 shadow-sm mx-auto mb-2"
+                    style={{ background: step.gradient, minHeight: 90 }}>
+                    <Icon name={step.icon as IconName} size={24} className="mb-2" />
+                    <div className="fw-bold fs-3">{step.count}</div>
+                  </div>
+                  <div className="small fw-semibold text-dark" style={{ lineHeight: 1.3 }}>{step.label}</div>
                 </div>
-                {i < arr.length - 1 && <div style={{ width: 20, height: 2, background: "#e2e8f0", flexShrink: 0 }} />}
+                {i < arr.length - 1 && (
+                  <div style={{ marginTop: -30 }}><Icon name="arrowRight" size={20} className="text-muted flex-shrink-0" /></div>
+                )}
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* STEP 1 � New student requests */}
+      {/* STEP 1 – New student requests - Enhanced */}
       {newRequests.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">New Student Requests - Action Required</h3>
-          <div className="d-flex flex-column gap-2">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="rounded-circle bg-warning bg-opacity-25 p-2">
+              <Icon name="bell" size={18} className="text-warning" />
+            </div>
+            <h3 className="fw-bold mb-0">New Student Requests - Action Required</h3>
+          </div>
+          <div className="d-flex flex-column gap-3">
             {newRequests.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3">
+              <div key={req.id} className="card border-0 shadow-sm rounded-3 border-start border-5 border-warning">
                 <div className="card-body p-4">
                   <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                     <div className="flex-grow-1">
-                      <div className="fw-bold text-dark mb-1">{req.student_name || req.full_name}</div>
-                      <div className="text-muted small">{req.subject_code || req.subject_name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{req.term} · Requested: {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}</div>
+                      <div className="fw-bold text-dark fs-6 mb-2">{req.student_name || req.full_name}</div>
+                      <div className="d-flex flex-wrap gap-2 align-items-center">
+                        <span className="badge bg-light text-dark border px-3 py-2">
+                          <Icon name="book" size={12} className="me-1" />
+                          {req.subject_code || req.subject_name}
+                        </span>
+                        <span className="badge bg-light text-dark border px-3 py-2">
+                          <Icon name="calendar" size={12} className="me-1" />
+                          {req.term}
+                        </span>
+                        <span className="badge bg-light text-dark border px-3 py-2">
+                          <Icon name="clock" size={12} className="me-1" />
+                          {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
+                    <span className="badge bg-warning text-white px-3 py-2 fw-semibold">{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
+                    ? <div className="alert alert-danger py-2 text-center small mb-0">🔒 Locked - visit Registrar's Office</div>
                     : <div className="d-flex gap-2">
-                        <button onClick={() => acceptRequest(req.id)} className="btn btn-primary btn-sm flex-grow-1">Accept &amp; Calculate</button>
-                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger btn-sm">Reject</button>
+                        <button onClick={() => acceptRequest(req.id)} className="btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+                          <Icon name="check" size={18} />
+                          Accept & Calculate
+                        </button>
+                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger d-flex align-items-center gap-2">
+                          <Icon name="x" size={18} />
+                          Reject
+                        </button>
                       </div>
                   }
                 </div>
@@ -1748,28 +2082,117 @@ function DocumentApprovalsPanel() {
   const [docs, setDocs] = useState(documentApprovals);
   const pending  = docs.filter(d => d.status === "pending");
   const approved = docs.filter(d => d.status === "approved");
+  
+  // Document type icons mapping
+  const getDocIcon = (type: string): IconName => {
+    if (type.toLowerCase().includes('certificate')) return 'file';
+    if (type.toLowerCase().includes('transcript')) return 'documents';
+    if (type.toLowerCase().includes('grade')) return 'chart';
+    return 'file';
+  };
+  
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Document Approvals</h2><p className="text-muted small mb-0">Verify and approve student document requests</p></div>
-      <div className="row g-3">
-        {[{ label: "Pending", value: pending.length, cls: "bg-warning-subtle border-warning-subtle text-warning" }, { label: "Approved", value: approved.length, cls: "bg-success-subtle border-success-subtle text-success" }].map(s => (
-          <div key={s.label} className="col-6"><div className={`card border rounded-3 ${s.cls}`}><div className="card-body p-3 text-center"><div className="small mb-1">{s.label}</div><div className="fw-black fs-3">{s.value}</div></div></div></div>
+      {/* Header - Enhanced */}
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+        <div className="card-body p-4">
+          <div className="d-flex align-items-center gap-3">
+            <div className="bg-white bg-opacity-25 rounded-3 p-3">
+              <Icon name="documents" size={32} />
+            </div>
+            <div className="flex-grow-1 text-white">
+              <h2 className="fw-bold mb-1 fs-3">Document Requests</h2>
+              <p className="mb-0 opacity-75">Review and approve student document requests</p>
+            </div>
+            {/* Pending count badge */}
+            <div className="d-none d-md-block">
+              <div className="text-center px-4 py-3 rounded-3" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
+                <div className="text-white fw-bold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>{pending.length}</div>
+                <div className="text-white opacity-75 small mt-1">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Stats Cards */}
+      <div className="row g-4">
+        {[
+          { label: "Pending Requests", value: pending.length, gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "clock" },
+          { label: "Approved", value: approved.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
+          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "documents" },
+        ].map((stat, i) => (
+          <div key={i} className="col-12 col-md-4">
+            <div className="card border-0 shadow-sm rounded-3 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-start mb-3">
+                  <div className="rounded-3 p-3" style={{ background: `${stat.gradient}15` }}>
+                    <div style={{ background: stat.gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                      <Icon name={stat.icon as IconName} size={28} />
+                    </div>
+                  </div>
+                </div>
+                <div className="small text-muted text-uppercase fw-semibold mb-2" style={{ letterSpacing: "0.05em" }}>{stat.label}</div>
+                <div className="fw-bold fs-2" style={{ background: stat.gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                  {stat.value}
+                </div>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
+      
+      {/* Pending Approvals */}
       {pending.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3"> Pending Approvals</h3>
-          <div className="d-flex flex-column gap-2">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="rounded-circle bg-warning bg-opacity-25 p-2">
+              <Icon name="clock" size={18} className="text-warning" />
+            </div>
+            <h3 className="fw-bold mb-0">Pending Approvals</h3>
+            <span className="badge bg-warning text-white ms-2">{pending.length}</span>
+          </div>
+          <div className="row g-3">
             {pending.map(doc => (
-              <div key={doc.id} className="card border-0 shadow-sm rounded-3">
-                <div className="card-body p-3">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type}  {doc.requestedAt}</div></div>
-                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle">Pending</span>
-                  </div>
-                  <div className="d-flex gap-2">
-                    <button onClick={() => setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved", approvedAt: new Date().toLocaleDateString() } : d))} className="btn btn-success btn-sm flex-grow-1">Approve</button>
-                    <button onClick={() => setDocs(prev => prev.filter(d => d.id !== doc.id))} className="btn btn-danger btn-sm flex-grow-1"> Reject</button>
+              <div key={doc.id} className="col-12 col-lg-6">
+                <div className="card border-0 shadow-sm rounded-3 h-100 border-start border-4 border-warning">
+                  <div className="card-body p-4">
+                    <div className="d-flex align-items-start gap-3 mb-3">
+                      <div className="rounded-circle bg-warning bg-opacity-15 p-3 flex-shrink-0">
+                        <Icon name={getDocIcon(doc.type)} size={24} className="text-warning" />
+                      </div>
+                      <div className="flex-grow-1">
+                        <h5 className="fw-bold text-dark mb-2">{doc.student}</h5>
+                        <div className="d-flex flex-wrap gap-2 mb-2">
+                          <span className="badge bg-light text-dark border px-3 py-2">
+                            <Icon name="file" size={12} className="me-1" />
+                            {doc.type}
+                          </span>
+                          <span className="badge bg-light text-dark border px-3 py-2">
+                            <Icon name="calendar" size={12} className="me-1" />
+                            {doc.requestedAt}
+                          </span>
+                        </div>
+                        <span className="badge bg-warning text-white px-3 py-2 fw-semibold">Pending Review</span>
+                      </div>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button 
+                        onClick={() => setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved", approvedAt: new Date().toLocaleDateString() } : d))} 
+                        className="btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+                      >
+                        <Icon name="check" size={18} />
+                        Approve
+                      </button>
+                      <button 
+                        onClick={() => setDocs(prev => prev.filter(d => d.id !== doc.id))} 
+                        className="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
+                        style={{ minWidth: 100 }}
+                      >
+                        <Icon name="x" size={18} />
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1777,15 +2200,44 @@ function DocumentApprovalsPanel() {
           </div>
         </div>
       )}
+      
+      {/* No pending message */}
+      {pending.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-5 text-center text-muted">
+            <Icon name="checkCircle" size={48} className="mb-3 opacity-25" />
+            <div className="fw-semibold fs-5">All caught up!</div>
+            <div className="small">No pending document requests at the moment</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Approved Documents */}
       {approved.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">Approved</h3>
-          <div className="d-flex flex-column gap-2">
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="rounded-circle bg-success bg-opacity-25 p-2">
+              <Icon name="checkCircle" size={18} className="text-success" />
+            </div>
+            <h3 className="fw-bold mb-0">Recently Approved</h3>
+            <span className="badge bg-success text-white ms-2">{approved.length}</span>
+          </div>
+          <div className="row g-3">
             {approved.map(doc => (
-              <div key={doc.id} className="card border-0 shadow-sm rounded-3 opacity-75">
-                <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{doc.student}</div><div className="text-muted" style={{ fontSize: 11 }}>{doc.type}  Approved {doc.approvedAt}</div></div>
-                  <span className="badge bg-success-subtle text-success border border-success-subtle"> Approved</span>
+              <div key={doc.id} className="col-12 col-lg-6">
+                <div className="card border-0 shadow-sm rounded-3 border-start border-4 border-success">
+                  <div className="card-body p-3">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="rounded-circle bg-success bg-opacity-15 p-2 flex-shrink-0">
+                        <Icon name="checkCircle" size={20} className="text-success" />
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-dark">{doc.student}</div>
+                        <div className="small text-muted">{doc.type} • Approved {doc.approvedAt}</div>
+                      </div>
+                      <span className="badge bg-success text-white">Approved</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2171,6 +2623,230 @@ function TimeLogPanel() {
 }
 
 /* -- Main Page -- */
+/* -- Profile Panel -- */
+function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; department: string; email: string } | null }) {
+  const name       = teacher?.full_name   ?? "Teacher";
+  const teacherId  = teacher?.teacher_id  ?? "";
+  const email      = teacher?.email       ?? "";
+  const department = teacher?.department  ?? "";
+  const initials   = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "T";
+
+  /* info rows for the quick-info list */
+  const infoItems = [
+    {
+      label: "Email",
+      value: email || "—",
+      bg: "#ede9fe", stroke: "#7c3aed",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+    },
+    {
+      label: "Department",
+      value: department || "—",
+      bg: "#dbeafe", stroke: "#2563eb",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
+    },
+    {
+      label: "Employment",
+      value: "Full-time",
+      bg: "#dcfce7", stroke: "#16a34a",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/></svg>,
+    },
+  ];
+
+  return (
+    <div className="d-flex flex-column gap-0">
+
+      {/* ── Banner header ─────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
+        borderRadius: "16px 16px 0 0",
+        padding: "32px 32px 72px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* decorative blobs */}
+        <div style={{ position:"absolute", top:-40, right:-40, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+        <div style={{ position:"absolute", bottom:-50, right:140, width:130, height:130, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+        <div style={{ position:"relative", zIndex:1 }}>
+          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.6rem" }}>My Profile</h1>
+          <p className="mb-0" style={{ color:"rgba(255,255,255,0.7)" }}>Your personal &amp; professional information</p>
+        </div>
+      </div>
+
+      {/* ── Cards pulled up over the banner ───────────────── */}
+      <div className="container-fluid px-3 px-md-4" style={{ marginTop:"-52px", paddingBottom:32 }}>
+        <div className="row g-4">
+
+          {/* ── Left: profile card ── */}
+          <div className="col-12 col-lg-4">
+            <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
+
+              {/* avatar */}
+              <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
+                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#667eea,#764ba2)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
+                  {initials}
+                </div>
+
+                <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{name}</h4>
+                <p className="text-muted small mb-3">{teacherId}</p>
+
+                {/* badges */}
+                <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                  <span className="badge rounded-pill px-3 py-2"
+                    style={{ background:"rgba(102,126,234,0.12)", color:"#667eea", border:"1px solid rgba(102,126,234,0.3)", fontWeight:600 }}>
+                    {department || "Teacher"}
+                  </span>
+                  <span className="badge rounded-pill px-3 py-2"
+                    style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>
+                    Active
+                  </span>
+                </div>
+
+                {/* stat boxes */}
+                <div className="w-100 row g-2 mb-3">
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                      <div className="fw-bold" style={{ fontSize:"1.15rem", color:"#667eea" }}>Full-time</div>
+                      <div className="text-muted" style={{ fontSize:"0.7rem" }}>Employment</div>
+                    </div>
+                  </div>
+                  <div className="col-6">
+                    <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                      <div className="fw-bold" style={{ fontSize:"1.15rem", color:"#16a34a" }}>Active</div>
+                      <div className="text-muted" style={{ fontSize:"0.7rem" }}>Status</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* quick-info list */}
+              <div className="px-4 pb-4">
+                <hr style={{ borderColor:"#e2e8f0" }} />
+                <div className="d-flex flex-column gap-3">
+                  {infoItems.map(item => (
+                    <div key={item.label} className="d-flex align-items-center gap-3">
+                      <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style={{ width:34, height:34, background:item.bg }}>
+                        {item.icon}
+                      </div>
+                      <div style={{ overflow:"hidden" }}>
+                        <div className="text-muted" style={{ fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>{item.label}</div>
+                        <div className="fw-semibold text-truncate" style={{ fontSize:"0.84rem", color:"#1e293b" }}>{item.value}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right: details card ── */}
+          <div className="col-12 col-lg-8">
+            <div className="card border-0 shadow-lg rounded-4 h-100">
+              <div className="card-body p-4 p-md-5">
+
+                {/* card header */}
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:44, height:44, background:"linear-gradient(135deg,#667eea,#764ba2)" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold mb-0" style={{ color:"#1e293b" }}>Profile Information</h5>
+                      <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your personal and professional details</p>
+                    </div>
+                  </div>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontSize:"0.75rem" }}>
+                    Read-Only
+                  </span>
+                </div>
+
+                {/* Personal section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#667eea,#764ba2)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Full Name</label>
+                      <input type="text" className="form-control rounded-3" value={name} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Teacher ID</label>
+                      <input type="text" className="form-control rounded-3" value={teacherId} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Email Address</label>
+                      <input type="email" className="form-control rounded-3" value={email} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional section */}
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#10b981,#059669)", borderRadius:4 }} />
+                    <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Professional Details</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Department</label>
+                      <input type="text" className="form-control rounded-3" value={department} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Employment Type</label>
+                      <input type="text" className="form-control rounded-3" value="Full-time" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Status</label>
+                      <input type="text" className="form-control rounded-3" value="Active" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#16a34a", fontWeight:600 }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info alert */}
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                    style={{ width:32, height:32, background:"#dbeafe" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                      Please visit the Registrar&apos;s Office or email{" "}
+                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
+                      with your updated details.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TeacherDashboardPage() {
   const [panel, setPanel]           = useState<Panel>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -2284,6 +2960,7 @@ export default function TeacherDashboardPage() {
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;
+      case "profile":       return <ProfilePanel teacher={apiTeacher} />;
       default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} />;
     }
   }
