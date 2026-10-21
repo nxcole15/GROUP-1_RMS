@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type AdminRecord = {
   id: number;
@@ -13,6 +14,22 @@ type AdminRecord = {
   created_at: string;
   updated_at: string;
 };
+
+type IconName = "users" | "activity" | "menu";
+
+function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  const props = {
+    width: size, height: size, fill: "none", viewBox: "0 0 24 24",
+    stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (name) {
+    case "users": return <svg {...props}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
+    case "activity": return <svg {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+    case "menu": return <svg {...props}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
+    default: return <svg {...props}><circle cx="12" cy="12" r="10"/></svg>;
+  }
+}
 
 const emptyForm = {
   admin_id: "",
@@ -32,6 +49,7 @@ export default function SuperAdminCreateAccountPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
+  const [showSidebar, setShowSidebar] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -190,412 +208,324 @@ export default function SuperAdminCreateAccountPage() {
   }
 
   return (
-    <div className="min-vh-100 position-relative overflow-hidden" style={{ 
-      background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
-    }}>
-      {/* Animated background effects */}
-      <div className="position-absolute w-100 h-100" style={{ opacity: 0.1, pointerEvents: "none" }}>
-        <div className="position-absolute rounded-circle" style={{ 
-          width: 400, height: 400, top: -100, right: -100,
-          background: "radial-gradient(circle, #ffd700 0%, transparent 70%)",
-          animation: "pulse 4s ease-in-out infinite"
-        }} />
-        <div className="position-absolute rounded-circle" style={{ 
-          width: 300, height: 300, bottom: -50, left: -50,
-          background: "radial-gradient(circle, #ff6b6b 0%, transparent 70%)",
-          animation: "pulse 6s ease-in-out infinite"
-        }} />
-        <div className="position-absolute rounded-circle" style={{ 
-          width: 250, height: 250, top: "40%", right: "20%",
-          background: "radial-gradient(circle, #4ecdc4 0%, transparent 70%)",
-          animation: "pulse 5s ease-in-out infinite"
-        }} />
+    <>
+      {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
+      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e3a8a 0%,#1e40af 100%)", overflowY: "auto" }}>
+        <div className="p-4 d-flex flex-column align-items-center border-bottom border-white border-opacity-10">
+          <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3" width={80} height={80} />
+          <div className="text-center">
+            <div className="text-white fw-bold" style={{ fontSize: "1.1rem" }}>Super Admin</div>
+            <div className="text-white-50 small">System Control Panel</div>
+          </div>
+        </div>
+
+        <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
+          <button onClick={() => router.push("/admin/super-admin/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+            <Icon name="activity" size={20} />
+            <span>Overview</span>
+          </button>
+          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#3b82f6" }}>
+            <Icon name="users" size={20} />
+            <span>Manage Accounts</span>
+          </button>
+        </nav>
+
+        <div className="px-3 py-4 border-top border-white border-opacity-10">
+          <button onClick={() => {
+            localStorage.removeItem("inform_token");
+            localStorage.removeItem("inform_role");
+            localStorage.removeItem("inform_user");
+            localStorage.removeItem("inform_admin_token");
+            router.push("/login");
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#1e3a8a", color: "#fff", border: "2px solid #1e40af", fontSize: "1rem" }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            <span>Log Out</span>
+          </button>
+        </div>
       </div>
 
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.1; }
-          50% { transform: scale(1.1); opacity: 0.15; }
-        }
-        @keyframes shimmer {
-          0% { background-position: -1000px 0; }
-          100% { background-position: 1000px 0; }
-        }
-        .shimmer-effect {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-          background-size: 1000px 100%;
-          animation: shimmer 3s infinite;
-        }
-      `}</style>
+      <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
+    <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
+      <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "24px 0" }}>
+        <div className="container-fluid px-4">
+          <div>
+            <h3 className="mb-0 fw-bold text-white">Manage Admin Accounts</h3>
+            <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Create, edit, and manage administrators</p>
+          </div>
+        </div>
+      </header>
 
-      <div className="container-fluid px-0 position-relative">
-        <div className="row g-0 min-vh-100">
-          <aside className="col-lg-3 border-end p-4 position-relative" style={{ 
-            background: "linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(138,43,226,0.15) 100%)",
-            borderRight: "2px solid rgba(255,215,0,0.3) !important",
-            backdropFilter: "blur(10px)"
-          }}>
-            <div className="d-flex align-items-center gap-3 mb-5 p-3 rounded-4" style={{
-              background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,105,180,0.2))",
-              border: "2px solid rgba(255,215,0,0.4)",
-              boxShadow: "0 8px 32px rgba(255,215,0,0.2)"
-            }}>
-              <div className="rounded-circle d-flex align-items-center justify-content-center fw-bold position-relative" style={{ 
-                width: 60, height: 60, 
-                background: "linear-gradient(135deg, #ffd700, #ff6b6b, #4ecdc4)",
-                fontSize: "1.5rem",
-                boxShadow: "0 0 30px rgba(255,215,0,0.6), inset 0 0 20px rgba(255,255,255,0.3)",
-                border: "3px solid rgba(255,255,255,0.5)"
-              }}>
-                <span style={{ textShadow: "0 0 10px rgba(0,0,0,0.5)" }}>S</span>
-              </div>
-              <div>
-                <div className="text-uppercase small fw-bold" style={{ 
-                  color: "#ffd700",
-                  letterSpacing: "0.15em",
-                  textShadow: "0 0 10px rgba(255,215,0,0.5)"
-                }}>SYSTEM</div>
-                <h5 className="mb-0 text-white fw-bold" style={{
-                  fontSize: "1.3rem",
-                  textShadow: "0 2px 10px rgba(0,0,0,0.5)"
-                }}>Super Admin</h5>
-              </div>
-            </div>
-
-            <nav className="nav flex-column gap-3">
-              <button className="btn text-start py-3 px-4 fw-bold position-relative overflow-hidden" style={{
-                background: "linear-gradient(135deg, #ffd700, #ffed4e)",
-                color: "#1a1a2e",
-                border: "2px solid rgba(255,255,255,0.5)",
-                borderRadius: "15px",
-                boxShadow: "0 8px 20px rgba(255,215,0,0.4), inset 0 2px 10px rgba(255,255,255,0.3)",
-                fontSize: "1.05rem"
-              }}>
-                <span style={{ position: "relative", zIndex: 1 }}>Admin Accounts</span>
-              </button>
-              
-              <button className="btn text-start py-3 px-4 fw-semibold" style={{
-                background: "rgba(255,255,255,0.1)",
-                color: "#fff",
-                border: "2px solid rgba(255,255,255,0.3)",
-                borderRadius: "15px",
-                transition: "all 0.3s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-                e.currentTarget.style.borderColor = "rgba(255,215,0,0.5)";
-                e.currentTarget.style.transform = "translateX(5px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
-                e.currentTarget.style.transform = "translateX(0)";
-              }}
-              onClick={() => {
-                localStorage.removeItem("inform_token");
-                localStorage.removeItem("inform_role");
-                localStorage.removeItem("inform_user");
-                localStorage.removeItem("inform_admin_token");
-                router.push("/login");
-              }}>Logout</button>
-            </nav>
-          </aside>
-
-          <main className="col-lg-9 p-4 p-xl-5 position-relative">
-            <div className="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
-              <div>
-                <div className="text-uppercase small fw-bold mb-2" style={{ 
-                  color: "#ffd700",
-                  letterSpacing: "0.2em",
-                  textShadow: "0 0 10px rgba(255,215,0,0.5)"
-                }}>MANAGEMENT CONSOLE</div>
-                <h1 className="mb-0 fw-bold" style={{
-                  fontSize: "2.5rem",
-                  background: "linear-gradient(135deg, #ffd700, #ffffff, #4ecdc4)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  textShadow: "0 2px 20px rgba(255,215,0,0.3)"
-                }}>Administrative Accounts</h1>
-              </div>
-              <div className="px-4 py-2 rounded-pill fw-bold" style={{
-                background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,105,180,0.2))",
-                border: "2px solid rgba(255,215,0,0.5)",
-                color: "#ffd700",
-                fontSize: "1.1rem",
-                boxShadow: "0 4px 15px rgba(255,215,0,0.3)"
-              }}>
-                {admins.length} total accounts
-              </div>
-            </div>
-
-            <div className="row g-4 align-items-start">
-              <div className="col-xl-5">
-                <div className="card border-0 rounded-4 position-relative overflow-hidden" style={{
-                  background: "rgba(255,255,255,0.95)",
-                  boxShadow: "0 20px 60px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)",
-                  backdropFilter: "blur(20px)"
-                }}>
-                  <div className="position-absolute top-0 start-0 w-100 h-100 shimmer-effect" style={{ pointerEvents: "none" }} />
-                  <div className="card-body p-4 position-relative">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                      <h2 className="h4 mb-0 fw-bold" style={{
-                        background: "linear-gradient(135deg, #ffd700, #ff6b6b)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent"
-                      }}>
-                        {editingId ? "Edit admin account" : "Create admin account"}
-                      </h2>
-                      {editingId && (
-                        <button className="btn btn-sm px-3 py-2 fw-semibold" type="button" onClick={resetForm} style={{
-                          background: "rgba(255,215,0,0.2)",
-                          border: "2px solid rgba(255,215,0,0.5)",
-                          borderRadius: "10px",
-                          color: "#1a1a2e"
-                        }}>Cancel</button>
-                      )}
-                    </div>
-
-                    {error && <div className="alert alert-danger border-0 rounded-3" style={{
-                      background: "rgba(255,107,107,0.15)",
-                      border: "2px solid rgba(255,107,107,0.5) !important",
-                      color: "#dc3545"
-                    }}>{error}</div>}
-                    {success && <div className="alert alert-success border-0 rounded-3" style={{
-                      background: "rgba(78,205,196,0.15)",
-                      border: "2px solid rgba(78,205,196,0.5) !important",
-                      color: "#198754"
-                    }}>{success}</div>}
-
-                    <form onSubmit={handleSubmit} className="row g-3">
-                      <div className="col-md-6">
-                        <label className="form-label fw-semibold text-dark">Admin ID</label>
-                        <input
-                          type="text"
-                          className="form-control py-3 px-3 border-2"
-                          style={{
-                            borderRadius: "12px",
-                            borderColor: "rgba(255,215,0,0.3)",
-                            background: "rgba(255,255,255,0.8)"
-                          }}
-                          value={form.admin_id}
-                          onChange={(e) => setForm({ ...form, admin_id: e.target.value })}
-                          disabled={!!editingId}
-                          placeholder="e.g. PRINCIPAL01"
-                          required
-                        />
-                      </div>
-
-                      <div className="col-md-6">
-                        <label className="form-label fw-semibold text-dark">Role</label>
-                        <select className="form-select py-3 px-3 border-2" style={{
-                          borderRadius: "12px",
-                          borderColor: "rgba(255,215,0,0.3)",
-                          background: "rgba(255,255,255,0.8)"
-                        }} value={role} onChange={(e) => setRole(e.target.value)}>
-                          <option value="principal">Principal</option>
-                          <option value="registrar">Registrar</option>
-                          <option value="accounting">Accounting</option>
-                        </select>
-                      </div>
-
-                      <div className="col-12">
-                        <label className="form-label fw-semibold text-dark">Full Name</label>
-                        <input
-                          type="text"
-                          className="form-control py-3 px-3 border-2"
-                          style={{
-                            borderRadius: "12px",
-                            borderColor: "rgba(255,215,0,0.3)",
-                            background: "rgba(255,255,255,0.8)"
-                          }}
-                          value={form.full_name}
-                          onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                          placeholder="e.g. Maria Santos"
-                          required
-                        />
-                      </div>
-
-                      <div className="col-12">
-                        <label className="form-label fw-semibold text-dark">Email</label>
-                        <input
-                          type="email"
-                          className="form-control py-3 px-3 border-2"
-                          style={{
-                            borderRadius: "12px",
-                            borderColor: "rgba(255,215,0,0.3)",
-                            background: "rgba(255,255,255,0.8)"
-                          }}
-                          value={form.email}
-                          onChange={(e) => setForm({ ...form, email: e.target.value })}
-                          placeholder="principal@school.edu"
-                          required
-                        />
-                      </div>
-
-                      {!editingId && (
-                        <div className="col-12">
-                          <label className="form-label fw-semibold text-dark">Temporary Password</label>
-                          <input
-                            type="password"
-                            className="form-control py-3 px-3 border-2"
-                            style={{
-                              borderRadius: "12px",
-                              borderColor: "rgba(255,215,0,0.3)",
-                              background: "rgba(255,255,255,0.8)"
-                            }}
-                            value={form.password}
-                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                            placeholder="Minimum 8 characters"
-                            minLength={8}
-                            required
-                          />
-                        </div>
-                      )}
-
-                      <div className="col-12 pt-2">
-                        <button type="submit" className="btn w-100 py-3 fw-bold text-dark position-relative overflow-hidden" disabled={loading} style={{
-                          background: "linear-gradient(135deg, #ffd700, #ffed4e)",
-                          border: "2px solid rgba(255,255,255,0.5)",
-                          borderRadius: "12px",
-                          boxShadow: "0 8px 25px rgba(255,215,0,0.4)",
-                          fontSize: "1.05rem",
-                          transition: "all 0.3s ease"
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!loading) e.currentTarget.style.transform = "translateY(-2px)";
-                          e.currentTarget.style.boxShadow = "0 12px 35px rgba(255,215,0,0.5)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 8px 25px rgba(255,215,0,0.4)";
-                        }}>
-                          {loading ? (editingId ? "Saving changes..." : "Creating account...") : editingId ? "Save changes" : `Create ${role} account`}
-                        </button>
-                      </div>
-                    </form>
+      <main className="container-fluid px-4 py-4">
+        <div className="row g-4">
+          <div className="col-lg-5">
+            <div className="card border-0 shadow-sm rounded-4">
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <div>
+                    <h4 className="fw-bold mb-1" style={{ color: "#3b82f6" }}>{editingId ? "Edit Admin Account" : "Create Admin Account"}</h4>
+                    <p className="text-muted mb-0" style={{ fontSize: 15 }}>Enter account details below</p>
                   </div>
+                  {editingId && (
+                    <button className="btn btn-outline-secondary px-3" type="button" onClick={resetForm}>Cancel</button>
+                  )}
+                </div>
+
+                {error && <div className="alert alert-danger border-0" style={{ background:"#fef2f2", color:"#dc2626" }}>{error}</div>}
+                {success && <div className="alert alert-success border-0" style={{ background:"#f0fdf4", color:"#16a34a" }}>{success}</div>}
+
+                <form onSubmit={handleSubmit} className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold text-dark" style={{ fontSize: 15 }}>Admin ID</label>
+                    <input type="text" className="form-control form-control-lg" value={form.admin_id} onChange={(e) => setForm({ ...form, admin_id: e.target.value })} disabled={!!editingId} placeholder="e.g. PRINCIPAL01" required />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold text-dark" style={{ fontSize: 15 }}>Role</label>
+                    <select className="form-select form-select-lg" value={role} onChange={(e) => setRole(e.target.value)}>
+                      <option value="principal">Principal</option>
+                      <option value="registrar">Registrar</option>
+                      <option value="accounting">Accounting</option>
+                    </select>
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label fw-semibold text-dark" style={{ fontSize: 15 }}>Full Name</label>
+                    <input type="text" className="form-control form-control-lg" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="e.g. Maria Santos" required />
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label fw-semibold text-dark" style={{ fontSize: 15 }}>Email</label>
+                    <input type="email" className="form-control form-control-lg" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="principal@school.edu" required />
+                  </div>
+
+                  {!editingId && (
+                    <div className="col-12">
+                      <label className="form-label fw-semibold text-dark" style={{ fontSize: 15 }}>Temporary Password</label>
+                      <input type="password" className="form-control form-control-lg" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Minimum 8 characters" minLength={8} required />
+                    </div>
+                  )}
+
+                  <div className="col-12 pt-2">
+                    <button type="submit" className="btn w-100 py-3 fw-semibold text-white" disabled={loading} style={{ fontSize: 16, background: "linear-gradient(135deg,#3b82f6,#60a5fa)", border: "none" }}>
+                      {loading ? (editingId ? "Saving changes..." : "Creating account...") : editingId ? "Save Changes" : `Create ${role.charAt(0).toUpperCase() + role.slice(1)} Account`}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-7">
+            <div className="card border-0 shadow-sm rounded-4">
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                  <div>
+                    <h4 className="fw-bold mb-1" style={{ color: "#3b82f6" }}>Admin Accounts</h4>
+                    <p className="text-muted mb-0" style={{ fontSize: 15 }}>View and manage all admin accounts</p>
+                  </div>
+                  <input type="search" className="form-control form-control-lg" style={{ minWidth: 300, maxWidth: 400 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search accounts..." />
+                </div>
+
+                {loadingList ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border mb-3" role="status" style={{ width: 50, height: 50, color: "#3b82f6" }}>
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="text-muted fs-5">Loading accounts...</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle mb-0" style={{ fontSize: 15 }}>
+                      <thead>
+                        <tr style={{ borderBottom:"2px solid #f1f5f9" }}>
+                          <th className="fw-bold py-3 text-dark" style={{ fontSize: 15 }}>ID / Email</th>
+                          <th className="fw-bold py-3 text-dark" style={{ fontSize: 15 }}>Name</th>
+                          <th className="fw-bold py-3 text-dark" style={{ fontSize: 15 }}>Role</th>
+                          <th className="fw-bold py-3 text-dark" style={{ fontSize: 15 }}>Status</th>
+                          <th className="fw-bold py-3 text-dark" style={{ fontSize: 15 }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAdmins.length ? filteredAdmins.map((admin) => (
+                          <tr key={admin.id} className={admin.is_archived ? "opacity-50" : ""} style={{ borderBottom:"1px solid #f8fafc" }}>
+                            <td className="py-3">
+                              <div className="fw-semibold text-dark">{admin.admin_id}</div>
+                              <div className="text-muted" style={{ fontSize: 13 }}>{admin.email}</div>
+                            </td>
+                            <td className="fw-medium py-3">{admin.full_name}</td>
+                            <td className="py-3">
+                              <span className="badge text-capitalize fw-semibold px-3 py-2" style={{ 
+                                fontSize: 14,
+                                background: admin.role === "principal" ? "#eff6ff" : admin.role === "registrar" ? "#f5f3ff" : "#ecfeff",
+                                color: admin.role === "principal" ? "#3b82f6" : admin.role === "registrar" ? "#8b5cf6" : "#06b6d4"
+                              }}>{admin.role}</span>
+                            </td>
+                            <td className="py-3">
+                              {admin.is_archived ? (
+                                <span className="badge fw-semibold px-3 py-2" style={{ fontSize: 14, background:"#f1f5f9", color:"#64748b" }}>Archived</span>
+                              ) : (
+                                <span className="badge fw-semibold px-3 py-2" style={{ fontSize: 14, background:"#dcfce7", color:"#16a34a" }}>Active</span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              <div className="d-flex gap-2 flex-wrap align-items-center">
+                                <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => startEdit(admin)} style={{ fontSize: 14, background:"#eff6ff", color:"#2563eb", border:"1px solid #dbeafe" }}>Edit</button>
+                                <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => handleArchive(admin)} style={{ fontSize: 14, background:"#fffbeb", color:"#d97706", border:"1px solid #fef3c7" }}>
+                                  {admin.is_archived ? "Restore" : "Archive"}
+                                </button>
+                                <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => handleDelete(admin)} style={{ fontSize: 14, background:"#fef2f2", color:"#dc2626", border:"1px solid #fecaca" }}>Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={5} className="text-center py-5">
+                              <p className="text-muted mb-0 fs-5">No accounts match your search</p>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+      </div>
+
+      <div className="d-lg-none">
+        <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
+          <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "24px 0", position: "relative" }}>
+            <button className="btn position-absolute top-0 start-0 m-3" onClick={() => setShowSidebar(true)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "white" }}>
+              <Icon name="menu" size={20} />
+            </button>
+            <div className="container-fluid px-4" style={{ paddingTop: 40 }}>
+              <h3 className="mb-0 fw-bold text-white" style={{ fontSize: "1.3rem" }}>Manage Accounts</h3>
+              <p className="mb-0 text-white-50" style={{ fontSize: 14 }}>Create and edit administrators</p>
+            </div>
+          </header>
+
+          <main className="container-fluid px-3 py-4">
+            <div className="row g-3 mb-4">
+              <div className="col-4">
+                <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
+                  <div className="card-body p-2">
+                    <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Total</p>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#3b82f6", lineHeight: 1 }}>{admins.length}</h3>
+                  </div>
+                  <div style={{ height:2, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }} />
                 </div>
               </div>
+              <div className="col-4">
+                <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
+                  <div className="card-body p-2">
+                    <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Active</p>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#8b5cf6", lineHeight: 1 }}>{admins.filter(a => !a.is_archived).length}</h3>
+                  </div>
+                  <div style={{ height:2, background:"linear-gradient(135deg,#8b5cf6,#a78bfa)" }} />
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
+                  <div className="card-body p-2">
+                    <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Archived</p>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#06b6d4", lineHeight: 1 }}>{admins.filter(a => a.is_archived).length}</h3>
+                  </div>
+                  <div style={{ height:2, background:"linear-gradient(135deg,#06b6d4,#22d3ee)" }} />
+                </div>
+              </div>
+            </div>
 
-              <div className="col-xl-7">
-                <div className="card border-0 rounded-4 position-relative overflow-hidden" style={{
-                  background: "rgba(255,255,255,0.95)",
-                  boxShadow: "0 20px 60px rgba(255,215,0,0.3), 0 0 0 1px rgba(255,215,0,0.2)",
-                  backdropFilter: "blur(20px)"
-                }}>
-                  <div className="position-absolute top-0 start-0 w-100 h-100 shimmer-effect" style={{ pointerEvents: "none" }} />
-                  <div className="card-body p-4 position-relative">
-                    <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                      <h2 className="h4 mb-0 fw-bold" style={{
-                        background: "linear-gradient(135deg, #ffd700, #4ecdc4)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent"
-                      }}>Created accounts</h2>
-                      <input
-                        type="search"
-                        className="form-control w-auto py-2 px-3 border-2"
-                        style={{ 
-                          minWidth: 220,
-                          borderRadius: "12px",
-                          borderColor: "rgba(255,215,0,0.3)",
-                          background: "rgba(255,255,255,0.8)"
-                        }}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search accounts"
-                      />
+            <div className="card border-0 shadow-sm rounded-3 mb-3">
+              <div className="card-body p-3">
+                <h4 className="fw-bold mb-3" style={{ color: "#3b82f6", fontSize: "1rem" }}>{editingId ? "Edit Account" : "Create Account"}</h4>
+                {error && <div className="alert alert-danger border-0 p-2 mb-2" style={{ background:"#fef2f2", color:"#dc2626", fontSize: "0.8rem" }}>{error}</div>}
+                {success && <div className="alert alert-success border-0 p-2 mb-2" style={{ background:"#f0fdf4", color:"#16a34a", fontSize: "0.8rem" }}>{success}</div>}
+                <form onSubmit={handleSubmit} className="row g-2">
+                  <div className="col-6">
+                    <label className="form-label fw-semibold small mb-1">Admin ID</label>
+                    <input type="text" className="form-control" value={form.admin_id} onChange={(e) => setForm({ ...form, admin_id: e.target.value })} disabled={!!editingId} placeholder="PRINCIPAL01" required style={{ fontSize: "0.85rem" }} />
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label fw-semibold small mb-1">Role</label>
+                    <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)} style={{ fontSize: "0.85rem" }}>
+                      <option value="principal">Principal</option>
+                      <option value="registrar">Registrar</option>
+                      <option value="accounting">Accounting</option>
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label fw-semibold small mb-1">Full Name</label>
+                    <input type="text" className="form-control" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Maria Santos" required style={{ fontSize: "0.85rem" }} />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label fw-semibold small mb-1">Email</label>
+                    <input type="email" className="form-control" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="principal@school.edu" required style={{ fontSize: "0.85rem" }} />
+                  </div>
+                  {!editingId && (
+                    <div className="col-12">
+                      <label className="form-label fw-semibold small mb-1">Password</label>
+                      <input type="password" className="form-control" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" minLength={8} required style={{ fontSize: "0.85rem" }} />
                     </div>
-
-                    {loadingList ? (
-                      <div className="text-center py-5">
-                        <div className="spinner-border" style={{ color: "#ffd700" }} role="status">
-                          <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <div className="mt-3 fw-semibold" style={{ color: "#ffd700" }}>Loading accounts...</div>
-                      </div>
-                    ) : (
-                      <div className="table-responsive">
-                        <table className="table align-middle">
-                          <thead>
-                            <tr style={{ borderBottom: "2px solid rgba(255,215,0,0.3)" }}>
-                              <th className="fw-bold text-dark">ID</th>
-                              <th className="fw-bold text-dark">Name</th>
-                              <th className="fw-bold text-dark">Role</th>
-                              <th className="fw-bold text-dark">Status</th>
-                              <th className="fw-bold text-dark">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredAdmins.length ? filteredAdmins.map((admin) => (
-                              <tr key={admin.id} className={admin.is_archived ? "opacity-50" : ""} style={{
-                                borderBottom: "1px solid rgba(0,0,0,0.05)"
-                              }}>
-                                <td>
-                                  <div className="fw-semibold text-dark">{admin.admin_id}</div>
-                                  <div className="small text-muted">{admin.email}</div>
-                                </td>
-                                <td className="fw-medium">{admin.full_name}</td>
-                                <td>
-                                  <span className="badge px-3 py-2 text-capitalize fw-semibold" style={{
-                                    background: "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(78,205,196,0.2))",
-                                    color: "#1a1a2e",
-                                    border: "1px solid rgba(255,215,0,0.4)",
-                                    borderRadius: "8px"
-                                  }}>{admin.role}</span>
-                                </td>
-                                <td>
-                                  <span className={`badge px-3 py-2 fw-semibold`} style={{
-                                    background: admin.is_archived ? "rgba(108,117,125,0.2)" : "rgba(78,205,196,0.2)",
-                                    color: admin.is_archived ? "#6c757d" : "#198754",
-                                    border: admin.is_archived ? "1px solid rgba(108,117,125,0.4)" : "1px solid rgba(78,205,196,0.4)",
-                                    borderRadius: "8px"
-                                  }}>
-                                    {admin.is_archived ? "Archived" : "Active"}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="d-flex gap-2 flex-wrap">
-                                    <button type="button" className="btn btn-sm px-3 py-1 fw-semibold" onClick={() => startEdit(admin)} style={{
-                                      background: "rgba(78,205,196,0.2)",
-                                      border: "1px solid rgba(78,205,196,0.5)",
-                                      borderRadius: "8px",
-                                      color: "#0c7c72"
-                                    }}>Edit</button>
-                                    <button type="button" className="btn btn-sm px-3 py-1 fw-semibold" onClick={() => handleArchive(admin)} style={{
-                                      background: "rgba(255,193,7,0.2)",
-                                      border: "1px solid rgba(255,193,7,0.5)",
-                                      borderRadius: "8px",
-                                      color: "#997404"
-                                    }}>
-                                      {admin.is_archived ? "Restore" : "Archive"}
-                                    </button>
-                                    <button type="button" className="btn btn-sm px-3 py-1 fw-semibold" onClick={() => handleDelete(admin)} style={{
-                                      background: "rgba(255,107,107,0.2)",
-                                      border: "1px solid rgba(255,107,107,0.5)",
-                                      borderRadius: "8px",
-                                      color: "#c82333"
-                                    }}>Delete</button>
-                                  </div>
-                                </td>
-                              </tr>
-                            )) : (
-                              <tr>
-                                <td colSpan={5} className="text-center py-5">
-                                  <div className="text-muted fw-semibold">No accounts match your search.</div>
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                  )}
+                  <div className="col-12 d-flex gap-2">
+                    <button type="submit" className="btn flex-grow-1 py-2 fw-semibold text-white" disabled={loading} style={{ fontSize: "0.85rem", background: "linear-gradient(135deg,#3b82f6,#60a5fa)", border: "none" }}>
+                      {loading ? "Saving..." : editingId ? "Save" : "Create"}
+                    </button>
+                    {editingId && (
+                      <button type="button" className="btn btn-outline-secondary py-2 px-3" onClick={resetForm} style={{ fontSize: "0.85rem" }}>Cancel</button>
                     )}
                   </div>
+                </form>
+              </div>
+            </div>
+
+            <div className="card border-0 shadow-sm rounded-3">
+              <div className="card-body p-3">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h4 className="fw-bold mb-0" style={{ color: "#3b82f6", fontSize: "1rem" }}>Accounts</h4>
+                  <input type="search" className="form-control w-auto" style={{ fontSize: "0.8rem" }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." />
                 </div>
+                {loadingList ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border spinner-border-sm" style={{ color:"#3b82f6" }} />
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column gap-2">
+                    {filteredAdmins.map((admin) => (
+                      <div key={admin.id} className="p-2 rounded" style={{ background:"#f8fafc", fontSize: "0.8rem" }}>
+                        <div className="d-flex justify-content-between align-items-start mb-1">
+                          <div className="flex-grow-1">
+                            <div className="fw-bold">{admin.full_name}</div>
+                            <div className="text-muted small">{admin.admin_id}</div>
+                          </div>
+                          <span className="badge px-2 py-1" style={{ 
+                            background: admin.role === "principal" ? "#eff6ff" : admin.role === "registrar" ? "#f5f3ff" : "#ecfeff",
+                            color: admin.role === "principal" ? "#3b82f6" : admin.role === "registrar" ? "#8b5cf6" : "#06b6d4",
+                            fontSize:"0.65rem"
+                          }}>{admin.role}</span>
+                        </div>
+                        <div className="d-flex gap-1">
+                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => startEdit(admin)} style={{ fontSize: "0.7rem", background:"#eff6ff", color:"#3b82f6", border:"none" }}>Edit</button>
+                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => handleArchive(admin)} style={{ fontSize: "0.7rem", background:"#f5f3ff", color:"#8b5cf6", border:"none" }}>
+                            {admin.is_archived ? "Restore" : "Archive"}
+                          </button>
+                          <button type="button" className="btn btn-sm py-1 px-2" onClick={() => handleDelete(admin)} style={{ fontSize: "0.7rem", background:"#fef2f2", color:"#dc2626", border:"none" }}>Del</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </main>
         </div>
       </div>
-    </div>
+    </>
   );
 }
