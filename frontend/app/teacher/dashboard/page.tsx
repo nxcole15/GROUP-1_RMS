@@ -187,13 +187,49 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 /* -- Overview -- */
 function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
   const displayTeacher = teacher ?? teacherData;
-  const pendingRequests = gradeRequestsTeacher.filter(r => r.status === "pending").length;
-  const avgGrade = grades.length > 0 ? Math.round(grades.reduce((a, g) => a + g.percentage, 0) / grades.length) : 0;
+  const [overviewData, setOverviewData] = useState<{
+    total_students: number;
+    avg_grade: number;
+    pending_requests: number;
+    active_term: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        const token = localStorage.getItem("inform_token");
+        const res = await fetch(`${API_BASE}/api/teacher/overview`, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOverviewData(data);
+        } else {
+          console.error("Overview fetch failed:", res.status, res.statusText);
+        }
+      } catch (err) {
+        console.error("Failed to fetch overview:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOverview();
+  }, []);
+
+  const totalStudents = overviewData?.total_students || 0;
+  const avgGrade = Math.round(overviewData?.avg_grade || 0);
+  const pendingRequests = overviewData?.pending_requests || 0;
+  const displayActiveTerm = overviewData?.active_term || activeTerm;
 
   const stats = [
     {
       label: "My Students",
-      value: students.length,
+      value: loading ? "..." : totalStudents,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
       gradient: "linear-gradient(135deg,#6366f1,#818cf8)",
       shadow: "rgba(99,102,241,0.35)",
@@ -202,7 +238,7 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
     },
     {
       label: "Class Avg. Grade",
-      value: `${avgGrade}%`,
+      value: loading ? "..." : `${avgGrade}%`,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
       gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)",
       shadow: "rgba(245,158,11,0.35)",
@@ -211,7 +247,7 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
     },
     {
       label: "Pending Requests",
-      value: pendingRequests,
+      value: loading ? "..." : pendingRequests,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/></svg>,
       gradient: "linear-gradient(135deg,#ef4444,#f87171)",
       shadow: "rgba(239,68,68,0.35)",
@@ -220,7 +256,7 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
     },
     {
       label: "Active Term",
-      value: activeTerm,
+      value: loading ? "..." : displayActiveTerm,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
       gradient: "linear-gradient(135deg,#059669,#10b981)",
       shadow: "rgba(5,150,105,0.35)",
@@ -1641,6 +1677,8 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     student_id: string;
     full_name: string;
     student_name?: string;
+    student_track?: string;
+    strand?: string;
     subject_code: string;
     subject_name: string;
     subject_title: string;
@@ -2042,8 +2080,13 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="card-body p-3 d-flex align-items-center gap-3">
                   <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 40, height: 40 }}><Icon name="checkCircle" size={20} /></div>
                   <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.full_name} – {req.subject_title}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}</div>
+                    <div className="fw-bold small text-dark">{req.student_name || req.full_name}</div>
+                    <div className="text-muted" style={{ fontSize: 12 }}>
+                      {req.subject_name} {req.strand && `- ${req.strand}`}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: 11 }}>
+                      Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}
+                    </div>
                   </div>
                   <span className="badge bg-success text-white" style={{ fontSize: 10 }}><Icon name="check" size={12} className="me-1" /> Released</span>
                 </div>
@@ -2079,9 +2122,65 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
 /* -- Document Approvals -- */
 function DocumentApprovalsPanel() {
-  const [docs, setDocs] = useState(documentApprovals);
-  const pending  = docs.filter(d => d.status === "pending");
-  const approved = docs.filter(d => d.status === "approved");
+  const [docs, setDocs] = useState<Array<{
+    id: number; 
+    student: string; 
+    document_type: string;
+    status: string; 
+    created_at: string;
+    teacher_reviewed_at?: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      const token = localStorage.getItem("inform_token");
+      if (!token) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/teacher/documents`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setDocs(data.documents || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch documents:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDocuments();
+  }, []);
+  
+  const pending = docs.filter(d => d.status === "student_requested");
+  const approved = docs.filter(d => d.status === "teacher_approved");
+  
+  const handleApprove = async (id: number) => {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/teacher/documents/${id}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      
+      if (res.ok) {
+        // Refresh list
+        setDocs(prev => prev.map(d => 
+          d.id === id ? { ...d, status: "teacher_approved" } : d
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to approve document:", err);
+    }
+  };
   
   // Document type icons mapping
   const getDocIcon = (type: string): IconName => {
@@ -2154,45 +2253,28 @@ function DocumentApprovalsPanel() {
           </div>
           <div className="row g-3">
             {pending.map(doc => (
-              <div key={doc.id} className="col-12 col-lg-6">
-                <div className="card border-0 shadow-sm rounded-3 h-100 border-start border-4 border-warning">
+              <div key={doc.id} className="col-12 col-md-6">
+                <div className="card border-0 shadow-sm h-100">
                   <div className="card-body p-4">
                     <div className="d-flex align-items-start gap-3 mb-3">
-                      <div className="rounded-circle bg-warning bg-opacity-15 p-3 flex-shrink-0">
-                        <Icon name={getDocIcon(doc.type)} size={24} className="text-warning" />
+                      <div className="rounded-3 bg-warning bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }}>
+                        <Icon name={getDocIcon(doc.document_type)} size={20} className="text-warning" />
                       </div>
                       <div className="flex-grow-1">
-                        <h5 className="fw-bold text-dark mb-2">{doc.student}</h5>
-                        <div className="d-flex flex-wrap gap-2 mb-2">
-                          <span className="badge bg-light text-dark border px-3 py-2">
-                            <Icon name="file" size={12} className="me-1" />
-                            {doc.type}
-                          </span>
-                          <span className="badge bg-light text-dark border px-3 py-2">
-                            <Icon name="calendar" size={12} className="me-1" />
-                            {doc.requestedAt}
-                          </span>
+                        <div className="fw-bold text-dark mb-1">{doc.student}</div>
+                        <div className="text-muted small">{doc.document_type}</div>
+                        <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                          Requested: {new Date(doc.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
                         </div>
-                        <span className="badge bg-warning text-white px-3 py-2 fw-semibold">Pending Review</span>
                       </div>
                     </div>
-                    <div className="d-flex gap-2">
-                      <button 
-                        onClick={() => setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved", approvedAt: new Date().toLocaleDateString() } : d))} 
-                        className="btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2"
-                      >
-                        <Icon name="check" size={18} />
-                        Approve
-                      </button>
-                      <button 
-                        onClick={() => setDocs(prev => prev.filter(d => d.id !== doc.id))} 
-                        className="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
-                        style={{ minWidth: 100 }}
-                      >
-                        <Icon name="x" size={18} />
-                        Reject
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => handleApprove(doc.id)}
+                      className="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+                    >
+                      <Icon name="checkCircle" size={16} />
+                      Approve & Forward
+                    </button>
                   </div>
                 </div>
               </div>

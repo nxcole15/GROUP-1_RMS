@@ -57,6 +57,15 @@ const {
   bulkEnrollStudents,
   getSchedulingStatistics
 } = require("./schedulingController");
+const {
+  getRegistrarDocuments,
+  registrarForwardToPrincipal,
+  registrarSetPickup,
+  registrarMarkAsReleased,
+  getPrincipalDocuments,
+  principalApprove,
+  principalReject
+} = require("./adminDocumentController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
 // ── Public admin auth ──────────────────────────────────────────────────────
@@ -133,5 +142,15 @@ router.get("/scheduling/students/:student_id/schedules", getStudentSchedules);
 router.get("/scheduling/timetable", getWeeklyTimetable);
 router.post("/scheduling/schedules/:schedule_id/enroll-bulk", bulkEnrollStudents);
 router.get("/scheduling/statistics", getSchedulingStatistics);
+
+// Document Workflow - Registrar & Principal
+router.get("/documents/registrar", getRegistrarDocuments);
+router.post("/documents/:id/registrar-forward", registrarForwardToPrincipal);
+router.post("/documents/:id/set-pickup", registrarSetPickup);
+router.post("/documents/:id/mark-released", registrarMarkAsReleased);
+
+router.get("/documents/principal", getPrincipalDocuments);
+router.post("/documents/:id/principal-approve", principalApprove);
+router.post("/documents/:id/principal-reject", principalReject);
 
 module.exports = router;

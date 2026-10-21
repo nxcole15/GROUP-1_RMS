@@ -112,10 +112,12 @@ async function getDashboardData(req, res, next) {
     try {
       const [rows] = await db.query(`
         SELECT 
-          g.subject_code,
-          g.subject_title,
+          g.id,
+          g.subject_name,
+          g.strand,
           g.percentage,
-          g.term
+          g.term,
+          g.created_at
         FROM grades g
         WHERE g.student_id = ?
         ORDER BY g.created_at DESC
@@ -123,6 +125,7 @@ async function getDashboardData(req, res, next) {
       `, [studentId]);
       recentGradesRows = rows;
     } catch (err) {
+      console.error("Error fetching recent grades:", err.message);
       // Grades table might not exist yet
     }
 

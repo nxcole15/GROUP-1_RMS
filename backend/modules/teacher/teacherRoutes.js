@@ -2,12 +2,13 @@ const express = require("express");
 const router  = express.Router();
 
 
-const { login, logout, getProfile, getDashboard, getNotifications }           = require("./teacherAuthController");
+const { login, logout, getProfile, getDashboard, getNotifications, getOverview }           = require("./teacherAuthController");
 const { getSubjectGrades, submitGrade, getClassGradeStats }                   = require("./teacherGradesController");
 const { getSubjectAttendance, updateAttendance, getClassAttendanceStats }      = require("./teacherAttendanceController");
 const { getSubjectStudentsWithGrades, getStudentsWithGradesForClass, saveDraftGrade, submitGradesBatch, getSubmissionStatus, getTeacherSubjectsWithStatus, getTeacherSubjectsForGrades } = require("./teacherGradeSubmissionController");
 const { getTeacherSchedules, getScheduleStudents }                             = require("./teacherScheduleController");
 const { authenticateTeacher }                                                  = require("./teacherMiddleware");
+const { getMyDocumentRequests, approveDocumentRequest }                        = require("./teacherDocumentController");
 
 // Public routes (no token needed)
 router.post("/login",  login);
@@ -20,6 +21,7 @@ router.use(authenticateTeacher);
 router.get("/profile",   getProfile);
 router.get("/notifications", getNotifications);
 router.get("/dashboard", getDashboard);
+router.get("/overview",  getOverview);
 
 // Grades
 router.get("/grades/:subject_id",       getSubjectGrades);
@@ -48,6 +50,10 @@ router.get("/attendance/class/:subject_id",  getClassAttendanceStats);
 // Teacher Schedules
 router.get("/schedules",                     getTeacherSchedules);
 router.get("/schedules/:schedule_id/students", getScheduleStudents);
+
+// Document Requests
+router.get("/documents",                     getMyDocumentRequests);
+router.post("/documents/:id/approve",        approveDocumentRequest);
 
 
 module.exports = router;

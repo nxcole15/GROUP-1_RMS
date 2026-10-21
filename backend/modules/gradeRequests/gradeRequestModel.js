@@ -43,7 +43,9 @@ const GradeRequestModel = {
     const [rows] = await db.query(
       `SELECT gr.*, 
               s.full_name AS student_name, 
+              s.pathway AS student_track,
               COALESCE(ts.subject_name, sub.name) AS subject_name,
+              COALESCE(ts.strand, s.strand) AS strand,
               COALESCE(CONCAT(ts.subject_name, ' (', ts.strand, ')'), sub.code) AS subject_code
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id

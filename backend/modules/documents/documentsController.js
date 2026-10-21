@@ -17,8 +17,8 @@ function getDocumentTypes(req, res) {
 
 async function submitDocumentRequest(req, res, next) {
   try {
-    const { student_id }                     = req.student;
-    const { document_type, purpose, copies } = req.body;
+    const { student_id }                              = req.student;
+    const { document_type, purpose, copies, teacher_id } = req.body;
 
     const errors = [];
     if (!document_type || !DocumentModel.SUPPORTED_TYPES.includes(document_type)) {
@@ -30,6 +30,11 @@ async function submitDocumentRequest(req, res, next) {
     const parsedCopies = parseInt(copies, 10);
     if (isNaN(parsedCopies) || parsedCopies < 1 || parsedCopies > 10) {
       errors.push("copies must be an integer between 1 and 10.");
+    }
+    // Parse teacher_id to handle both string and number
+    const parsedTeacherId = parseInt(teacher_id, 10);
+    if (!teacher_id || isNaN(parsedTeacherId) || parsedTeacherId < 1) {
+      errors.push("teacher_id is required - please select your adviser.");
     }
     if (errors.length > 0) {
       return res.status(400).json({ error: "Validation failed.", details: errors });
@@ -46,10 +51,11 @@ async function submitDocumentRequest(req, res, next) {
       document_type,
       purpose: purpose.trim(),
       copies:  parsedCopies,
+      teacher_id: parsedTeacherId,
     });
 
     res.status(201).json({
-      message:          "Document request submitted successfully.",
+      message:          "Document request submitted successfully. Your adviser will review it.",
       reference_number: doc.reference_number,
       document:         doc,
     });
