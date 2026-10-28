@@ -31,12 +31,33 @@ const TeacherModel = {
   },
 
   async getAssignedSubjects(teacher_id) {
-    const [rows] = await db.query(
-      `SELECT s.id, s.code, s.name, s.units, s.max_capacity, s.enrolled_count
-       FROM subjects s
-       WHERE s.teacher_id = (SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1)
-       ORDER BY s.code`,
+    // Get teacher's internal ID first
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
       [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+
+    if (!internalTeacherId) {
+      return [];
+    }
+
+    // Get subjects from teacher_schedules (new system)
+    const [rows] = await db.query(
+      `SELECT 
+         ts.id,
+         ts.subject_name AS name,
+         ts.subject_name AS code,
+         ts.strand,
+         ts.track,
+         ts.term,
+         COUNT(DISTINCT sse.student_id) AS enrolled_count
+       FROM teacher_schedules ts
+       LEFT JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
+       WHERE ts.teacher_id = ?
+       GROUP BY ts.id, ts.subject_name, ts.strand, ts.track, ts.term
+       ORDER BY ts.subject_name`,
+      [internalTeacherId]
     );
     return rows;
   },
@@ -137,17 +158,150 @@ const TeacherModel = {
     return rows[0] || { total_subjects: 0, total_students: 0, avg_grade: 0 };
   },
 
+  async getOverviewStats(teacher_id) {
+    // Get teacher's internal ID first
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
+      [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+
+    if (!internalTeacherId) {
+      return {
+        total_students: 0,
+        avg_grade: 0,
+        pending_requests: 0,
+        active_term: 'Term 1'
+      };
+    }
+
+    // Get total students enrolled in this teacher's classes (using new teacher_schedules system)
+    const [studentRows] = await db.query(
+      `SELECT COUNT(DISTINCT sse.student_id) AS total_students
+       FROM teacher_schedules ts
+       INNER JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
+       WHERE ts.teacher_id = ?`,
+      [internalTeacherId]
+    );
+
+    // Get average grade for this teacher's students
+    // Check if teacher_schedule_id column exists in grades table
+    const [columnCheck] = await db.query(
+      `SELECT COLUMN_NAME 
+       FROM INFORMATION_SCHEMA.COLUMNS 
+       WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'grades' 
+         AND COLUMN_NAME = 'teacher_schedule_id'`
+    );
+    
+    let gradeRows;
+    if (columnCheck.length > 0) {
+      // New system: use teacher_schedule_id
+      [gradeRows] = await db.query(
+        `SELECT ROUND(AVG(g.percentage), 2) AS avg_grade,
+                COUNT(g.id) AS grade_count
+         FROM grades g
+         LEFT JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+         LEFT JOIN subjects s ON g.subject_id = s.id
+         WHERE (ts.teacher_id = ? OR s.teacher_id = ?) 
+           AND g.percentage IS NOT NULL`,
+        [internalTeacherId, internalTeacherId]
+      );
+    } else {
+      // Old system: need to handle both old (subject_id) and new (subject_name + strand)
+      // Check if subject_name column exists (indicates new system is being used)
+      const [subjectNameCheck] = await db.query(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+           AND TABLE_NAME = 'grades' 
+           AND COLUMN_NAME = 'subject_name'`
+      );
+      
+      if (subjectNameCheck.length > 0) {
+        // New system without teacher_schedule_id: use subject_name + strand
+        // Need to match through teacher_schedules table
+        [gradeRows] = await db.query(
+          `SELECT ROUND(AVG(g.percentage), 2) AS avg_grade,
+                  COUNT(g.id) AS grade_count
+           FROM grades g
+           INNER JOIN teacher_schedules ts 
+             ON g.subject_name = ts.subject_name 
+             AND g.strand = ts.strand
+           WHERE ts.teacher_id = ? 
+             AND g.percentage IS NOT NULL`,
+          [internalTeacherId]
+        );
+      } else {
+        // Original old system: use subject_id
+        [gradeRows] = await db.query(
+          `SELECT ROUND(AVG(g.percentage), 2) AS avg_grade,
+                  COUNT(g.id) AS grade_count
+           FROM grades g
+           INNER JOIN subjects s ON g.subject_id = s.id
+           WHERE s.teacher_id = ? AND g.percentage IS NOT NULL`,
+          [internalTeacherId]
+        );
+      }
+    }
+
+    // Get pending grade requests count for this teacher
+    const [requestRows] = await db.query(
+      `SELECT COUNT(*) AS pending_requests
+       FROM grade_requests gr
+       WHERE gr.teacher_id = ? AND gr.status = 'pending'`,
+      [internalTeacherId]
+    );
+
+    // Get pending document approvals count for this teacher
+    const [docRequestRows] = await db.query(
+      `SELECT COUNT(*) AS pending_docs
+       FROM documents d
+       WHERE d.teacher_id = ? AND d.status = 'student_requested'`,
+      [internalTeacherId]
+    );
+
+    // Get active term from enrollment_config
+    const [termRows] = await db.query(
+      `SELECT active_term FROM enrollment_config LIMIT 1`
+    ).catch(() => [[]]);
+
+    return {
+      total_students: studentRows[0]?.total_students || 0,
+      avg_grade: gradeRows[0]?.avg_grade || 0,
+      pending_requests: (requestRows[0]?.pending_requests || 0) + (docRequestRows[0]?.pending_docs || 0),
+      active_term: termRows[0]?.active_term || 'Term 1'
+    };
+  },
+
   async getRecentActivity(teacher_id, limit = 5) {
+    // Get teacher's internal ID
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
+      [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+
+    if (!internalTeacherId) {
+      return [];
+    }
+
     const [rows] = await db.query(
-      `SELECT 'grade' AS type, g.created_at, st.full_name AS student_name,
-              s.name AS subject_name, g.percentage AS value
+      `(SELECT 'grade' AS type, g.created_at, st.full_name AS student_name,
+              s.name AS subject_name, g.percentage AS value, NULL AS document_type
        FROM grades g
        JOIN students st ON st.student_id = g.student_id
        JOIN subjects s ON s.id = g.subject_id
-       WHERE s.teacher_id = (SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1)
-       ORDER BY g.created_at DESC
+       WHERE s.teacher_id = ?)
+       UNION ALL
+       (SELECT 'document' AS type, d.teacher_reviewed_at AS created_at, st.full_name AS student_name,
+              d.document_type AS subject_name, NULL AS value, d.document_type AS document_type
+       FROM documents d
+       JOIN students st ON st.student_id = d.student_id
+       WHERE d.teacher_id = ? AND d.teacher_reviewed_at IS NOT NULL)
+       ORDER BY created_at DESC
        LIMIT ?`,
-      [teacher_id, limit]
+      [internalTeacherId, teacher_id, limit]
     );
     return rows;
   },

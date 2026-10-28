@@ -108,4 +108,15 @@ async function getNotifications(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { login, logout, getProfile, getDashboard, getNotifications };
+async function getOverview(req, res, next) {
+  try {
+    const { teacher_id } = req.teacher;
+    const stats = await TeacherModel.getOverviewStats(teacher_id);
+    res.json(stats);
+  } catch (err) {
+    console.error("Overview error:", err);
+    next(err);
+  }
+}
+
+module.exports = { login, logout, getProfile, getDashboard, getNotifications, getOverview };

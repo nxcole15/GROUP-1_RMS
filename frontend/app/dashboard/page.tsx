@@ -268,6 +268,9 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
   const totalFees = dashboardData?.stats.total_tuition || 0;
   const balanceDue = dashboardData?.stats.balance_due || 0;
   const pendingDocs = dashboardData?.stats.pending_docs || 0;
+  
+  // Use recent grades from API
+  const recentGrades = dashboardData?.recent_grades || [];
 
   const quickLinks = [
     { id:"grades"        as Panel, label:"View Grades",  icon:"", bg:"#8b5cf6" },
@@ -294,7 +297,7 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
             Welcome back, {student?.full_name ?? "Student"}
           </h1>
           <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
-            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {student?.term ?? "Term 1"} SY 2025-2026
+            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · SY {new Date().getFullYear()}-{new Date().getFullYear() + 1}
           </p>
           <div className="d-flex gap-2 flex-wrap">
             <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
@@ -372,7 +375,7 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
                     View all <Icon name="arrowRight" size={12} />
                   </button>
                 </div>
-                {gradeData.length === 0 ? (
+                {recentGrades.length === 0 ? (
                   <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
                     <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
                       style={{ width:52, height:52, background:"#f1f5f9" }}>
@@ -384,17 +387,22 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
                   </div>
                 ) : (
                   <div className="d-flex flex-column gap-3">
-                    {gradeData.slice(0,4).map((g,i) => (
-                      <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
-                        <div className="flex-grow-1 overflow-hidden">
-                          <div className="small fw-semibold text-dark text-truncate">{g.subject}</div>
-                          <div className="progress mt-1" style={{ height:4, borderRadius:4 }}>
-                            <div className="progress-bar" style={{ width:`${g.term1.pct}%`, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }} />
+                    {recentGrades.slice(0,4).map((g,i) => {
+                      const percentage = Number(g.percentage);
+                      const gradeColor = percentage >= 90 ? "#059669" : percentage >= 80 ? "#6366f1" : percentage >= 75 ? "#f59e0b" : "#dc2626";
+                      return (
+                        <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
+                          <div className="flex-grow-1 overflow-hidden">
+                            <div className="small fw-semibold text-dark text-truncate">{g.subject_name} - {g.strand}</div>
+                            <div className="text-muted" style={{ fontSize:11 }}>{g.term}</div>
+                            <div className="progress mt-1" style={{ height:4, borderRadius:4 }}>
+                              <div className="progress-bar" style={{ width:`${percentage}%`, background:gradeColor }} />
+                            </div>
                           </div>
+                          <span className="fw-black small" style={{ color:gradeColor }}>{percentage}%</span>
                         </div>
-                        <span className="fw-black small" style={{ color:"#6366f1" }}>{g.term1.grade}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1413,12 +1421,24 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const [selectedType, setSelectedType] = useState("");
   const [purpose, setPurpose]       = useState("");
   const [copies, setCopies]         = useState(1);
+  const [selectedTeacher, setSelectedTeacher] = useState("");
+  const [teachers, setTeachers]     = useState<Array<{id: number; teacher_id: string; full_name: string}>>([]);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast]           = useState<string|null>(null);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError]   = useState(false);
+  const [documentCatalog, setDocumentCatalog] = useState<any[]>([]);
 
-  const DOCUMENT_CATALOG = [
+  // Helper function to format time to 12-hour format
+  const formatTime = (time24: string) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const _UNUSED_CATALOG = [
     { type:"School Form 10 (Form 137)",              price:"₱250.00",       days:"10-15 working days" },
     { type:"School Form 9 - Report Card (1st copy)", price:"Free of charge", days:"2-3 working days"   },
     { type:"School Form 9 - Report Card (2nd copy)", price:"₱150.00",       days:"2-3 working days"   },
@@ -1438,6 +1458,34 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
+    
+    // Fetch document types from database
+    fetch(`${API_BASE}/api/documents/types`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.document_types) {
+          setDocumentCatalog(data.document_types);
+        }
+      })
+      .catch(() => {});
+    
+    // Fetch teachers for selection
+    fetch(`${API_BASE}/api/auth/teachers`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.teachers) {
+          setTeachers(data.teachers);
+        }
+      })
+      .catch(() => {});
+    
+    // Fetch document requests
     setDocsLoading(true);
     setDocsError(false);
     fetch(`${API_BASE}/api/documents`, {
@@ -1447,15 +1495,20 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.documents?.length) {
-          setRequests(data.documents.map((d: {id:number;document_type:string;purpose:string;copies:number;status:string;expected_release_date:string|null;created_at:string}) => ({
+          setRequests(data.documents.map((d: any) => ({
             id: d.id,
             type: d.document_type,
-            status: d.status === "approved" ? "approved" : d.status === "rejected" ? "rejected" : "pending",
+            status: d.status,
             requestedAt: new Date(d.created_at).toLocaleDateString("en-PH",{month:"long",day:"numeric",year:"numeric"}),
-            approvedAt: d.status === "approved" ? d.expected_release_date : null,
-            approvedBy: d.status === "approved" ? "Registrar" : null,
-            releaseDate: d.expected_release_date,
-            downloadUrl: d.status === "approved" ? "#" : null,
+            teacher_name: d.teacher_name,
+            registrar_name: d.registrar_name,
+            principal_name: d.principal_name,
+            pickup_date: d.pickup_date,
+            pickup_time: d.pickup_time,
+            pickup_location: d.pickup_location,
+            payment_amount: d.payment_amount,
+            payment_reference: d.payment_reference,
+            rejection_reason: d.rejection_reason,
           })));
         }
       })
@@ -1463,33 +1516,70 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       .finally(() => setDocsLoading(false));
   }, []);
 
-  function openModal() { setSelectedType(""); setPurpose(""); setCopies(1); setShowModal(true); }
+  function openModal() { setSelectedType(""); setPurpose(""); setCopies(1); setSelectedTeacher(""); setShowModal(true); }
 
   async function submitRequest() {
     if (!selectedType) { setToast("⚠️ Please select a document type."); setTimeout(()=>setToast(null),3000); return; }
+    if (!selectedTeacher) { setToast("⚠️ Please select your adviser/teacher."); setTimeout(()=>setToast(null),3000); return; }
+    if (!purpose || purpose.length < 10) { setToast("⚠️ Purpose must be at least 10 characters."); setTimeout(()=>setToast(null),3000); return; }
+    
     setSubmitting(true);
     const token = localStorage.getItem("inform_token");
-    // Optimistic UI
-    setRequests(prev => [...prev, { id:Date.now(), type:selectedType, status:"pending",
-      requestedAt:new Date().toLocaleDateString("en-PH",{month:"long",day:"numeric",year:"numeric"}),
-      approvedAt:null, approvedBy:null, releaseDate:null, downloadUrl:null }]);
     setShowModal(false);
+    
     if (token && !token.startsWith("demo_")) {
-      await fetch(`${API_BASE}/api/documents`, {
-        method:"POST",
-        headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
-        credentials:"include",
-        body: JSON.stringify({ document_type: selectedType, purpose: purpose||"Personal use", copies }),
-      }).catch(()=>{});
+      try {
+        const res = await fetch(`${API_BASE}/api/documents`, {
+          method:"POST",
+          headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+          credentials:"include",
+          body: JSON.stringify({ 
+            document_type: selectedType, 
+            purpose: purpose.trim(), 
+            copies,
+            teacher_id: selectedTeacher
+          }),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setToast("✅ Document request submitted to your teacher!");
+          // Refresh the list
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          const error = await res.json();
+          setToast(`⚠️ ${error.error || "Failed to submit request"}`);
+        }
+      } catch (err) {
+        setToast("⚠️ Network error. Please try again.");
+      }
+    } else {
+      setToast("✅ Document request submitted!");
     }
-    setToast("✅ Document request submitted!");
+    
     setTimeout(()=>setToast(null), 3000);
     setSubmitting(false);
   }
 
-  const pending  = requests.filter(r => r.status==="pending");
-  const approved = requests.filter(r => r.status==="approved");
-  const rejected = requests.filter(r => r.status==="rejected");
+  function getStatusInfo(status: string) {
+    const map: Record<string, {label: string; color: string; bg: string}> = {
+      student_requested: { label: "Pending Teacher Review", color: "#f59e0b", bg: "#fffbeb" },
+      teacher_approved: { label: "Teacher Approved", color: "#10b981", bg: "#f0fdf4" },
+      registrar_forwarded: { label: "Pending Principal Review", color: "#3b82f6", bg: "#eff6ff" },
+      principal_approved: { label: "Principal Approved", color: "#059669", bg: "#f0fdf4" },
+      principal_rejected: { label: "Rejected", color: "#dc2626", bg: "#fef2f2" },
+      pending_payment: { label: "Pending Payment", color: "#f59e0b", bg: "#fffbeb" },
+      payment_verified: { label: "Ready for Pickup", color: "#10b981", bg: "#f0fdf4" },
+      released: { label: "Picked Up", color: "#64748b", bg: "#f8fafc" },
+    };
+    return map[status] || { label: status, color: "#64748b", bg: "#f8fafc" };
+  }
+
+  const pending  = requests.filter(r => ['student_requested', 'teacher_approved', 'registrar_forwarded', 'principal_approved'].includes(r.status));
+  const pendingPayment = requests.filter(r => r.status === 'pending_payment');
+  const paymentVerified = requests.filter(r => r.status === 'payment_verified');
+  const completed = requests.filter(r => r.status === 'released');
+  const rejected = requests.filter(r => r.status === 'principal_rejected');
 
   return (
     <div className="d-flex flex-column gap-0">
@@ -1542,7 +1632,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
         {docsError && <div className="rounded-3 p-3 small" style={{ background:"#fffbeb", border:"1px solid #fef08a", color:"#92400e" }}>Could not load latest data. Showing cached results.</div>}
 
         {/* My Requests */}
-        {(pending.length > 0 || approved.length > 0 || rejected.length > 0) && (
+        {(pending.length > 0 || pendingPayment.length > 0 || paymentVerified.length > 0 || completed.length > 0 || rejected.length > 0) && (
           <div>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="d-flex align-items-center justify-content-center rounded-3"
@@ -1556,6 +1646,67 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                 {requests.length} total
               </span>
             </div>
+            
+            {/* Payment Required Section */}
+            {pendingPayment.length > 0 && (
+              <div className="card border-0 shadow-sm rounded-4 mb-3" style={{ borderLeft: "4px solid #f59e0b" }}>
+                <div className="card-header" style={{ background:"#fffbeb", borderBottom:"1px solid #fef08a", padding:"12px 20px" }}>
+                  <div className="fw-semibold" style={{ color:"#92400e", fontSize:"0.85rem" }}>💰 Payment Required</div>
+                </div>
+                <div className="card-body p-3">
+                  {pendingPayment.map(r => (
+                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#fef3c7" }}>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-dark mb-1">{r.type}</div>
+                        <div className="small mb-2" style={{ color:"#92400e" }}>
+                          <strong>Amount Due: ₱{r.payment_amount || '0.00'}</strong>
+                        </div>
+                        <div className="small text-muted mb-2">
+                          📍 Pickup at: {r.pickup_location}<br/>
+                          📅 Pickup schedule: {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
+                        </div>
+                        <div className="alert alert-warning mb-0 py-2 px-3 small">
+                          <strong>⚠️ Action Required:</strong> Please pay at the Accounting office first before you can pick up this document.
+                        </div>
+                      </div>
+                      <span className="badge px-3 py-2" style={{ background: "#fef08a", color: "#92400e", fontSize:"0.72rem" }}>
+                        Pending Payment
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Ready for Pickup Section */}
+            {paymentVerified.length > 0 && (
+              <div className="card border-0 shadow-sm rounded-4 mb-3">
+                <div className="card-header" style={{ background:"#f0fdf4", borderBottom:"1px solid #bbf7d0", padding:"12px 20px" }}>
+                  <div className="fw-semibold" style={{ color:"#065f46", fontSize:"0.85rem" }}>✅ Ready for Pickup</div>
+                </div>
+                <div className="card-body p-3">
+                  {paymentVerified.map(r => (
+                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#f0fdf4" }}>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-dark mb-1">{r.type}</div>
+                        <div className="small text-muted mb-2">
+                          📍 {r.pickup_location}<br/>
+                          📅 {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
+                        </div>
+                        <div className="alert alert-success mb-0 py-2 px-3 small">
+                          <strong>✅ Payment Verified!</strong> You can now pick up your document at the Registrar's Office.
+                        </div>
+                      </div>
+                      <span className="badge px-3 py-2" style={{ background: "#bbf7d0", color: "#065f46", fontSize:"0.72rem" }}>
+                        Ready for Pickup
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* All Requests Table */}
             <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
@@ -1563,23 +1714,37 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                     <tr>
                       <th className="small fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em", color:"#64748b", paddingTop:14, paddingBottom:14 }}>Document Type</th>
                       <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Requested</th>
-                      <th className="small fw-semibold text-uppercase d-none d-md-table-cell" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Release Date</th>
                       <th className="small fw-semibold text-uppercase pe-4 text-end" style={{ letterSpacing:"0.05em", color:"#64748b" }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...pending, ...approved, ...rejected].map(r => (
-                      <tr key={r.id}>
-                        <td className="ps-4 small fw-semibold text-dark align-middle">{r.type}</td>
-                        <td className="small text-muted align-middle d-none d-md-table-cell">{r.requestedAt}</td>
-                        <td className="small text-muted align-middle d-none d-md-table-cell">{r.releaseDate || "—"}</td>
-                        <td className="pe-4 text-end align-middle">
-                          {r.status === "approved" && <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontSize:"0.72rem" }}>Approved</span>}
-                          {r.status === "pending"  && <span className="badge rounded-pill px-3 py-2" style={{ background:"#fffbeb", color:"#d97706", border:"1px solid #fef08a", fontSize:"0.72rem" }}>Pending</span>}
-                          {r.status === "rejected" && <span className="badge rounded-pill px-3 py-2" style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fecaca", fontSize:"0.72rem" }}>Rejected</span>}
-                        </td>
-                      </tr>
-                    ))}
+                    {requests.map(r => {
+                      const statusInfo = getStatusInfo(r.status);
+                      return (
+                        <tr key={r.id}>
+                          <td className="ps-4 align-middle">
+                            <div className="fw-semibold text-dark" style={{ fontSize:"0.85rem" }}>{r.type}</div>
+                            {r.teacher_name && (
+                              <div className="text-muted" style={{ fontSize:"0.72rem" }}>Teacher: {r.teacher_name}</div>
+                            )}
+                            {r.rejection_reason && (
+                              <div className="text-danger mt-1" style={{ fontSize:"0.72rem" }}>Reason: {r.rejection_reason}</div>
+                            )}
+                          </td>
+                          <td className="small text-muted align-middle d-none d-md-table-cell">{r.requestedAt}</td>
+                          <td className="pe-4 text-end align-middle">
+                            <span className="badge rounded-pill px-3 py-2" style={{ 
+                              background: statusInfo.bg, 
+                              color: statusInfo.color, 
+                              border: `1px solid ${statusInfo.color}33`, 
+                              fontSize:"0.72rem" 
+                            }}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1609,13 +1774,15 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {DOCUMENT_CATALOG.map((doc, i) => (
+                  {documentCatalog.map((doc, i) => (
                     <tr key={i} style={{ borderBottom:"1px solid #f1f5f9" }}>
-                      <td className="ps-4 small fw-medium text-dark align-middle py-3">{doc.type}</td>
+                      <td className="ps-4 small fw-medium text-dark align-middle py-3">{doc.document_name}</td>
                       <td className="small text-center align-middle py-3">
-                        <span className="fw-semibold" style={{ color: doc.price.includes("Free") ? "#16a34a" : "#1d4ed8" }}>{doc.price}</span>
+                        <span className="fw-semibold" style={{ color: doc.price > 0 ? "#1d4ed8" : "#16a34a" }}>
+                          {doc.price > 0 ? `₱${parseFloat(doc.price).toFixed(2)}` : 'Free of charge'}
+                        </span>
                       </td>
-                      <td className="pe-4 small text-center text-muted align-middle py-3">{doc.days}</td>
+                      <td className="pe-4 small text-center text-muted align-middle py-3">{doc.processing_days}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1670,21 +1837,23 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                     Document Type <span className="text-danger">*</span>
                   </label>
                   <div className="row g-2 mt-1" style={{ maxHeight:280, overflowY:"auto", paddingRight:4 }}>
-                    {DOCUMENT_CATALOG.map((doc, i) => (
+                    {documentCatalog.map((doc, i) => (
                       <div key={i} className="col-12 col-md-6">
                         <label className="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
                           style={{
-                            border: selectedType === doc.type ? "2px solid #8b5cf6" : "1.5px solid #e2e8f0",
-                            background: selectedType === doc.type ? "#f5f3ff" : "white",
+                            border: selectedType === doc.document_name ? "2px solid #8b5cf6" : "1.5px solid #e2e8f0",
+                            background: selectedType === doc.document_name ? "#f5f3ff" : "white",
                             cursor:"pointer", transition:"all 0.15s"
                           }}>
-                          <input type="radio" name="doctype" value={doc.type} checked={selectedType===doc.type}
-                            onChange={() => setSelectedType(doc.type)} className="mt-1 flex-shrink-0" />
+                          <input type="radio" name="doctype" value={doc.document_name} checked={selectedType===doc.document_name}
+                            onChange={() => setSelectedType(doc.document_name)} className="mt-1 flex-shrink-0" />
                           <div>
-                            <div className="fw-semibold" style={{ fontSize:"0.82rem", color:"#1e293b", lineHeight:1.4 }}>{doc.type}</div>
+                            <div className="fw-semibold" style={{ fontSize:"0.82rem", color:"#1e293b", lineHeight:1.4 }}>{doc.document_name}</div>
                             <div className="d-flex gap-2 mt-1 flex-wrap">
-                              <span style={{ fontSize:"0.72rem", color: doc.price.includes("Free") ? "#16a34a" : "#2563eb", fontWeight:600 }}>{doc.price}</span>
-                              <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>• {doc.days}</span>
+                              <span style={{ fontSize:"0.72rem", color: doc.price > 0 ? "#2563eb" : "#16a34a", fontWeight:600 }}>
+                                {doc.price > 0 ? `₱${parseFloat(doc.price).toFixed(2)}` : 'Free'}
+                              </span>
+                              <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>• {doc.processing_days}</span>
                             </div>
                           </div>
                         </label>
@@ -1696,11 +1865,36 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                 {/* Purpose */}
                 <div className="mb-4">
                   <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
-                    Purpose <span className="text-muted fw-normal">(optional)</span>
+                    Select Your Adviser/Teacher <span className="text-danger">*</span>
                   </label>
-                  <input type="text" className="form-control rounded-3" placeholder="e.g., Employment, Scholarship, Personal use"
-                    value={purpose} onChange={e => setPurpose(e.target.value)}
-                    style={{ border:"1.5px solid #e2e8f0" }} />
+                  <select 
+                    className="form-select" 
+                    value={selectedTeacher} 
+                    onChange={e => setSelectedTeacher(e.target.value)}
+                    style={{ borderRadius:10, border:"1.5px solid #e2e8f0", fontSize:"0.9rem" }}
+                  >
+                    <option value="">-- Select your teacher --</option>
+                    {teachers.map(t => (
+                      <option key={t.id} value={t.id}>{t.full_name} ({t.teacher_id})</option>
+                    ))}
+                  </select>
+                  <div className="form-text" style={{ fontSize:"0.72rem" }}>Your teacher will review and approve this request</div>
+                </div>
+
+                {/* Purpose */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
+                    Purpose <span className="text-danger">*</span>
+                  </label>
+                  <textarea 
+                    className="form-control" 
+                    rows={3} 
+                    placeholder="e.g., For scholarship application, employment requirement, etc." 
+                    value={purpose} 
+                    onChange={e => setPurpose(e.target.value)}
+                    style={{ borderRadius:10, border:"1.5px solid #e2e8f0", fontSize:"0.9rem" }}
+                  />
+                  <div className="form-text" style={{ fontSize:"0.72rem" }}>Minimum 10 characters</div>
                 </div>
 
                 {/* Copies */}

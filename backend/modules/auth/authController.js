@@ -138,4 +138,25 @@ async function universalLogin(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { logout, me, universalLogin };
+async function getTeachers(req, res, next) {
+  try {
+    const db = require("../../config/db");
+    
+    // Get all teachers (no account_status column in teachers table)
+    const [rows] = await db.query(`
+      SELECT 
+        id,
+        teacher_id,
+        full_name,
+        department
+      FROM teachers
+      ORDER BY full_name ASC
+    `);
+
+    res.json({ teachers: rows });
+  } catch (err) { 
+    next(err); 
+  }
+}
+
+module.exports = { logout, me, universalLogin, getTeachers };

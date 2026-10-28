@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { API_BASE } from "../lib/auth";
+import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
 
 type StudentRecord = {
   id: string;
@@ -7186,7 +7187,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "teachers":      return <TeachersPanel readOnly={readOnly} registrarView={hideRequests} role={role} />;
       case "grades":        return <GradesPanel role={role} />;
       case "requests":      return <>{gradeRequestsContent}<AdminRequestsPanel role={role} /></>;
-      case "documents":     return <AdminDocumentsPanel />;
+      case "documents":     return <DocumentWorkflowPanel />;
       case "enrollment":    return <EnrollmentPanel role={role} />;
       case "scheduling":    return <SchedulingPanel />;
       case "announcements": return <AnnouncementsPanel />;

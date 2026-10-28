@@ -3,6 +3,7 @@
  * Student-facing document-request operations.
  */
 const DocumentModel = require("./documentModel");
+const DocumentTypeModel = require("./documentTypeModel");
 
 async function getMyDocuments(req, res, next) {
   try {
@@ -11,25 +12,42 @@ async function getMyDocuments(req, res, next) {
   } catch (err) { next(err); }
 }
 
-function getDocumentTypes(req, res) {
-  res.json({ document_types: DocumentModel.SUPPORTED_TYPES });
+async function getDocumentTypes(req, res, next) {
+  try {
+    const types = await DocumentTypeModel.findAll();
+    res.json({ 
+      document_types: types,
+      supported_types: types.map(t => t.document_name)
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function submitDocumentRequest(req, res, next) {
   try {
-    const { student_id }                     = req.student;
-    const { document_type, purpose, copies } = req.body;
+    const { student_id }                              = req.student;
+    const { document_type, purpose, copies, teacher_id } = req.body;
 
     const errors = [];
-    if (!document_type || !DocumentModel.SUPPORTED_TYPES.includes(document_type)) {
-      errors.push(`document_type must be one of: ${DocumentModel.SUPPORTED_TYPES.join(", ")}.`);
+    
+    // Check if document type exists and is active
+    const docType = await DocumentTypeModel.findByName(document_type);
+    if (!docType) {
+      errors.push("Invalid document_type. Please select from available document types.");
     }
+    
     if (!purpose || typeof purpose !== "string" || purpose.trim().length < 10 || purpose.trim().length > 500) {
       errors.push("purpose must be between 10 and 500 characters.");
     }
     const parsedCopies = parseInt(copies, 10);
     if (isNaN(parsedCopies) || parsedCopies < 1 || parsedCopies > 10) {
       errors.push("copies must be an integer between 1 and 10.");
+    }
+    // Parse teacher_id to handle both string and number
+    const parsedTeacherId = parseInt(teacher_id, 10);
+    if (!teacher_id || isNaN(parsedTeacherId) || parsedTeacherId < 1) {
+      errors.push("teacher_id is required - please select your adviser.");
     }
     if (errors.length > 0) {
       return res.status(400).json({ error: "Validation failed.", details: errors });
@@ -41,15 +59,20 @@ async function submitDocumentRequest(req, res, next) {
       });
     }
 
+    // Get payment amount from database
+    const payment_amount = parseFloat(docType.price);
+
     const doc = await DocumentModel.create({
       student_id,
       document_type,
       purpose: purpose.trim(),
       copies:  parsedCopies,
+      teacher_id: parsedTeacherId,
+      payment_amount,
     });
 
     res.status(201).json({
-      message:          "Document request submitted successfully.",
+      message:          "Document request submitted successfully. Your adviser will review it.",
       reference_number: doc.reference_number,
       document:         doc,
     });
