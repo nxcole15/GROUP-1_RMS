@@ -297,7 +297,7 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
             Welcome back, {student?.full_name ?? "Student"}
           </h1>
           <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
-            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {student?.term ?? "Term 1"} SY 2025-2026
+            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · SY {new Date().getFullYear()}-{new Date().getFullYear() + 1}
           </p>
           <div className="d-flex gap-2 flex-wrap">
             <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
@@ -1427,8 +1427,18 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const [toast, setToast]           = useState<string|null>(null);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError]   = useState(false);
+  const [documentCatalog, setDocumentCatalog] = useState<any[]>([]);
 
-  const DOCUMENT_CATALOG = [
+  // Helper function to format time to 12-hour format
+  const formatTime = (time24: string) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const _UNUSED_CATALOG = [
     { type:"School Form 10 (Form 137)",              price:"₱250.00",       days:"10-15 working days" },
     { type:"School Form 9 - Report Card (1st copy)", price:"Free of charge", days:"2-3 working days"   },
     { type:"School Form 9 - Report Card (2nd copy)", price:"₱150.00",       days:"2-3 working days"   },
@@ -1448,6 +1458,19 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
     if (!token || token.startsWith("demo_")) return;
+    
+    // Fetch document types from database
+    fetch(`${API_BASE}/api/documents/types`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.document_types) {
+          setDocumentCatalog(data.document_types);
+        }
+      })
+      .catch(() => {});
     
     // Fetch teachers for selection
     fetch(`${API_BASE}/api/auth/teachers`, {
@@ -1483,6 +1506,8 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
             pickup_date: d.pickup_date,
             pickup_time: d.pickup_time,
             pickup_location: d.pickup_location,
+            payment_amount: d.payment_amount,
+            payment_reference: d.payment_reference,
             rejection_reason: d.rejection_reason,
           })));
         }
@@ -1543,14 +1568,16 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       registrar_forwarded: { label: "Pending Principal Review", color: "#3b82f6", bg: "#eff6ff" },
       principal_approved: { label: "Principal Approved", color: "#059669", bg: "#f0fdf4" },
       principal_rejected: { label: "Rejected", color: "#dc2626", bg: "#fef2f2" },
-      ready_for_pickup: { label: "Ready for Pickup", color: "#8b5cf6", bg: "#faf5ff" },
-      released: { label: "Released", color: "#64748b", bg: "#f8fafc" },
+      pending_payment: { label: "Pending Payment", color: "#f59e0b", bg: "#fffbeb" },
+      payment_verified: { label: "Ready for Pickup", color: "#10b981", bg: "#f0fdf4" },
+      released: { label: "Picked Up", color: "#64748b", bg: "#f8fafc" },
     };
     return map[status] || { label: status, color: "#64748b", bg: "#f8fafc" };
   }
 
-  const pending  = requests.filter(r => ['student_requested', 'teacher_approved', 'registrar_forwarded'].includes(r.status));
-  const readyForPickup = requests.filter(r => r.status === 'ready_for_pickup');
+  const pending  = requests.filter(r => ['student_requested', 'teacher_approved', 'registrar_forwarded', 'principal_approved'].includes(r.status));
+  const pendingPayment = requests.filter(r => r.status === 'pending_payment');
+  const paymentVerified = requests.filter(r => r.status === 'payment_verified');
   const completed = requests.filter(r => r.status === 'released');
   const rejected = requests.filter(r => r.status === 'principal_rejected');
 
@@ -1605,7 +1632,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
         {docsError && <div className="rounded-3 p-3 small" style={{ background:"#fffbeb", border:"1px solid #fef08a", color:"#92400e" }}>Could not load latest data. Showing cached results.</div>}
 
         {/* My Requests */}
-        {(pending.length > 0 || readyForPickup.length > 0 || completed.length > 0 || rejected.length > 0) && (
+        {(pending.length > 0 || pendingPayment.length > 0 || paymentVerified.length > 0 || completed.length > 0 || rejected.length > 0) && (
           <div>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="d-flex align-items-center justify-content-center rounded-3"
@@ -1620,24 +1647,58 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
               </span>
             </div>
             
-            {/* Ready for Pickup Section */}
-            {readyForPickup.length > 0 && (
-              <div className="card border-0 shadow-sm rounded-4 mb-3">
-                <div className="card-header" style={{ background:"#faf5ff", borderBottom:"1px solid #e9d5ff", padding:"12px 20px" }}>
-                  <div className="fw-semibold" style={{ color:"#7c3aed", fontSize:"0.85rem" }}>📦 Ready for Pickup</div>
+            {/* Payment Required Section */}
+            {pendingPayment.length > 0 && (
+              <div className="card border-0 shadow-sm rounded-4 mb-3" style={{ borderLeft: "4px solid #f59e0b" }}>
+                <div className="card-header" style={{ background:"#fffbeb", borderBottom:"1px solid #fef08a", padding:"12px 20px" }}>
+                  <div className="fw-semibold" style={{ color:"#92400e", fontSize:"0.85rem" }}>💰 Payment Required</div>
                 </div>
                 <div className="card-body p-3">
-                  {readyForPickup.map(r => (
-                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#f8fafc" }}>
+                  {pendingPayment.map(r => (
+                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#fef3c7" }}>
                       <div className="flex-grow-1">
                         <div className="fw-semibold text-dark mb-1">{r.type}</div>
-                        <div className="small text-muted">
-                          📍 {r.pickup_location}<br/>
-                          📅 {r.pickup_date} at {r.pickup_time}
+                        <div className="small mb-2" style={{ color:"#92400e" }}>
+                          <strong>Amount Due: ₱{r.payment_amount || '0.00'}</strong>
+                        </div>
+                        <div className="small text-muted mb-2">
+                          📍 Pickup at: {r.pickup_location}<br/>
+                          📅 Pickup schedule: {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
+                        </div>
+                        <div className="alert alert-warning mb-0 py-2 px-3 small">
+                          <strong>⚠️ Action Required:</strong> Please pay at the Accounting office first before you can pick up this document.
                         </div>
                       </div>
-                      <span className="badge px-3 py-2" style={{ background: getStatusInfo(r.status).bg, color: getStatusInfo(r.status).color, fontSize:"0.72rem" }}>
-                        {getStatusInfo(r.status).label}
+                      <span className="badge px-3 py-2" style={{ background: "#fef08a", color: "#92400e", fontSize:"0.72rem" }}>
+                        Pending Payment
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Ready for Pickup Section */}
+            {paymentVerified.length > 0 && (
+              <div className="card border-0 shadow-sm rounded-4 mb-3">
+                <div className="card-header" style={{ background:"#f0fdf4", borderBottom:"1px solid #bbf7d0", padding:"12px 20px" }}>
+                  <div className="fw-semibold" style={{ color:"#065f46", fontSize:"0.85rem" }}>✅ Ready for Pickup</div>
+                </div>
+                <div className="card-body p-3">
+                  {paymentVerified.map(r => (
+                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#f0fdf4" }}>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-dark mb-1">{r.type}</div>
+                        <div className="small text-muted mb-2">
+                          📍 {r.pickup_location}<br/>
+                          📅 {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
+                        </div>
+                        <div className="alert alert-success mb-0 py-2 px-3 small">
+                          <strong>✅ Payment Verified!</strong> You can now pick up your document at the Registrar's Office.
+                        </div>
+                      </div>
+                      <span className="badge px-3 py-2" style={{ background: "#bbf7d0", color: "#065f46", fontSize:"0.72rem" }}>
+                        Ready for Pickup
                       </span>
                     </div>
                   ))}
@@ -1713,13 +1774,15 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {DOCUMENT_CATALOG.map((doc, i) => (
+                  {documentCatalog.map((doc, i) => (
                     <tr key={i} style={{ borderBottom:"1px solid #f1f5f9" }}>
-                      <td className="ps-4 small fw-medium text-dark align-middle py-3">{doc.type}</td>
+                      <td className="ps-4 small fw-medium text-dark align-middle py-3">{doc.document_name}</td>
                       <td className="small text-center align-middle py-3">
-                        <span className="fw-semibold" style={{ color: doc.price.includes("Free") ? "#16a34a" : "#1d4ed8" }}>{doc.price}</span>
+                        <span className="fw-semibold" style={{ color: doc.price > 0 ? "#1d4ed8" : "#16a34a" }}>
+                          {doc.price > 0 ? `₱${parseFloat(doc.price).toFixed(2)}` : 'Free of charge'}
+                        </span>
                       </td>
-                      <td className="pe-4 small text-center text-muted align-middle py-3">{doc.days}</td>
+                      <td className="pe-4 small text-center text-muted align-middle py-3">{doc.processing_days}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1774,21 +1837,23 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                     Document Type <span className="text-danger">*</span>
                   </label>
                   <div className="row g-2 mt-1" style={{ maxHeight:280, overflowY:"auto", paddingRight:4 }}>
-                    {DOCUMENT_CATALOG.map((doc, i) => (
+                    {documentCatalog.map((doc, i) => (
                       <div key={i} className="col-12 col-md-6">
                         <label className="d-flex align-items-start gap-3 p-3 rounded-3 cursor-pointer"
                           style={{
-                            border: selectedType === doc.type ? "2px solid #8b5cf6" : "1.5px solid #e2e8f0",
-                            background: selectedType === doc.type ? "#f5f3ff" : "white",
+                            border: selectedType === doc.document_name ? "2px solid #8b5cf6" : "1.5px solid #e2e8f0",
+                            background: selectedType === doc.document_name ? "#f5f3ff" : "white",
                             cursor:"pointer", transition:"all 0.15s"
                           }}>
-                          <input type="radio" name="doctype" value={doc.type} checked={selectedType===doc.type}
-                            onChange={() => setSelectedType(doc.type)} className="mt-1 flex-shrink-0" />
+                          <input type="radio" name="doctype" value={doc.document_name} checked={selectedType===doc.document_name}
+                            onChange={() => setSelectedType(doc.document_name)} className="mt-1 flex-shrink-0" />
                           <div>
-                            <div className="fw-semibold" style={{ fontSize:"0.82rem", color:"#1e293b", lineHeight:1.4 }}>{doc.type}</div>
+                            <div className="fw-semibold" style={{ fontSize:"0.82rem", color:"#1e293b", lineHeight:1.4 }}>{doc.document_name}</div>
                             <div className="d-flex gap-2 mt-1 flex-wrap">
-                              <span style={{ fontSize:"0.72rem", color: doc.price.includes("Free") ? "#16a34a" : "#2563eb", fontWeight:600 }}>{doc.price}</span>
-                              <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>• {doc.days}</span>
+                              <span style={{ fontSize:"0.72rem", color: doc.price > 0 ? "#2563eb" : "#16a34a", fontWeight:600 }}>
+                                {doc.price > 0 ? `₱${parseFloat(doc.price).toFixed(2)}` : 'Free'}
+                              </span>
+                              <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>• {doc.processing_days}</span>
                             </div>
                           </div>
                         </label>

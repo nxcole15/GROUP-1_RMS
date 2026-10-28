@@ -7,8 +7,12 @@ const DocumentModel = require("../documents/documentModel");
 async function getMyDocumentRequests(req, res, next) {
   try {
     const teacher_id = req.teacher.id; // Internal ID from JWT
-    const docs = await DocumentModel.findPendingForTeacher(teacher_id);
-    res.json({ documents: docs });
+    const docs = await DocumentModel.findAllForTeacher(teacher_id);
+    const stats = await DocumentModel.getTeacherDocumentStats(teacher_id);
+    res.json({ 
+      documents: docs,
+      stats: stats
+    });
   } catch (err) {
     next(err);
   }

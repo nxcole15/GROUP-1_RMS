@@ -59,12 +59,18 @@ const {
 } = require("./schedulingController");
 const {
   getRegistrarDocuments,
+  getAllRegistrarDocuments,
   registrarForwardToPrincipal,
   registrarSetPickup,
   registrarMarkAsReleased,
+  registrarConfirmPickedUp,
   getPrincipalDocuments,
+  getAllPrincipalDocuments,
   principalApprove,
-  principalReject
+  principalReject,
+  getAccountingDocuments,
+  getAllAccountingDocuments,
+  accountingVerifyPayment
 } = require("./adminDocumentController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
@@ -143,14 +149,21 @@ router.get("/scheduling/timetable", getWeeklyTimetable);
 router.post("/scheduling/schedules/:schedule_id/enroll-bulk", bulkEnrollStudents);
 router.get("/scheduling/statistics", getSchedulingStatistics);
 
-// Document Workflow - Registrar & Principal
+// Document Workflow - Registrar & Principal & Accounting
 router.get("/documents/registrar", getRegistrarDocuments);
+router.get("/documents/registrar/all", getAllRegistrarDocuments);
 router.post("/documents/:id/registrar-forward", registrarForwardToPrincipal);
 router.post("/documents/:id/set-pickup", registrarSetPickup);
 router.post("/documents/:id/mark-released", registrarMarkAsReleased);
+router.post("/documents/:id/confirm-picked-up", registrarConfirmPickedUp);
 
 router.get("/documents/principal", getPrincipalDocuments);
+router.get("/documents/principal/all", getAllPrincipalDocuments);
 router.post("/documents/:id/principal-approve", principalApprove);
 router.post("/documents/:id/principal-reject", principalReject);
+
+router.get("/documents/accounting", getAccountingDocuments);
+router.get("/documents/accounting/all", getAllAccountingDocuments);
+router.post("/documents/:id/accounting-verify-payment", accountingVerifyPayment);
 
 module.exports = router;

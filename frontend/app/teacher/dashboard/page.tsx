@@ -185,7 +185,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* -- Overview -- */
-function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null }) {
+function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[] }) {
   const displayTeacher = teacher ?? teacherData;
   const [overviewData, setOverviewData] = useState<{
     total_students: number;
@@ -194,6 +194,46 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
     active_term: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Helper function to format 12-hour time
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // Transform API activity data to display format
+  const recentActivity = (apiActivity || []).map(a => {
+    if (a.type === 'grade') {
+      return {
+        action: `Submitted grade for ${a.student_name}`,
+        name: a.subject_name,
+        time: formatTime(a.created_at),
+        icon: 'chart' as IconName
+      };
+    } else if (a.type === 'document') {
+      return {
+        action: `Approved ${a.document_type || 'document'}`,
+        name: a.student_name,
+        time: formatTime(a.created_at),
+        icon: 'checkCircle' as IconName
+      };
+    }
+    return {
+      action: 'Activity',
+      name: a.student_name,
+      time: formatTime(a.created_at),
+      icon: 'activity' as IconName
+    };
+  });
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -288,7 +328,7 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
                 Welcome back, {displayTeacher.full_name}
               </h1>
               <p className="mb-3" style={{ color:"rgba(255,255,255,0.75)" }}>
-                {displayTeacher.department && <span>{displayTeacher.department} · </span>}
+                {displayTeacher.department && displayTeacher.department !== "Unassigned" && <span>{displayTeacher.department} · </span>}
                 {displayTeacher.teacher_id && <span>{displayTeacher.teacher_id}</span>}
               </p>
               <div className="d-flex gap-2 flex-wrap">
@@ -404,9 +444,9 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
                   </div>
                   <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Class Summary</h3>
                 </div>
-                {subjects.length > 0 ? (
+                {(apiSubjects && apiSubjects.length > 0) ? (
                   <div className="d-flex flex-column gap-3">
-                    {subjects.map(s => (
+                    {apiSubjects.map(s => (
                       <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                           style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
@@ -416,11 +456,11 @@ function Overview({ isGradeLocked, activeTerm, teacher }: { setActive?: (s: Pane
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
                           <div className="small fw-semibold text-dark text-truncate">{s.name}</div>
-                          <div className="text-muted" style={{ fontSize:11 }}>{s.code} · {s.units} units</div>
+                          <div className="text-muted" style={{ fontSize:11 }}>{s.code || s.name}{s.strand ? ` · ${s.strand}` : ''}</div>
                         </div>
                         <span className="badge rounded-pill px-2 py-1"
                           style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontSize:"0.75rem" }}>
-                          {s.enrolled}/{s.max}
+                          {s.enrolled_count || 0} students
                         </span>
                       </div>
                     ))}
@@ -2131,6 +2171,7 @@ function DocumentApprovalsPanel() {
     teacher_reviewed_at?: string;
   }>>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "approved">("all");
   
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -2145,7 +2186,10 @@ function DocumentApprovalsPanel() {
         
         if (res.ok) {
           const data = await res.json();
-          setDocs(data.documents || []);
+          setDocs((data.documents || []).map((d: any) => ({
+            ...d,
+            student: d.student_name // Map student_name to student
+          })));
         }
       } catch (err) {
         console.error("Failed to fetch documents:", err);
@@ -2158,7 +2202,16 @@ function DocumentApprovalsPanel() {
   }, []);
   
   const pending = docs.filter(d => d.status === "student_requested");
-  const approved = docs.filter(d => d.status === "teacher_approved");
+  const approved = docs.filter(d => 
+    ["teacher_approved", "registrar_forwarded", "principal_approved", "pending_payment", "payment_verified", "released"].includes(d.status)
+  );
+  
+  // Filtered documents based on active filter
+  const filteredDocs = activeFilter === "pending" 
+    ? pending 
+    : activeFilter === "approved" 
+    ? approved 
+    : docs;
   
   const handleApprove = async (id: number) => {
     const token = localStorage.getItem("inform_token");
@@ -2182,6 +2235,20 @@ function DocumentApprovalsPanel() {
     }
   };
   
+  // Get status display info
+  const getStatusInfo = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      "teacher_approved": { label: "With Registrar", color: "info" },
+      "registrar_forwarded": { label: "With Principal", color: "primary" },
+      "principal_approved": { label: "Principal Approved", color: "success" },
+      "pending_payment": { label: "Pending Payment", color: "warning" },
+      "payment_verified": { label: "Payment Verified", color: "success" },
+      "released": { label: "Released", color: "secondary" },
+      "principal_rejected": { label: "Rejected", color: "danger" }
+    };
+    return statusMap[status] || { label: status, color: "secondary" };
+  };
+
   // Document type icons mapping
   const getDocIcon = (type: string): IconName => {
     if (type.toLowerCase().includes('certificate')) return 'file';
@@ -2241,8 +2308,46 @@ function DocumentApprovalsPanel() {
         ))}
       </div>
       
+      {/* Filter Buttons */}
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-3">
+          <div className="d-flex gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveFilter("all")}
+              className={`btn ${activeFilter === "all" ? "btn-primary" : "btn-outline-primary"} d-flex align-items-center gap-2`}
+            >
+              <Icon name="documents" size={16} />
+              All Requests
+              <span className={`badge ${activeFilter === "all" ? "bg-white text-primary" : "bg-primary text-white"} ms-1`}>
+                {docs.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveFilter("pending")}
+              className={`btn ${activeFilter === "pending" ? "btn-warning" : "btn-outline-warning"} d-flex align-items-center gap-2`}
+            >
+              <Icon name="clock" size={16} />
+              Pending Requests
+              <span className={`badge ${activeFilter === "pending" ? "bg-white text-warning" : "bg-warning text-white"} ms-1`}>
+                {pending.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveFilter("approved")}
+              className={`btn ${activeFilter === "approved" ? "btn-success" : "btn-outline-success"} d-flex align-items-center gap-2`}
+            >
+              <Icon name="checkCircle" size={16} />
+              Approved
+              <span className={`badge ${activeFilter === "approved" ? "bg-white text-success" : "bg-success text-white"} ms-1`}>
+                {approved.length}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
       {/* Pending Approvals */}
-      {pending.length > 0 && (
+      {activeFilter === "pending" && pending.length > 0 && (
         <div>
           <div className="d-flex align-items-center gap-2 mb-3">
             <div className="rounded-circle bg-warning bg-opacity-25 p-2">
@@ -2284,7 +2389,7 @@ function DocumentApprovalsPanel() {
       )}
       
       {/* No pending message */}
-      {pending.length === 0 && (
+      {activeFilter === "pending" && pending.length === 0 && (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-5 text-center text-muted">
             <Icon name="checkCircle" size={48} className="mb-3 opacity-25" />
@@ -2295,7 +2400,7 @@ function DocumentApprovalsPanel() {
       )}
       
       {/* Approved Documents */}
-      {approved.length > 0 && (
+      {activeFilter === "approved" && approved.length > 0 && (
         <div>
           <div className="d-flex align-items-center gap-2 mb-3">
             <div className="rounded-circle bg-success bg-opacity-25 p-2">
@@ -2305,24 +2410,102 @@ function DocumentApprovalsPanel() {
             <span className="badge bg-success text-white ms-2">{approved.length}</span>
           </div>
           <div className="row g-3">
-            {approved.map(doc => (
-              <div key={doc.id} className="col-12 col-lg-6">
-                <div className="card border-0 shadow-sm rounded-3 border-start border-4 border-success">
-                  <div className="card-body p-3">
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="rounded-circle bg-success bg-opacity-15 p-2 flex-shrink-0">
-                        <Icon name="checkCircle" size={20} className="text-success" />
+            {approved.map(doc => {
+              const statusInfo = getStatusInfo(doc.status);
+              return (
+                <div key={doc.id} className="col-12 col-lg-6">
+                  <div className={`card border-0 shadow-sm rounded-3 border-start border-4 border-${statusInfo.color}`}>
+                    <div className="card-body p-3">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className={`rounded-circle bg-${statusInfo.color} bg-opacity-15 p-2 flex-shrink-0`}>
+                          <Icon name="checkCircle" size={20} className={`text-${statusInfo.color}`} />
+                        </div>
+                        <div className="flex-grow-1">
+                          <div className="fw-semibold text-dark">{doc.student}</div>
+                          <div className="small text-muted">
+                            {doc.document_type} • Approved {doc.teacher_reviewed_at ? new Date(doc.teacher_reviewed_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : 'recently'}
+                          </div>
+                        </div>
+                        <span className={`badge bg-${statusInfo.color} text-white`}>{statusInfo.label}</span>
                       </div>
-                      <div className="flex-grow-1">
-                        <div className="fw-semibold text-dark">{doc.student}</div>
-                        <div className="small text-muted">{doc.type} • Approved {doc.approvedAt}</div>
-                      </div>
-                      <span className="badge bg-success text-white">Approved</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* No approved message */}
+      {activeFilter === "approved" && approved.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-5 text-center text-muted">
+            <Icon name="documents" size={48} className="mb-3 opacity-25" />
+            <div className="fw-semibold fs-5">No approved documents yet</div>
+            <div className="small">Documents you approve will appear here</div>
+          </div>
+        </div>
+      )}
+      
+      {/* All Requests View */}
+      {activeFilter === "all" && docs.length > 0 && (
+        <div>
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <div className="rounded-circle bg-primary bg-opacity-25 p-2">
+              <Icon name="documents" size={18} className="text-primary" />
+            </div>
+            <h3 className="fw-bold mb-0">All Document Requests</h3>
+            <span className="badge bg-primary text-white ms-2">{docs.length}</span>
+          </div>
+          <div className="row g-3">
+            {docs.map(doc => {
+              const isPending = doc.status === "student_requested";
+              const statusInfo = getStatusInfo(doc.status);
+              return (
+                <div key={doc.id} className="col-12 col-lg-6">
+                  <div className={`card border-0 shadow-sm rounded-3 ${!isPending ? `border-start border-4 border-${statusInfo.color}` : ''}`}>
+                    <div className="card-body p-4">
+                      <div className="d-flex align-items-start gap-3 mb-3">
+                        <div className={`rounded-3 ${isPending ? 'bg-warning' : `bg-${statusInfo.color}`} bg-opacity-10 p-2 d-flex align-items-center justify-content-center`} style={{ width: 40, height: 40 }}>
+                          <Icon name={getDocIcon(doc.document_type)} size={20} className={isPending ? 'text-warning' : `text-${statusInfo.color}`} />
+                        </div>
+                        <div className="flex-grow-1">
+                          <div className="fw-bold text-dark mb-1">{doc.student}</div>
+                          <div className="text-muted small">{doc.document_type}</div>
+                          <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                            Requested: {new Date(doc.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                          </div>
+                        </div>
+                        <span className={`badge bg-${isPending ? 'warning' : statusInfo.color} text-white`}>
+                          {isPending ? 'Pending' : statusInfo.label}
+                        </span>
+                      </div>
+                      {isPending && (
+                        <button 
+                          onClick={() => handleApprove(doc.id)}
+                          className="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+                        >
+                          <Icon name="checkCircle" size={16} />
+                          Approve & Forward
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* No documents at all */}
+      {activeFilter === "all" && docs.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body p-5 text-center text-muted">
+            <Icon name="documents" size={48} className="mb-3 opacity-25" />
+            <div className="fw-semibold fs-5">No document requests yet</div>
+            <div className="small">Document requests from students will appear here</div>
           </div>
         </div>
       )}
@@ -2972,10 +3155,13 @@ export default function TeacherDashboardPage() {
     teacher_id: string; full_name: string; department: string; email: string;
   } | null>(null);
   const [apiSubjects, setApiSubjects] = useState<{
-    id: number; code: string; name: string; units: number; max_capacity: number; enrolled_count: number;
+    id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string;
   }[]>([]);
   const [apiStudents, setApiStudents] = useState<{
     student_id: string; full_name: string; email: string; pathway: string | null; grade_level: number | null; photo_url: string | null; track: string | null; strand: string | null; subject_name?: string; term?: string; track_strand?: string;
+  }[]>([]);
+  const [apiActivity, setApiActivity] = useState<{
+    type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string;
   }[]>([]);
 
   // -- Route protection ------------------------------------------
@@ -3005,6 +3191,7 @@ export default function TeacherDashboardPage() {
         if (data.teacher) setApiTeacher(data.teacher);
         if (data.subjects?.length) setApiSubjects(data.subjects);
         if (data.students?.length) setApiStudents(data.students);
+        if (data.activity?.length) setApiActivity(data.activity);
       })
       .catch(() => {});
   }, [panel, authChecked]);
@@ -3043,7 +3230,7 @@ export default function TeacherDashboardPage() {
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;
       case "profile":       return <ProfilePanel teacher={apiTeacher} />;
-      default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} />;
+      default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} />;
     }
   }
 

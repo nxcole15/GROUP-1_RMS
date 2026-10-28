@@ -16,7 +16,23 @@ type PaymentRecord = {
   admin_timestamp?: string;
 };
 
-type IconName = "activity" | "menu";
+type DocumentPaymentRecord = {
+  id: number;
+  student_name: string;
+  student_email: string;
+  document_type: string;
+  payment_amount: number;
+  pickup_date: string;
+  pickup_time: string;
+  pickup_location: string;
+  created_at: string;
+  status: string;
+  accounting_verified_at?: string;
+  accounting_verified_by_name?: string;
+  payment_reference?: string;
+};
+
+type IconName = "activity" | "menu" | "file";
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const props = {
@@ -27,6 +43,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   switch (name) {
     case "activity": return <svg {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
     case "menu": return <svg {...props}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
+    case "file": return <svg {...props}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
     default: return <svg {...props}><circle cx="12" cy="12" r="10"/></svg>;
   }
 }
@@ -34,12 +51,27 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 export default function AccountingDashboardPage() {
   const router = useRouter();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [documentPayments, setDocumentPayments] = useState<DocumentPaymentRecord[]>([]);
+  const [documentStats, setDocumentStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "verified">("all");
+  const [documentFilter, setDocumentFilter] = useState<"all" | "needs_verification" | "verified" | "completed">("all");
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<DocumentPaymentRecord | null>(null);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [activeView, setActiveView] = useState<"overview" | "documents">("overview");
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+  // Helper function to format time to 12-hour format
+  const formatTime = (time24: string) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
 
   useEffect(() => {
     const role = localStorage.getItem("inform_role");
@@ -53,6 +85,8 @@ export default function AccountingDashboardPage() {
   async function loadPayments() {
     try {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      
+      // Load tuition payments
       const res = await fetch(`${API_BASE}/api/payments`, {
         credentials: "include",
         headers: { Authorization: `Bearer ${token}` }
@@ -60,6 +94,17 @@ export default function AccountingDashboardPage() {
       const data = await res.json();
       if (res.ok) {
         setPayments(data.payments || []);
+      }
+      
+      // Load all document payments with stats
+      const docRes = await fetch(`${API_BASE}/api/admin/documents/accounting/all`, {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const docData = await docRes.json();
+      if (docRes.ok) {
+        setDocumentPayments(docData.documents || []);
+        setDocumentStats(docData.stats || {});
       }
     } catch (err) {
       console.error("Failed to load payments:", err);
@@ -87,6 +132,31 @@ export default function AccountingDashboardPage() {
     }
   }
 
+  async function handleVerifyDocumentPayment() {
+    if (!selectedDoc) return;
+    
+    try {
+      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+      const res = await fetch(`${API_BASE}/api/admin/documents/${selectedDoc.id}/accounting-verify-payment`, {
+        method: "POST",
+        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ payment_reference: `PAY-${Date.now()}` }) // Auto-generate reference
+      });
+      
+      if (res.ok) {
+        setShowVerifyModal(false);
+        setSelectedDoc(null);
+        await loadPayments();
+      }
+    } catch (err) {
+      console.error("Failed to verify document payment:", err);
+    }
+  }
+
   const filteredPayments = payments.filter(p => {
     const matchesFilter = filter === "all" || p.status === filter;
     const matchesSearch = !search || 
@@ -99,6 +169,24 @@ export default function AccountingDashboardPage() {
   const pendingCount = payments.filter(p => p.status === "pending").length;
   const verifiedCount = payments.filter(p => p.status === "verified").length;
   const totalAmount = payments.filter(p => p.status === "verified").reduce((sum, p) => sum + Number(p.amount), 0);
+
+  // Filter document payments
+  const filteredDocumentPayments = documentPayments.filter(doc => {
+    if (documentFilter === "needs_verification") return doc.status === "pending_payment";
+    if (documentFilter === "verified") return doc.status === "payment_verified";
+    if (documentFilter === "completed") return doc.status === "released";
+    return true; // "all"
+  });
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, {bg: string; text: string; label: string}> = {
+      pending_payment: { bg: "#fef3c7", text: "#92400e", label: "Needs Verification" },
+      payment_verified: { bg: "#d1fae5", text: "#065f46", label: "Payment Verified" },
+      released: { bg: "#f1f5f9", text: "#475569", label: "Picked Up" },
+    };
+    const info = statusMap[status] || { bg: "#f3f4f6", text: "#374151", label: status };
+    return <span className="badge px-3 py-2 rounded-pill" style={{ background: info.bg, color: info.text, fontSize: "0.75rem", fontWeight: 600 }}>{info.label}</span>;
+  };
 
   return (
     <>
@@ -113,15 +201,30 @@ export default function AccountingDashboardPage() {
         </div>
 
         <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#3b82f6" }}>
+          <button 
+            onClick={() => setActiveView("overview")}
+            className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
+            style={{ color: activeView === "overview" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "overview" ? "#3b82f6" : "transparent" }}
+          >
             <Icon name="activity" size={20} />
             <span>Overview</span>
+          </button>
+          <button 
+            onClick={() => setActiveView("documents")}
+            className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
+            style={{ color: activeView === "documents" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "documents" ? "#3b82f6" : "transparent" }}
+          >
+            <Icon name="file" size={20} />
+            <span>Document Payments</span>
+            {documentStats.needs_verification > 0 && (
+              <span className="badge bg-warning text-dark ms-auto">{documentStats.needs_verification}</span>
+            )}
           </button>
           <button onClick={() => router.push("/accounting/payments")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
-            <span>Payments</span>
+            <span>Tuition Payments</span>
           </button>
           <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -154,7 +257,9 @@ export default function AccountingDashboardPage() {
           </header>
 
           <main className="container-fluid px-4 py-4">
-            <div className="row g-3 mb-4">
+            {activeView === "overview" && (
+              <>
+                <div className="row g-3 mb-4">
               <div className="col-md-4">
                 <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-4">
@@ -261,9 +366,243 @@ export default function AccountingDashboardPage() {
                 </div>
               </div>
             </div>
+            </>
+            )}
+
+            {activeView === "documents" && (
+              <>
+                {/* Stats Cards */}
+                <div className="row g-3 mb-4">
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Needs Verification</p>
+                        <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#f59e0b", lineHeight: 1 }}>{documentStats.needs_verification || 0}</h2>
+                        <p className="text-muted mb-0" style={{ fontSize: 14 }}>₱{(documentStats.pending_amount || 0).toLocaleString()}</p>
+                      </div>
+                      <div style={{ height:3, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }} />
+                    </div>
+                  </div>
+
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Verified Payments</p>
+                        <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#10b981", lineHeight: 1 }}>{documentStats.verified || 0}</h2>
+                        <p className="text-muted mb-0" style={{ fontSize: 14 }}>Ready for pickup</p>
+                      </div>
+                      <div style={{ height:3, background:"linear-gradient(135deg,#10b981,#34d399)" }} />
+                    </div>
+                  </div>
+
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Completed</p>
+                        <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#6b7280", lineHeight: 1 }}>{documentStats.completed || 0}</h2>
+                        <p className="text-muted mb-0" style={{ fontSize: 14 }}>Already picked up</p>
+                      </div>
+                      <div style={{ height:3, background:"linear-gradient(135deg,#6b7280,#9ca3af)" }} />
+                    </div>
+                  </div>
+
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Verified</p>
+                        <h2 className="mb-3 fw-bold" style={{ fontSize: 36, color: "#3b82f6", lineHeight: 1 }}>₱{(documentStats.verified_amount || 0).toLocaleString()}</h2>
+                        <p className="text-muted mb-0" style={{ fontSize: 14 }}>Revenue collected</p>
+                      </div>
+                      <div style={{ height:3, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Buttons */}
+                <div className="card border-0 shadow-sm rounded-3 mb-4">
+                  <div className="card-body p-3">
+                    <div className="d-flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => setDocumentFilter("all")}
+                        className={`btn ${documentFilter === "all" ? "btn-primary" : "btn-outline-primary"} d-flex align-items-center gap-2`}
+                      >
+                        All Documents
+                        <span className={`badge ${documentFilter === "all" ? "bg-white text-primary" : "bg-primary text-white"} ms-1`}>
+                          {documentPayments.length}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setDocumentFilter("needs_verification")}
+                        className={`btn ${documentFilter === "needs_verification" ? "btn-warning" : "btn-outline-warning"} d-flex align-items-center gap-2`}
+                      >
+                        Needs Verification
+                        <span className={`badge ${documentFilter === "needs_verification" ? "bg-white text-warning" : "bg-warning text-white"} ms-1`}>
+                          {documentStats.needs_verification || 0}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setDocumentFilter("verified")}
+                        className={`btn ${documentFilter === "verified" ? "btn-success" : "btn-outline-success"} d-flex align-items-center gap-2`}
+                      >
+                        Verified
+                        <span className={`badge ${documentFilter === "verified" ? "bg-white text-success" : "bg-success text-white"} ms-1`}>
+                          {documentStats.verified || 0}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setDocumentFilter("completed")}
+                        className={`btn ${documentFilter === "completed" ? "btn-secondary" : "btn-outline-secondary"} d-flex align-items-center gap-2`}
+                      >
+                        Completed
+                        <span className={`badge ${documentFilter === "completed" ? "bg-white text-secondary" : "bg-secondary text-white"} ms-1`}>
+                          {documentStats.completed || 0}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Cards */}
+                <div className="row g-4">
+                  {filteredDocumentPayments.length === 0 ? (
+                    <div className="col-12">
+                      <div className="card border-0 shadow-sm rounded-4">
+                        <div className="card-body text-center py-5">
+                          <Icon name="file" size={48} />
+                          <div className="fw-semibold mt-3">No documents found</div>
+                          <div className="text-muted small">
+                            {documentFilter === "all" && "No document payment requests at this time"}
+                            {documentFilter === "needs_verification" && "All document payments have been verified"}
+                            {documentFilter === "verified" && "No verified payments waiting for pickup"}
+                            {documentFilter === "completed" && "No completed documents yet"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    filteredDocumentPayments.map(doc => (
+                      <div key={doc.id} className="col-12 col-lg-6">
+                        <div className="card border-0 shadow-sm rounded-4 h-100">
+                          <div className="card-body p-4">
+                            <div className="d-flex justify-content-between align-items-start mb-3">
+                              <div className="flex-grow-1">
+                                <div className="fw-bold text-dark mb-1">{doc.student_name}</div>
+                                <div className="text-muted small">{doc.document_type}</div>
+                                <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                                  {doc.student_email}
+                                </div>
+                              </div>
+                              {getStatusBadge(doc.status)}
+                            </div>
+
+                            {/* Payment Amount */}
+                            <div className="alert alert-light border mb-3 py-2 px-3">
+                              <div className="d-flex justify-content-between align-items-center">
+                                <div className="small text-muted">Payment Amount:</div>
+                                <div className="fw-bold text-warning fs-5">₱{parseFloat(String(doc.payment_amount)).toFixed(2)}</div>
+                              </div>
+                            </div>
+
+                            {/* Pickup Details */}
+                            {doc.pickup_date && (
+                              <div className="small text-muted mb-3">
+                                <div>📅 Pickup: {new Date(doc.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(doc.pickup_time)}</div>
+                                <div>📍 {doc.pickup_location}</div>
+                              </div>
+                            )}
+
+                            {/* Verified Info */}
+                            {doc.status === "payment_verified" || doc.status === "released" ? (
+                              <div className="alert alert-success mb-3 py-2 px-3">
+                                <div className="small">
+                                  <div className="fw-semibold">✓ Payment Verified</div>
+                                  {doc.accounting_verified_at && (
+                                    <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                                      {new Date(doc.accounting_verified_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                      {doc.accounting_verified_by_name && ` by ${doc.accounting_verified_by_name}`}
+                                    </div>
+                                  )}
+                                  {doc.payment_reference && (
+                                    <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                                      Ref: {doc.payment_reference}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {/* Action Button */}
+                            {doc.status === "pending_payment" && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDoc(doc);
+                                  setShowVerifyModal(true);
+                                }}
+                                className="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+                              >
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                Verify Payment
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Document Payment Verification Section - REMOVED FROM OVERVIEW */}
           </main>
         </div>
       </div>
+
+      {/* Payment Verification Modal - Simplified */}
+      {showVerifyModal && selectedDoc && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)" }} onClick={() => setShowVerifyModal(false)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">Verify Document Payment</h5>
+                <button className="btn-close btn-close-white" onClick={() => setShowVerifyModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="text-center mb-4">
+                  <div className="mb-3">
+                    <Icon name="file" size={48} />
+                  </div>
+                  <h5 className="fw-bold">{selectedDoc.student_name}</h5>
+                  <p className="text-muted mb-0">{selectedDoc.document_type}</p>
+                </div>
+                
+                <div className="alert alert-light border text-center mb-3">
+                  <div className="small text-muted mb-1">Amount Paid:</div>
+                  <div className="h3 mb-0 text-success">₱{parseFloat(String(selectedDoc.payment_amount)).toFixed(2)}</div>
+                </div>
+
+                <div className="alert alert-warning mb-0">
+                  <small>
+                    <strong>⚠️ Confirm Payment Verification</strong><br/>
+                    By clicking "Verify Payment", you confirm that this student has paid the required amount at the Accounting office.
+                  </small>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowVerifyModal(false)}>Cancel</button>
+                <button 
+                  className="btn btn-success" 
+                  onClick={handleVerifyDocumentPayment}
+                >
+                  ✓ Verify Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="d-lg-none">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>

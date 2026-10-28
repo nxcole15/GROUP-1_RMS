@@ -3,6 +3,7 @@
  * Student-facing document-request operations.
  */
 const DocumentModel = require("./documentModel");
+const DocumentTypeModel = require("./documentTypeModel");
 
 async function getMyDocuments(req, res, next) {
   try {
@@ -11,8 +12,16 @@ async function getMyDocuments(req, res, next) {
   } catch (err) { next(err); }
 }
 
-function getDocumentTypes(req, res) {
-  res.json({ document_types: DocumentModel.SUPPORTED_TYPES });
+async function getDocumentTypes(req, res, next) {
+  try {
+    const types = await DocumentTypeModel.findAll();
+    res.json({ 
+      document_types: types,
+      supported_types: types.map(t => t.document_name)
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function submitDocumentRequest(req, res, next) {
@@ -21,9 +30,13 @@ async function submitDocumentRequest(req, res, next) {
     const { document_type, purpose, copies, teacher_id } = req.body;
 
     const errors = [];
-    if (!document_type || !DocumentModel.SUPPORTED_TYPES.includes(document_type)) {
-      errors.push(`document_type must be one of: ${DocumentModel.SUPPORTED_TYPES.join(", ")}.`);
+    
+    // Check if document type exists and is active
+    const docType = await DocumentTypeModel.findByName(document_type);
+    if (!docType) {
+      errors.push("Invalid document_type. Please select from available document types.");
     }
+    
     if (!purpose || typeof purpose !== "string" || purpose.trim().length < 10 || purpose.trim().length > 500) {
       errors.push("purpose must be between 10 and 500 characters.");
     }
@@ -46,12 +59,16 @@ async function submitDocumentRequest(req, res, next) {
       });
     }
 
+    // Get payment amount from database
+    const payment_amount = parseFloat(docType.price);
+
     const doc = await DocumentModel.create({
       student_id,
       document_type,
       purpose: purpose.trim(),
       copies:  parsedCopies,
       teacher_id: parsedTeacherId,
+      payment_amount,
     });
 
     res.status(201).json({

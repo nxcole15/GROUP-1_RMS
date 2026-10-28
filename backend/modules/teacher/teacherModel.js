@@ -31,12 +31,33 @@ const TeacherModel = {
   },
 
   async getAssignedSubjects(teacher_id) {
-    const [rows] = await db.query(
-      `SELECT s.id, s.code, s.name, s.units, s.max_capacity, s.enrolled_count
-       FROM subjects s
-       WHERE s.teacher_id = (SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1)
-       ORDER BY s.code`,
+    // Get teacher's internal ID first
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
       [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+
+    if (!internalTeacherId) {
+      return [];
+    }
+
+    // Get subjects from teacher_schedules (new system)
+    const [rows] = await db.query(
+      `SELECT 
+         ts.id,
+         ts.subject_name AS name,
+         ts.subject_name AS code,
+         ts.strand,
+         ts.track,
+         ts.term,
+         COUNT(DISTINCT sse.student_id) AS enrolled_count
+       FROM teacher_schedules ts
+       LEFT JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
+       WHERE ts.teacher_id = ?
+       GROUP BY ts.id, ts.subject_name, ts.strand, ts.track, ts.term
+       ORDER BY ts.subject_name`,
+      [internalTeacherId]
     );
     return rows;
   },
@@ -232,6 +253,14 @@ const TeacherModel = {
       [internalTeacherId]
     );
 
+    // Get pending document approvals count for this teacher
+    const [docRequestRows] = await db.query(
+      `SELECT COUNT(*) AS pending_docs
+       FROM documents d
+       WHERE d.teacher_id = ? AND d.status = 'student_requested'`,
+      [internalTeacherId]
+    );
+
     // Get active term from enrollment_config
     const [termRows] = await db.query(
       `SELECT active_term FROM enrollment_config LIMIT 1`
@@ -240,22 +269,39 @@ const TeacherModel = {
     return {
       total_students: studentRows[0]?.total_students || 0,
       avg_grade: gradeRows[0]?.avg_grade || 0,
-      pending_requests: requestRows[0]?.pending_requests || 0,
+      pending_requests: (requestRows[0]?.pending_requests || 0) + (docRequestRows[0]?.pending_docs || 0),
       active_term: termRows[0]?.active_term || 'Term 1'
     };
   },
 
   async getRecentActivity(teacher_id, limit = 5) {
+    // Get teacher's internal ID
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
+      [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+
+    if (!internalTeacherId) {
+      return [];
+    }
+
     const [rows] = await db.query(
-      `SELECT 'grade' AS type, g.created_at, st.full_name AS student_name,
-              s.name AS subject_name, g.percentage AS value
+      `(SELECT 'grade' AS type, g.created_at, st.full_name AS student_name,
+              s.name AS subject_name, g.percentage AS value, NULL AS document_type
        FROM grades g
        JOIN students st ON st.student_id = g.student_id
        JOIN subjects s ON s.id = g.subject_id
-       WHERE s.teacher_id = (SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1)
-       ORDER BY g.created_at DESC
+       WHERE s.teacher_id = ?)
+       UNION ALL
+       (SELECT 'document' AS type, d.teacher_reviewed_at AS created_at, st.full_name AS student_name,
+              d.document_type AS subject_name, NULL AS value, d.document_type AS document_type
+       FROM documents d
+       JOIN students st ON st.student_id = d.student_id
+       WHERE d.teacher_id = ? AND d.teacher_reviewed_at IS NOT NULL)
+       ORDER BY created_at DESC
        LIMIT ?`,
-      [teacher_id, limit]
+      [internalTeacherId, teacher_id, limit]
     );
     return rows;
   },

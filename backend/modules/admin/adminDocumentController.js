@@ -15,6 +15,19 @@ async function getRegistrarDocuments(req, res, next) {
   }
 }
 
+async function getAllRegistrarDocuments(req, res, next) {
+  try {
+    const docs = await DocumentModel.findAllForRegistrar();
+    const stats = await DocumentModel.getRegistrarDocumentStats();
+    res.json({ 
+      documents: docs,
+      stats: stats
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function registrarForwardToPrincipal(req, res, next) {
   try {
     const { id } = req.params;
@@ -58,9 +71,9 @@ async function registrarSetPickup(req, res, next) {
       return res.status(400).json({ error: "pickup_date, pickup_time, and pickup_location are required." });
     }
 
-    await DocumentModel.setReadyForPickup(id, registrar_id, pickup_date, pickup_time, pickup_location);
+    await DocumentModel.setPendingPayment(id, registrar_id, pickup_date, pickup_time, pickup_location);
     res.json({ 
-      message: "Document is ready for pickup. Student has been notified.",
+      message: "Pickup details set. Student needs to pay at Accounting before pickup.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -78,13 +91,40 @@ async function registrarMarkAsReleased(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'ready_for_pickup') {
-      return res.status(400).json({ error: "Document must be ready for pickup first." });
+    if (doc.status !== 'payment_verified') {
+      return res.status(400).json({ error: "Payment must be verified by Accounting first." });
     }
 
+    // Mark as ready for pickup first
+    await DocumentModel.setReadyForPickup(id, released_by);
+    
+    res.json({ 
+      message: "Document is ready for pickup.",
+      document: await DocumentModel.findById(id)
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function registrarConfirmPickedUp(req, res, next) {
+  try {
+    const { id } = req.params;
+    const released_by = req.admin.admin_id;
+    
+    const doc = await DocumentModel.findById(id);
+    if (!doc) {
+      return res.status(404).json({ error: "Document request not found." });
+    }
+
+    if (doc.status !== 'payment_verified') {
+      return res.status(400).json({ error: "Payment must be verified by Accounting first." });
+    }
+
+    // Mark as picked up (released)
     await DocumentModel.markAsReleased(id, released_by);
     res.json({ 
-      message: "Document marked as released to student.",
+      message: "Document marked as picked up by student.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -102,6 +142,74 @@ async function getPrincipalDocuments(req, res, next) {
     next(err);
   }
 }
+
+async function getAllPrincipalDocuments(req, res, next) {
+  try {
+    const docs = await DocumentModel.findAllForPrincipal();
+    const stats = await DocumentModel.getPrincipalDocumentStats();
+    res.json({ 
+      documents: docs,
+      stats: stats
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ===== ACCOUNTING FUNCTIONS =====
+
+async function getAccountingDocuments(req, res, next) {
+  try {
+    const docs = await DocumentModel.findPendingForAccounting();
+    res.json({ documents: docs });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getAllAccountingDocuments(req, res, next) {
+  try {
+    const docs = await DocumentModel.findAllForAccounting();
+    const stats = await DocumentModel.getAccountingDocumentStats();
+    res.json({ 
+      documents: docs,
+      stats: stats
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function accountingVerifyPayment(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { payment_reference } = req.body;
+    const accounting_id = req.admin.admin_id;
+    
+    const doc = await DocumentModel.findById(id);
+    if (!doc) {
+      return res.status(404).json({ error: "Document request not found." });
+    }
+
+    if (doc.status !== 'pending_payment') {
+      return res.status(400).json({ error: "Document must be pending payment." });
+    }
+
+    if (!payment_reference || payment_reference.trim().length < 3) {
+      return res.status(400).json({ error: "payment_reference is required (min 3 characters)." });
+    }
+
+    await DocumentModel.accountingVerifyPayment(id, accounting_id, payment_reference.trim());
+    res.json({ 
+      message: "Payment verified. Registrar can now prepare the document for pickup.",
+      document: await DocumentModel.findById(id)
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ===== PRINCIPAL FUNCTIONS (CONTINUED) =====
 
 async function principalApprove(req, res, next) {
   try {
@@ -159,12 +267,20 @@ async function principalReject(req, res, next) {
 module.exports = {
   // Registrar
   getRegistrarDocuments,
+  getAllRegistrarDocuments,
   registrarForwardToPrincipal,
   registrarSetPickup,
   registrarMarkAsReleased,
+  registrarConfirmPickedUp,
   
   // Principal
   getPrincipalDocuments,
+  getAllPrincipalDocuments,
   principalApprove,
-  principalReject
+  principalReject,
+  
+  // Accounting
+  getAccountingDocuments,
+  getAllAccountingDocuments,
+  accountingVerifyPayment
 };

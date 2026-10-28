@@ -94,17 +94,19 @@ async function getDashboardData(req, res, next) {
       // Student_tuition table might not exist yet
     }
 
-    // Get pending document requests count (handle missing table)
+    // Get pending document requests count (documents not yet picked up)
     let pendingDocs = 0;
     try {
       const [docsRows] = await db.query(`
         SELECT COUNT(*) as pending_count
-        FROM document_requests
-        WHERE student_id = ? AND status = 'pending'
+        FROM documents
+        WHERE student_id = ? AND status <> 'released'
       `, [studentId]);
       pendingDocs = docsRows[0]?.pending_count || 0;
     } catch (err) {
-      // Document_requests table might not exist yet
+      // Documents table might not exist yet or query failed
+      console.error("Error fetching pending documents:", err.message);
+      pendingDocs = 0;
     }
 
     // Get recent grades (handle missing table)
