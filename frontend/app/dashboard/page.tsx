@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import React from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { API_BASE } from "../lib/auth";
+import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
 
 type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile";
 type JMsg  = { role:"ai"|"user"; text:string; feedback?:"up"|"down"|null };
@@ -257,11 +257,12 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
 }
 
 /* -- Home / Overview -- */
-function HomePanel({ setPanel, onAskJobert, student, dashboardData }: { 
+function HomePanel({ setPanel, onAskJobert, student, dashboardData, academicConfig }: { 
   setPanel:(p:Panel)=>void; 
   onAskJobert:(p:string)=>void; 
   student?: { student_id: string; full_name: string; pathway: string; grade_level: number; term: string; email: string; photo_url?: string } | null;
   dashboardData?: { stats: { average_grade: number; total_paid: number; total_tuition: number; balance_due: number; pending_docs: number }; recent_grades: any[] } | null;
+  academicConfig?: AcademicConfig | null;
 }) {
   const avgGrade = dashboardData?.stats.average_grade || 0;
   const totalPaid = dashboardData?.stats.total_paid || 0;
@@ -297,7 +298,7 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData }: {
             Welcome back, {student?.full_name ?? "Student"}
           </h1>
           <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
-            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · SY {new Date().getFullYear()}-{new Date().getFullYear() + 1}
+            {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`}
           </p>
           <div className="d-flex gap-2 flex-wrap">
             <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
@@ -1326,90 +1327,196 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
 /* -- Tuition View -- */
 function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
-  const [apiPayments, setApiPayments] = useState<{id:number;fee_item:string;amount:number;status:string;paid_at:string|null}[]>([]);
-  const [summary, setSummary] = useState<{total_assessment:number;total_paid:number;remaining_balance:number}|null>(null);
+  const [assessment, setAssessment] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+
+  useEffect(() => {
+    // Fetch academic config first
+    getAcademicConfig().then(config => {
+      setAcademicConfig(config);
+    });
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return;
+    if (!token || token.startsWith("demo_") || !academicConfig) return;
+    
     setLoading(true);
     setError(false);
-    fetch(`${API_BASE}/api/payments`, {
+    
+    const schoolYear = academicConfig.school_year || "2026-2027";
+    const term = academicConfig.current_term || "Term 1";
+    
+    // Fetch student assessment
+    fetch(`${API_BASE}/api/student/fees/my-assessment?school_year=${schoolYear}&term=${term}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data?.payments?.length) setApiPayments(data.payments);
-        if (data?.summary) setSummary(data.summary);
+        if (data?.assessment) {
+          setAssessment(data.assessment);
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [academicConfig]);
 
-  // Use API data if available, else fallback to mock
-  const useApi = apiPayments.length > 0;
-  const total  = useApi ? (summary?.total_assessment ?? fees.reduce((a,f) => a+f.amount, 0)) : fees.reduce((a,f) => a+f.amount, 0);
-  const paid   = useApi ? (summary?.total_paid ?? fees.filter(f=>f.paid).reduce((a,f) => a+f.amount, 0)) : fees.filter(f=>f.paid).reduce((a,f) => a+f.amount, 0);
-  const balance= useApi ? (summary?.remaining_balance ?? total - paid) : total - paid;
+  // Calculate totals
+  const total = assessment?.total_assessment || 0;
+  const discount = assessment?.discount_amount || 0;
+  const netTotal = assessment?.net_assessment || 0;
+  const paid = assessment ? (assessment.payment_summary?.total_paid || 0) : 0;
+  const balance = netTotal - paid;
+  const lineItems = assessment?.line_items || [];
+  
   return (
     <div className="d-flex flex-column gap-4">
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Tuition Fee</h2><p className="text-muted small mb-0">Term 1 - 2025-2026</p></div>
+      <div>
+        <h2 className="fw-black fs-4 text-dark mb-1">Tuition Fee</h2>
+        <p className="text-muted small mb-0">
+          {academicConfig?.current_term || "Term 1"} - {academicConfig?.school_year || "2025-2026"}
+        </p>
+      </div>
+      
       <div className="row g-3">
         {[
-          { label:"Total Fees",  value:peso(total),   cls:"bg-light border",                                        val:"text-dark"    },
-          { label:"Amount Paid", value:peso(paid),    cls:"bg-success-subtle border-success-subtle",                val:"text-success" },
-          { label:"Balance Due", value:peso(balance), cls:balance>0?"bg-danger-subtle border-danger-subtle":"bg-success-subtle border-success-subtle", val:balance>0?"text-danger":"text-success" },
+          { label:"Total Fees",  value:peso(netTotal), cls:"bg-light border",                                        val:"text-dark"    },
+          { label:"Amount Paid", value:peso(paid),     cls:"bg-success-subtle border-success-subtle",                val:"text-success" },
+          { label:"Balance Due", value:peso(balance),  cls:balance>0?"bg-danger-subtle border-danger-subtle":"bg-success-subtle border-success-subtle", val:balance>0?"text-danger":"text-success" },
         ].map(s => (
           <div key={s.label} className="col-4">
-            <div className={`card border rounded-3 ${s.cls}`}><div className="card-body p-3 text-center"><div className="text-muted small mb-1">{s.label}</div><div className={`fw-black fs-5 ${s.val}`}>{s.value}</div></div></div>
+            <div className={`card border rounded-3 ${s.cls}`}>
+              <div className="card-body p-3 text-center">
+                <div className="text-muted small mb-1">{s.label}</div>
+                <div className={`fw-black fs-5 ${s.val}`}>{s.value}</div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
+      
       <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
             <thead className="table-light">
               <tr>
                 <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Fee Item</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end" style={{ letterSpacing:"0.05em" }}>Amount</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Status</th>
+                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={3} className="text-center py-4"><div className="spinner-border text-primary spinner-border-sm" role="status"></div></td></tr>
-              ) : useApi ? (
-                apiPayments.map((f,i) => (
-                  <tr key={i}>
-                    <td className="ps-4 small fw-medium text-dark">{f.fee_item}</td>
-                    <td className="text-end small text-dark">{peso(Number(f.amount))}</td>
-                    <td className="text-end pe-4"><span className={`badge ${f.status==="paid"?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.status==="paid" ? <span className="d-inline-flex align-items-center gap-1"><Icon name="check" size={10} /> Paid</span> : "Unpaid"}</span></td>
-                  </tr>
-                ))
+                <tr>
+                  <td colSpan={2} className="text-center py-4">
+                    <div className="spinner-border text-primary spinner-border-sm" role="status"></div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={2} className="text-center py-4 text-danger small">
+                    Failed to load fee assessment
+                  </td>
+                </tr>
+              ) : !assessment ? (
+                <tr>
+                  <td colSpan={2} className="text-center py-4 text-muted small">
+                    No fee assessment assigned yet
+                  </td>
+                </tr>
               ) : (
-                fees.map((f,i) => (
-                  <tr key={i}>
-                    <td className="ps-4 small fw-medium text-dark">{f.label}</td>
-                    <td className="text-end small text-dark">{peso(f.amount)}</td>
-                    <td className="text-end pe-4"><span className={`badge ${f.paid?"bg-success-subtle text-success border border-success-subtle":"bg-danger-subtle text-danger border border-danger-subtle"}`}>{f.paid ? <span className="d-inline-flex align-items-center gap-1"><Icon name="check" size={10} /> Paid</span> : "Unpaid"}</span></td>
+                <>
+                  {lineItems.map((item: any, i: number) => (
+                    <tr key={i}>
+                      <td className="ps-4 small fw-medium text-dark">
+                        {item.item_name}
+                        {item.description && (
+                          <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                            {item.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-end pe-4 small text-dark">{peso(Number(item.amount))}</td>
+                    </tr>
+                  ))}
+                  
+                  {/* Subtotal */}
+                  <tr style={{ borderTop: "2px solid #e5e7eb" }}>
+                    <td className="ps-4 small fw-semibold text-dark">Subtotal</td>
+                    <td className="text-end pe-4 small fw-semibold text-dark">{peso(total)}</td>
                   </tr>
-                ))
+                  
+                  {/* Discount (if applicable) */}
+                  {discount > 0 && (
+                    <tr>
+                      <td className="ps-4 small text-success">
+                        Discount
+                        {assessment.discount_reason && (
+                          <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+                            {" "}({assessment.discount_reason})
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-end pe-4 small text-success">-{peso(discount)}</td>
+                    </tr>
+                  )}
+                  
+                  {/* Net Total */}
+                  <tr style={{ borderTop: "2px solid #e5e7eb", background: "#f8fafc" }}>
+                    <td className="ps-4 fw-bold text-dark">Net Assessment</td>
+                    <td className="text-end pe-4 fw-bold text-primary fs-5">{peso(netTotal)}</td>
+                  </tr>
+                  
+                  {/* Paid Amount */}
+                  {paid > 0 && (
+                    <tr>
+                      <td className="ps-4 small text-success">Amount Paid</td>
+                      <td className="text-end pe-4 small text-success">-{peso(paid)}</td>
+                    </tr>
+                  )}
+                  
+                  {/* Balance */}
+                  <tr style={{ background: balance > 0 ? "#fef2f2" : "#f0fdf4" }}>
+                    <td className="ps-4 fw-bold" style={{ color: balance > 0 ? "#dc2626" : "#059669" }}>
+                      Balance Due
+                    </td>
+                    <td className="text-end pe-4 fw-bold fs-5" style={{ color: balance > 0 ? "#dc2626" : "#059669" }}>
+                      {peso(balance)}
+                    </td>
+                  </tr>
+                </>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      {error && <div className="alert alert-warning small">Could not load data. Showing cached data.</div>}
-      {balance>0 && (
-        <div className="alert alert-warning d-flex align-items-start gap-2">
-          
-          <div className="small">You have an outstanding balance of <strong>{peso(balance)}</strong>. Please settle at the Finance Office or visit the Student Portal for online payment options.</div>
+      
+      {assessment && assessment.notes && (
+        <div className="alert alert-info small">
+          <strong>Note:</strong> {assessment.notes}
         </div>
       )}
-      <button onClick={() => onAskJobert(`My tuition balance is ${peso(balance)}. How do I pay it?`)} className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}><Icon name="bot" size={14} /> Ask JOBERT about payment</button>
+      
+      {balance > 0 && assessment && (
+        <div className="alert alert-warning d-flex align-items-start gap-2">
+          <div className="small">
+            You have an outstanding balance of <strong>{peso(balance)}</strong>. 
+            Please settle at the Finance Office or visit the Student Portal for online payment options.
+          </div>
+        </div>
+      )}
+      
+      {assessment && (
+        <button 
+          onClick={() => onAskJobert(`My tuition balance is ${peso(balance)}. How do I pay it?`)} 
+          className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" 
+          style={{ fontSize:12 }}
+        >
+          <Icon name="bot" size={14} /> Ask JOBERT about payment
+        </button>
+      )}
     </div>
   );
 }
@@ -2280,6 +2387,7 @@ export default function DashboardPage() {
       term: string;
     }>;
   } | null>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
 
   // -- Route protection ------------------------------------------
@@ -2292,6 +2400,12 @@ export default function DashboardPage() {
       setAuthChecked(true);
     }
   }, []);
+
+  // Fetch academic config
+  useEffect(() => {
+    if (!authChecked) return;
+    getAcademicConfig().then(config => setAcademicConfig(config));
+  }, [authChecked]);
 
   // -- Fetch real notifications from API � poll every 20s ---------
   useEffect(() => {
@@ -2373,7 +2487,7 @@ export default function DashboardPage() {
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
       case "notifications": return <NotificationsView />;
-      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} dashboardData={dashboardData} />;
+      default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} dashboardData={dashboardData} academicConfig={academicConfig} />;
     }
   }
 

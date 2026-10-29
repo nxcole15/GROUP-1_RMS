@@ -46,20 +46,27 @@ const PaymentModel = {
   },
 
   async computeSummary(student_id) {
+    // Get official fee assessment from student_assessments
+    const FeeModel = require("../fees/feeModel");
+    const assessment = await FeeModel.getCompleteAssessment(student_id, "2026-2027", "Term 1");
+    
+    const total_assessment = assessment ? parseFloat(assessment.net_assessment) : 0;
+    
+    // Get total paid from payments
     const [rows] = await db.query(
       `SELECT
-         SUM(amount)                                              AS total_assessment,
          SUM(CASE WHEN status='verified' THEN amount ELSE 0 END) AS total_paid
        FROM payments
        WHERE student_id = ?`,
       [student_id]
     );
-    const total_assessment = parseFloat(rows[0].total_assessment || 0);
-    const total_paid       = parseFloat(rows[0].total_paid       || 0);
+    const total_paid = parseFloat(rows[0].total_paid || 0);
+    
     return {
       total_assessment,
       total_paid,
       remaining_balance: parseFloat((total_assessment - total_paid).toFixed(2)),
+      assessment_breakdown: assessment ? assessment.line_items : null
     };
   },
 };

@@ -33,6 +33,15 @@ const {
   clearGradeSubmissionSchedule,
 } = require("./adminController");
 const {
+  getAcademicConfig,
+  getSchoolYears,
+  createSchoolYear,
+  updateSchoolYear,
+  deleteSchoolYear,
+  completeTerm,
+  updateEnrollmentConfig
+} = require("./adminSettingsController");
+const {
   getPendingSubmissions,
   getAllSubmissions,
   getSubmissionDetails,
@@ -77,6 +86,15 @@ const { authenticateAdmin } = require("./adminMiddleware");
 // ── Public admin auth ──────────────────────────────────────────────────────
 router.post("/login",  adminLogin);
 router.post("/logout", adminLogout);
+
+// ── TEST ROUTE (No auth needed - remove after testing) ────────────────────
+router.get("/settings/test", (req, res) => {
+  res.json({ 
+    message: "Settings routes are working! Backend is alive!", 
+    timestamp: new Date(),
+    note: "This route works without authentication"
+  });
+});
 
 // ── All routes below require a valid admin JWT ─────────────────────────────
 router.use(authenticateAdmin);
@@ -165,5 +183,14 @@ router.post("/documents/:id/principal-reject", principalReject);
 router.get("/documents/accounting", getAccountingDocuments);
 router.get("/documents/accounting/all", getAllAccountingDocuments);
 router.post("/documents/:id/accounting-verify-payment", accountingVerifyPayment);
+
+// ── System Settings (Principal Only) ──────────────────────────────────────
+router.get("/settings/academic-config", getAcademicConfig);
+router.get("/settings/school-years", getSchoolYears);
+router.post("/settings/school-years", createSchoolYear);
+router.put("/settings/school-years/:id", updateSchoolYear);
+router.delete("/settings/school-years/:id", deleteSchoolYear);
+router.post("/settings/complete-term", completeTerm);
+router.put("/settings/enrollment-config", updateEnrollmentConfig);
 
 module.exports = router;

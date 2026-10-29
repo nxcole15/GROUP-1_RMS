@@ -72,26 +72,42 @@ async function getDashboardData(req, res, next) {
         SELECT 
           COALESCE(SUM(amount), 0) as total_paid
         FROM payments
-        WHERE student_id = ? AND status = 'paid'
+        WHERE student_id = ? AND status = 'verified'
       `, [studentId]);
       totalPaid = paymentsRows[0]?.total_paid || 0;
     } catch (err) {
       // Payments table might not exist yet
     }
 
-    // Get total tuition fee (handle missing table)
+    // Get total tuition fee from new assessment system
     let totalTuition = 0;
     try {
-      const [tuitionRows] = await db.query(`
+      // Try new assessment system first
+      const [assessmentRows] = await db.query(`
         SELECT 
-          COALESCE(total_amount, 0) as total_tuition
-        FROM student_tuition
+          COALESCE(net_assessment, 0) as total_tuition
+        FROM student_assessments
         WHERE student_id = ?
+        ORDER BY assessed_at DESC
         LIMIT 1
       `, [studentId]);
-      totalTuition = tuitionRows[0]?.total_tuition || 0;
+      
+      if (assessmentRows && assessmentRows[0] && assessmentRows[0].total_tuition > 0) {
+        totalTuition = assessmentRows[0].total_tuition;
+      } else {
+        // Fallback to old student_tuition table if assessment doesn't exist
+        const [tuitionRows] = await db.query(`
+          SELECT 
+            COALESCE(total_amount, 0) as total_tuition
+          FROM student_tuition
+          WHERE student_id = ?
+          LIMIT 1
+        `, [studentId]);
+        totalTuition = tuitionRows[0]?.total_tuition || 0;
+      }
     } catch (err) {
-      // Student_tuition table might not exist yet
+      // Tables might not exist yet
+      console.error("Error fetching tuition:", err.message);
     }
 
     // Get pending document requests count (documents not yet picked up)
