@@ -10,7 +10,7 @@ const AdminSettingsModel = {
    */
   async getActiveConfig() {
     const [rows] = await db.query(
-      `SELECT * FROM enrollment_config WHERE status = 'active' LIMIT 1`
+      `SELECT * FROM enrollment_config ORDER BY id DESC LIMIT 1`
     );
     return rows[0] || null;
   },
