@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { API_BASE } from "../../lib/auth";
+import { API_BASE, getAcademicConfig, type AcademicConfig } from "../../lib/auth";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
 
@@ -185,7 +185,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* -- Overview -- */
-function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[] }) {
+function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects, academicConfig }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[]; academicConfig?: AcademicConfig | null }) {
   const displayTeacher = teacher ?? teacherData;
   const [overviewData, setOverviewData] = useState<{
     total_students: number;
@@ -336,7 +336,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                   ✅ Active Teacher
                 </span>
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>
-                  📅 {activeTerm} · SY 2025-2026
+                  📅 {academicConfig?.current_term || activeTerm} · SY {academicConfig?.school_year || "2025-2026"}
                 </span>
               </div>
             </div>
@@ -3163,6 +3163,7 @@ export default function TeacherDashboardPage() {
   const [apiActivity, setApiActivity] = useState<{
     type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string;
   }[]>([]);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   // -- Route protection ------------------------------------------
   useEffect(() => {
@@ -3174,6 +3175,12 @@ export default function TeacherDashboardPage() {
       setAuthChecked(true);
     }
   }, []);
+
+  // Fetch academic config
+  useEffect(() => {
+    if (!authChecked) return;
+    getAcademicConfig().then(config => setAcademicConfig(config));
+  }, [authChecked]);
 
   // Fetch real teacher dashboard data from API
   useEffect(() => {
@@ -3230,7 +3237,7 @@ export default function TeacherDashboardPage() {
       case "documents":     return <DocumentApprovalsPanel />;
       case "notifications": return <NotificationsPanel />;
       case "profile":       return <ProfilePanel teacher={apiTeacher} />;
-      default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} />;
+      default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} academicConfig={academicConfig} />;
     }
   }
 

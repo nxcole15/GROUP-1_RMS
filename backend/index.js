@@ -19,6 +19,8 @@ const notificationsRoutes = require("./modules/notifications/notificationsRoutes
 const teacherRoutes       = require("./modules/teacher/teacherRoutes");
 const gradeRequestRoutes = require("./modules/gradeRequests/gradeRequestRoutes");
 const applicationRoutes  = require("./modules/student/applicationRoutes");
+const feeRoutes          = require("./modules/fees/feeRoutes");
+const studentFeeRoutes   = require("./modules/fees/studentFeeRoutes");
 
 
 const app = express();
@@ -88,6 +90,8 @@ app.use("/api/teacher", teacherRoutes);
 
 app.use("/api/grade-requests", gradeRequestRoutes);
 app.use("/api/applications",  applicationRoutes);
+app.use("/api/fees",           feeRoutes);
+app.use("/api/student/fees",   studentFeeRoutes); // Student-facing fee routes
 
 /* ── 404 handler ── */
 app.use((req, res) => res.status(404).json({ error: "Route not found." }));

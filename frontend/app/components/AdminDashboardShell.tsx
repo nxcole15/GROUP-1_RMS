@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { API_BASE } from "../lib/auth";
+import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
 import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
+import { SettingsPanel } from "../principal-dashboard/SettingsPanel";
 
 type StudentRecord = {
   id: string;
@@ -85,7 +86,7 @@ const adminNotifications: NotificationRecord[] = [];
 
 type IconName =
   | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
-  | "enrollment" | "tuition" | "announcements" | "timelog" | "scheduling"
+  | "enrollment" | "tuition" | "announcements" | "timelog" | "scheduling" | "settings"
   | "check" | "checkCircle" | "x" | "close" | "calendar" | "clock" | "bell"
 
   | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user" | "users"
@@ -108,6 +109,7 @@ function Icon({ name, size = 18, className }: { name: IconName; size?: number; c
     case "tuition":       return <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>;
     case "scheduling":    return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
     case "announcements": return <svg {...props}><path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/><path d="M12 14v-6"/><path d="M9 11l3-3 3 3"/></svg>;
+    case "settings":      return <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/></svg>;
     case "timelog":       return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case "check":         return <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>;
     case "checkCircle":   return <svg {...props}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
@@ -145,6 +147,7 @@ const navItems = [
   { id:"enrollment",    label:"Enrollment"        },
   { id:"announcements", label:"Announcements"     },
   { id:"profile",       label:"My Profile"        },
+  { id:"settings",      label:"Settings"          },
 ];
 
 function initials(name: string) { 
@@ -174,7 +177,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
   if (role === "registrar") {
     // Registrar: Remove students, teachers, tuition, grades, and grade requests
     filteredNavItems = navItems.filter(item => 
-      !["students", "teachers", "tuition", "grades", "requests"].includes(item.id)
+      !["students", "teachers", "tuition", "grades", "requests", "settings"].includes(item.id)
     );
     // Add scheduling item after enrollment
     const enrollmentIndex = filteredNavItems.findIndex(item => item.id === "enrollment");
@@ -185,6 +188,12 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
+  } else if (role === "accounting") {
+    // Accounting: Only settings for principal
+    filteredNavItems = navItems.filter(item => item.id !== "settings");
+  } else if (role !== "principal") {
+    // All other roles: No settings
+    filteredNavItems = navItems.filter(item => item.id !== "settings");
   }
 
   return (
@@ -263,7 +272,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
 }
 
 /*  Overview  */
-function Overview({ setActive, hideBanner, adminName }: { setActive: (s: string) => void; hideBanner?: boolean; adminName?: string | null }) {
+function Overview({ setActive, hideBanner, adminName, academicConfig }: { setActive: (s: string) => void; hideBanner?: boolean; adminName?: string | null; academicConfig?: AcademicConfig | null }) {
     // Calculate current school year
   const getCurrentSchoolYear = () => {
     const now = new Date();
@@ -369,7 +378,7 @@ function Overview({ setActive, hideBanner, adminName }: { setActive: (s: string)
               Welcome back, {adminName || adminInfo?.full_name || "..."}
             </h1>
             <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
-              {adminInfo?.role === "principal" ? "Principal" : adminInfo?.role ? "Administrator" : "..."} · Full Access · SY {getCurrentSchoolYear()}
+              {adminInfo?.role === "principal" ? "Principal" : adminInfo?.role ? "Administrator" : "..."} · Full Access · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || getCurrentSchoolYear()}
             </p>
             <div className="d-flex gap-2 flex-wrap">
               <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
@@ -7059,6 +7068,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [adminName, setAdminName] = useState<string | null>(null);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
   // Fetch admin name on mount
   useEffect(() => {
@@ -7075,6 +7085,11 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
         }
       })
       .catch(() => {});
+  }, []);
+
+  // Fetch academic config
+  useEffect(() => {
+    getAcademicConfig().then(config => setAcademicConfig(config));
   }, []);
 
   // Route protection � only runs when used as standalone page (not wrapped)
@@ -7194,7 +7209,8 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
       case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
-      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} />;
+      case "settings":      return <SettingsPanel />;
+      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} academicConfig={academicConfig} />;
     }
   }
 

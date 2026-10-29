@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getAcademicConfig } from "../lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -101,6 +102,13 @@ export default function EnrollmentPage() {
     idPhoto: null as File | null,
   });
 
+  // Fetch active school year from settings
+  useEffect(() => {
+    getAcademicConfig().then(config => {
+      setFormData(prev => ({ ...prev, schoolYear: config.school_year }));
+    });
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
     if (target.type === "file") {
@@ -140,22 +148,7 @@ export default function EnrollmentPage() {
     }
     if (formData.lrn.length !== 12 || !/^\d{12}$/.test(formData.lrn)) return "LRN must be exactly 12 digits.";
     
-    // Validate school year format
-    if (!/^\d{4}-\d{4}$/.test(formData.schoolYear)) {
-      return "School Year must be in format YYYY-YYYY (e.g., 2026-2027).";
-    }
-    
-    // Validate that the second year is exactly one year after the first
-    const [startYear, endYear] = formData.schoolYear.split('-').map(Number);
-    if (endYear !== startYear + 1) {
-      return "School Year end year must be exactly one year after start year (e.g., 2026-2027).";
-    }
-    
-    // Validate that school year is not in the past
-    const currentYear = new Date().getFullYear();
-    if (startYear < currentYear) {
-      return `School Year cannot be in the past. Please enter ${currentYear}-${currentYear + 1} or later.`;
-    }
+    // School year is automatically set from Principal's settings - no validation needed
     
     if (formData.studentStatus === "old" && !formData.studentId.trim()) return "Student ID is required for returning students.";
     if (!formData.idPhoto) return "Please upload a 2×2 ID photo.";
@@ -571,14 +564,10 @@ export default function EnrollmentPage() {
                     type="text" 
                     name="schoolYear" 
                     value={formData.schoolYear} 
-                    onChange={handleChange} 
-                    placeholder={`e.g., ${new Date().getFullYear()}-${new Date().getFullYear() + 1}`}
-                    className="form-control rounded-2" 
-                    required 
-                    pattern="\d{4}-\d{4}"
-                    title={`Please enter school year in format: YYYY-YYYY (e.g., ${new Date().getFullYear()}-${new Date().getFullYear() + 1})`}
+                    readOnly
+                    className="form-control rounded-2 bg-light" 
+                    style={{ cursor: "not-allowed" }}
                   />
-                  <small className="text-muted">Format: YYYY-YYYY (current year or future only)</small>
                 </div>
 
                 <div className="col-12">
