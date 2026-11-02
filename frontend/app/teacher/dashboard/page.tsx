@@ -141,14 +141,14 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
+        style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", overflowX: "hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={180} height={180} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">Teacher Portal</div>
+              <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>Teacher Portal</div>
             </div>
           </div>
           <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
@@ -161,7 +161,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", background: active === item.id ? "#059669" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
+              style={{ color: active === item.id ? "#fff" : "#4b5563", background: active === item.id ? "#dc2626" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
               title={item.label}>
               <Icon name={item.icon as IconName} size={20} />
               {expanded && <span>{item.label}</span>}
@@ -170,10 +170,10 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         </nav>
 
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 py-3 border-top border-white border-opacity-10">
-          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+        <div className="px-3 py-3 border-top" style={{ borderColor: "#f1f5f9" }}>
+          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#b91c1c"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#dc2626"; }}
             onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
             <Icon name="unlock" size={18} />
             <span>Log Out</span>
@@ -291,9 +291,9 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "My Students",
       value: loading ? "..." : totalStudents,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-      gradient: "linear-gradient(135deg,#6366f1,#818cf8)",
-      shadow: "rgba(99,102,241,0.35)",
-      textColor: "#6366f1",
+      gradient: "linear-gradient(135deg,#dc2626,#ef4444)",
+      shadow: "rgba(220,38,38,0.35)",
+      textColor: "#dc2626",
       bgLight: "#eef2ff",
     },
     {
@@ -414,7 +414,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <div className="card-body p-4">
                 <div className="d-flex align-items-center gap-2 mb-4">
                   <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                     </svg>
@@ -426,7 +426,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {recentActivity.map((a, i) => (
                       <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                           <Icon name={a.icon as IconName} size={16} className="text-white" />
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
@@ -1954,7 +1954,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
           <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto pb-2">
             {[
               { label: "Student Requested",    count: newRequests.length,     gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "bell" },
-              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "chart" },
+              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "chart" },
               { label: "Principal Review",     count: pendingAdmin.length,    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: "user" },
               { label: "Principal Verified",   count: verifiedByAdmin.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
               { label: "Released to Student",  count: released.length,        gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)", icon: "check" },
@@ -2306,7 +2306,7 @@ function DocumentApprovalsPanel() {
         {[
           { label: "Pending Requests", value: pending.length, gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "clock" },
           { label: "Approved", value: approved.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
-          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "documents" },
+          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "documents" },
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
             <div className="card border-0 shadow-sm rounded-3 h-100">
@@ -2696,7 +2696,7 @@ function TimeLogPanel() {
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Time Log</h2><p className="text-muted small mb-0">{today}</p></div>
 
       {/* Current status card */}
-      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#1e40af,#3b82f6)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#dc2626,#ef4444)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-3">
             <Icon name={currentSession ? "checkCircle" : "clock"} size={40} className="text-white" />
@@ -2708,7 +2708,7 @@ function TimeLogPanel() {
           <button
             onClick={currentSession ? handleTimeOut : handleTimeIn}
             className="btn btn-light fw-black w-100 rounded-3"
-            style={{ fontSize: 15, color: currentSession ? "#059669" : "#1e40af" }}
+            style={{ fontSize: 15, color: currentSession ? "#059669" : "#dc2626" }}
           >
             {currentSession ? "Time Out" : "Time In"}
           </button>
@@ -3243,7 +3243,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                 {/* Contact section */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -3285,10 +3285,10 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#991b1b" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
                       Please visit the Registrar&apos;s Office or email{" "}
-                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
+                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#b91c1c", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>

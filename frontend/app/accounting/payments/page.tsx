@@ -102,27 +102,51 @@ export default function PaymentsPage() {
   return (
     <>
       {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
-      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e3a8a 0%,#1e40af 100%)", overflowY: "auto" }}>
-        <div className="p-4 d-flex flex-column align-items-center border-bottom border-white border-opacity-10">
-          <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3" width={80} height={80} />
+      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}>
+        <div className="p-4 d-flex flex-column align-items-center border-bottom" style={{ borderColor: "#f1f5f9" }}>
+          <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3 sidebar-brand-logo" width={180} height={180} />
           <div className="text-center">
-            <div className="text-white fw-bold" style={{ fontSize: "1.1rem" }}>Accounting</div>
-            <div className="text-white-50 small">Payment Management</div>
+            <div className="fw-bold" style={{ fontSize: "1.1rem", color: "#1f2937" }}>Accounting</div>
+            <div className="small" style={{ color: "#6b7280" }}>Payment Management</div>
           </div>
         </div>
 
         <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
-          <button onClick={() => router.push("/accounting/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/accounting/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
             <Icon name="activity" size={20} />
             <span>Overview</span>
           </button>
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#3b82f6" }}>
+          <button onClick={() => router.push("/accounting/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span>Document Payments</span>
+          </button>
+          
+          <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
+          
+          <button onClick={() => router.push("/accounting/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+            </svg>
+            <span>Fee Settings</span>
+          </button>
+          <button onClick={() => router.push("/accounting/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            <span>Fee Management</span>
+          </button>
+          
+          <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
+          
+          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#dc2626" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
-            <span>Payments</span>
+            <span>Tuition Payments</span>
           </button>
-          <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
@@ -130,11 +154,11 @@ export default function PaymentsPage() {
           </button>
         </nav>
 
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
           <button onClick={() => {
             localStorage.clear();
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#1e3a8a", color: "#fff", border: "2px solid #1e40af", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -145,7 +169,7 @@ export default function PaymentsPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "24px 0" }}>
+          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "24px 0" }}>
             <div className="container-fluid px-4">
               <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Payment Records</h1>
               <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Manage and verify student payments</p>

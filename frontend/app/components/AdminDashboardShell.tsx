@@ -201,19 +201,21 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         style={{ 
           width: 256,
           zIndex: 1000, 
-          background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
+          background: "#ffffff", 
           overflowY: "auto",
-          overflowX: "hidden"
+          overflowX: "hidden",
+          boxShadow: "2px 0 10px rgba(0,0,0,0.05)",
+          borderRight: "1px solid #f1f5f9"
         }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}>
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={180} height={180} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">{config.title}</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{config.subtitle}</div></div>
+              <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>{config.title}</div><div style={{ color:"#6b7280", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
-          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
+          <button className="btn-close sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -221,15 +223,15 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center px-3 py-2 rounded-3 border-0"
               style={{
-                color: active === item.id ? "#fff" : "rgba(255,255,255,0.55)",
-                background: active === item.id ? "linear-gradient(135deg,#4f46e5,#6366f1)" : "transparent",
+                color: active === item.id ? "#fff" : "#6b7280",
+                background: active === item.id ? "linear-gradient(135deg,#dc2626,#ef4444)" : "transparent",
                 fontWeight: active === item.id ? 600 : 500,
                 fontSize: 13.5,
                 justifyContent: "flex-start",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s",
-                boxShadow: active === item.id ? "0 2px 12px rgba(79,70,229,0.4)" : "none",
-                borderLeft: active === item.id ? "3px solid rgba(255,255,255,0.4)" : "3px solid transparent",
+                boxShadow: active === item.id ? "0 2px 12px rgba(220,38,38,0.4)" : "none",
+                borderLeft: active === item.id ? "3px solid #dc2626" : "3px solid transparent",
               }}
               title={item.label}>
               <span>{item.label}</span>
@@ -238,26 +240,26 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-          <div className="rounded-3 p-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f1f5f9" }}>
+          <div className="rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 2px 8px rgba(99,102,241,0.4)" }}>
+                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 2px 8px rgba(220,38,38,0.4)" }}>
                 {config.initials}
               </div>
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white fw-semibold text-truncate" style={{ fontSize:13 }}>
+                <div className="fw-semibold text-truncate" style={{ fontSize:13, color:"#1f2937" }}>
                   {adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}
                 </div>
-                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.35)", fontSize:11 }}>{config.email}</div>
+                <div className="text-truncate" style={{ color:"#6b7280", fontSize:11 }}>{config.email}</div>
               </div>
             </div>
             <button
               onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }}
               className="btn w-100 fw-semibold"
-              style={{ fontSize:12, borderRadius:8, background:"rgba(220,38,38,0.15)", color:"#fca5a5", border:"1px solid rgba(220,38,38,0.3)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.28)"; (e.currentTarget as HTMLButtonElement).style.color="#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.15)"; (e.currentTarget as HTMLButtonElement).style.color="#fca5a5"; }}
+              style={{ fontSize:12, borderRadius:8, background:"#dc2626", color:"#fff", border:"none" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#b91c1c"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#dc2626"; }}
             >
               Log Out
             </button>
@@ -361,7 +363,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {/* ── Banner ──────────────────────────────────────────────────── */}
       {!hideBanner && (
         <div style={{
-          background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)",
+          background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)",
           borderRadius: "16px 16px 0 0",
           padding: "32px 32px 80px",
           position: "relative",
@@ -379,11 +381,11 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             </p>
             <div className="d-flex gap-2 flex-wrap">
               <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                ✅ System Online
+                 System Online
               </span>
               {pendingStats && pendingStats.total > 0 && (
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(220,38,38,0.75)", color:"white", border:"1px solid rgba(220,38,38,0.5)", fontSize:"0.78rem" }}>
-                  ⚠️ {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
+                   {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -398,9 +400,9 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {!hideBanner && (
         <div className="row g-3 mb-4">
           {[
-            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6366f1,#818cf8)", shadow:"rgba(99,102,241,0.35)", bgLight:"#eef2ff", textColor:"#4f46e5",
+            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#dc2626,#ef4444)", shadow:"rgba(220,38,38,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#8b5cf6,#a78bfa)", shadow:"rgba(139,92,246,0.35)", bgLight:"#f5f3ff", textColor:"#7c3aed",
+            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#ef4444,#f87171)", shadow:"rgba(239,68,68,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
             { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#f59e0b,#fbbf24)", shadow:"rgba(245,158,11,0.35)", bgLight:"#fffbeb", textColor:"#d97706",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
@@ -436,7 +438,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             <div className="card-body p-4">
               <div className="d-flex align-items-center gap-2 mb-4">
                 <div className="d-flex align-items-center justify-content-center rounded-3"
-                  style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                  style={{ width:36, height:36, background:"#fef2f2", color:"#dc2626" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 </div>
                 <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Activity</h3>
@@ -453,7 +455,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   recentActivity.map((a, i) => (
                     <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                       <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                        style={{ width:34, height:34, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                        style={{ width:34, height:34, background:"#fef2f2", color:"#dc2626" }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div className="flex-grow-1 overflow-hidden">
@@ -521,7 +523,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   count: filteredData.filter(item => item.track === t.fullName).reduce((sum, item) => sum + item.count, 0),
                 }));
                 const maxCount = Math.max(1, ...countsByTrack.map(c => c.count));
-                const barColors = ["#6366f1","#8b5cf6","#a78bfa","#059669","#10b981"];
+                const barColors = ["#dc2626","#ef4444","#f87171","#f97316","#fb923c"];
                 return (
                   <div>
                     <div style={{ display:"flex", gap:8, alignItems:"flex-end", height:150 }}>
@@ -1879,9 +1881,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
             label: "Total Enrolled", 
             value: confirmed.length, 
             icon: "students" as IconName,
-            gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-            bgColor: "rgba(59, 130, 246, 0.1)",
-            textColor: "#2563eb"
+            gradient: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+            bgColor: "rgba(220, 38, 38, 0.1)",
+            textColor: "#dc2626"
           },
           { 
             label: "Confirmed", 
@@ -2145,7 +2147,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
               <div 
                 className="modal-header border-0 text-white position-relative" 
                 style={{ 
-                  background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                  background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
                   padding: "2rem 2.5rem"
                 }}
               >
@@ -3014,7 +3016,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
       <div className="row g-3">
         <div className="col-12 col-md-8">
           <div className="input-group shadow-sm">
-            <span className="input-group-text bg-white border-end-0">🔍</span>
+            <span className="input-group-text bg-white border-end-0"></span>
             <input 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
@@ -3025,7 +3027,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
         </div>
         <div className="col-12 col-md-4">
           <div className="input-group shadow-sm">
-            <span className="input-group-text bg-white border-end-0">📅</span>
+            <span className="input-group-text bg-white border-end-0"></span>
             <select 
               value={termFilter}
               onChange={e => setTermFilter(e.target.value as "All Terms" | "Term 1" | "Term 2" | "Term 3")}
@@ -6783,12 +6785,12 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
 
   const infoItems = [
     {
-      label: "Email", value: email, bg: "#ede9fe",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+      label: "Email", value: email, bg: "#fef2f2",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
     },
     {
-      label: "Role", value: roleLabel, bg: "#dbeafe",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+      label: "Role", value: roleLabel, bg: "#fef2f2",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     },
     {
       label: "Access Level", value: "Full Access", bg: "#dcfce7",
@@ -6799,7 +6801,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
   return (
     <div className="d-flex flex-column gap-0">
       {/* Banner */}
-      <div style={{ background:"linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+      <div style={{ background:"linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
         <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
         <div style={{ position:"relative", zIndex:1 }}>
@@ -6817,19 +6819,19 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
             <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow:"0 6px 20px rgba(79,70,229,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 6px 20px rgba(220,38,38,0.4)", border:"4px solid white" }}>
                   {initials2}
                 </div>
                 <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{name}</h4>
                 <p className="text-muted small mb-3">{email}</p>
                 <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(79,70,229,0.1)", color:"#4f46e5", border:"1px solid rgba(79,70,229,0.25)", fontWeight:600 }}>{roleLabel}</span>
+                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(220,38,38,0.1)", color:"#dc2626", border:"1px solid rgba(220,38,38,0.25)", fontWeight:600 }}>{roleLabel}</span>
                   <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>Active</span>
                 </div>
                 <div className="w-100 row g-2 mb-3">
                   <div className="col-6">
                     <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
-                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#4f46e5" }}>Full</div>
+                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#dc2626" }}>Full</div>
                       <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access</div>
                     </div>
                   </div>
@@ -6866,7 +6868,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
               <div className="card-body p-4 p-md-5">
                 <div className="d-flex align-items-center justify-content-between mb-4">
                   <div className="d-flex align-items-center gap-3">
-                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
@@ -6876,13 +6878,13 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                       <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
                     </div>
                   </div>
-                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontSize:"0.75rem" }}>Read-Only</span>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fee2e2", fontSize:"0.75rem" }}>Read-Only</span>
                 </div>
 
                 {/* Personal */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
                   </div>
                   <div className="row g-3">
@@ -6900,7 +6902,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 {/* Contact */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#f97316)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -6930,17 +6932,17 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 </div>
 
                 {/* Info alert */}
-                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
-                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#dbeafe" }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#fecaca" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#dc2626" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
                       Please contact the system administrator or email{" "}
-                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
+                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#dc2626", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>
