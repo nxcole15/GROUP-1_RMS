@@ -197,7 +197,7 @@ export function DocumentWorkflowPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">

@@ -32,6 +32,10 @@
   --dark-border:    #334155;
   --dark-text:      #f1f5f9;
   --dark-text-muted: #cbd5e1;
+  
+  /* Bootstrap Primary Override */
+  --bs-primary: #dc2626;
+  --bs-primary-rgb: 220, 38, 38;
 }
 
 /* Dark Mode — landing page scoped to data-landing="dark" */
@@ -1516,8 +1520,8 @@ html:not([data-theme="dark"]) .kiosk-bg .display-4 span {
 }
 
 .sidebar-brand-logo {
-  width: 32px;
-  height: 32px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
   border-radius: 9999px;
   border: 1px solid rgba(255,255,255,0.2);
@@ -4201,4 +4205,69 @@ html:not([data-theme="dark"]) .landing-premium .landing-headline-accent {
   .admin-dashboard-main {
     margin-left: 0 !important;
   }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BOOTSTRAP PRIMARY COLOR OVERRIDE - RED THEME
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Override Bootstrap primary color to red */
+.btn-primary {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: white !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+.bg-primary {
+  background-color: #dc2626 !important;
+}
+
+.bg-primary-subtle {
+  background-color: #fef2f2 !important;
+}
+
+.text-primary {
+  color: #dc2626 !important;
+}
+
+.border-primary {
+  border-color: #dc2626 !important;
+}
+
+.border-primary-subtle {
+  border-color: #fee2e2 !important;
+}
+
+.btn-outline-primary {
+  color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: #dc2626 !important;
+  color: white !important;
+}
+
+.btn-link.text-primary {
+  color: #dc2626 !important;
+}
+
+.badge.bg-primary {
+  background-color: #dc2626 !important;
+}
+
+.badge.text-primary {
+  color: #dc2626 !important;
+}
+
+.progress-bar.bg-primary {
+  background-color: #dc2626 !important;
 }

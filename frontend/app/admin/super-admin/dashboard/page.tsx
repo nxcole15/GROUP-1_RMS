@@ -83,9 +83,9 @@ export default function SuperAdminDashboardPage() {
   const accountingCount = admins.filter(a => a.role === "accounting" && !a.is_archived).length;
 
   const roleDistribution = [
-    { role: "Principal", count: principalCount, color: "#3b82f6", percentage: activeAdmins > 0 ? (principalCount / activeAdmins * 100) : 0 },
-    { role: "Registrar", count: registrarCount, color: "#8b5cf6", percentage: activeAdmins > 0 ? (registrarCount / activeAdmins * 100) : 0 },
-    { role: "Accounting", count: accountingCount, color: "#06b6d4", percentage: activeAdmins > 0 ? (accountingCount / activeAdmins * 100) : 0 },
+    { role: "Principal", count: principalCount, color: "#dc2626", percentage: activeAdmins > 0 ? (principalCount / activeAdmins * 100) : 0 },
+    { role: "Registrar", count: registrarCount, color: "#ef4444", percentage: activeAdmins > 0 ? (registrarCount / activeAdmins * 100) : 0 },
+    { role: "Accounting", count: accountingCount, color: "#f87171", percentage: activeAdmins > 0 ? (accountingCount / activeAdmins * 100) : 0 },
   ];
 
   const stats = [
@@ -93,71 +93,71 @@ export default function SuperAdminDashboardPage() {
       label: "Total Accounts",
       value: totalAdmins,
       icon: <Icon name="users" size={22} />,
-      gradient: "linear-gradient(135deg,#3b82f6,#60a5fa)",
-      shadow: "rgba(59,130,246,0.35)",
-      textColor: "#3b82f6",
-      bgLight: "#eff6ff",
+      gradient: "#dc2626",
+      shadow: "rgba(220,38,38,0.35)",
+      textColor: "#dc2626",
+      bgLight: "#fef2f2",
     },
     {
       label: "Active Accounts",
       value: activeAdmins,
       icon: <Icon name="check" size={22} />,
-      gradient: "linear-gradient(135deg,#8b5cf6,#a78bfa)",
-      shadow: "rgba(139,92,246,0.35)",
-      textColor: "#8b5cf6",
-      bgLight: "#f5f3ff",
+      gradient: "#dc2626",
+      shadow: "rgba(220,38,38,0.35)",
+      textColor: "#dc2626",
+      bgLight: "#fef2f2",
     },
     {
       label: "Archived",
       value: archivedAdmins,
       icon: <Icon name="archive" size={22} />,
-      gradient: "linear-gradient(135deg,#06b6d4,#22d3ee)",
-      shadow: "rgba(6,182,212,0.35)",
-      textColor: "#06b6d4",
-      bgLight: "#ecfeff",
+      gradient: "#dc2626",
+      shadow: "rgba(220,38,38,0.35)",
+      textColor: "#dc2626",
+      bgLight: "#fef2f2",
     },
     {
       label: "System Health",
       value: "Healthy",
       icon: <Icon name="shield" size={22} />,
-      gradient: "linear-gradient(135deg,#10b981,#34d399)",
-      shadow: "rgba(16,185,129,0.35)",
-      textColor: "#10b981",
-      bgLight: "#f0fdf4",
+      gradient: "#dc2626",
+      shadow: "rgba(220,38,38,0.35)",
+      textColor: "#dc2626",
+      bgLight: "#fef2f2",
     },
   ];
 
   return (
     <>
       {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
-      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e3a8a 0%,#1e40af 100%)", overflowY: "auto" }}>
-        <div className="p-4 d-flex flex-column align-items-center border-bottom border-white border-opacity-10">
+      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#fff", overflowY: "auto", boxShadow: "2px 0 10px rgba(0,0,0,0.05)" }}>
+        <div className="p-4 d-flex flex-column align-items-center border-bottom" style={{ borderColor: "#f1f5f9" }}>
           <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3" width={80} height={80} />
           <div className="text-center">
-            <div className="text-white fw-bold" style={{ fontSize: "1.1rem" }}>Super Admin</div>
-            <div className="text-white-50 small">System Control Panel</div>
+            <div className="fw-bold" style={{ fontSize: "1.1rem", color: "#1f2937" }}>Super Admin</div>
+            <div className="small" style={{ color: "#6b7280" }}>System Control Panel</div>
           </div>
         </div>
 
         <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#3b82f6" }}>
+          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#dc2626", boxShadow: "0 2px 8px rgba(220,38,38,0.3)" }}>
             <Icon name="activity" size={20} />
             <span>Overview</span>
           </button>
-          <button onClick={() => router.push("/admin/super-admin/create")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/admin/super-admin/create")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#6b7280", background: "transparent" }}>
             <Icon name="users" size={20} />
             <span>Manage Accounts</span>
           </button>
         </nav>
 
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
           <button onClick={() => {
             localStorage.removeItem("inform_token");
             localStorage.removeItem("inform_role");
             localStorage.removeItem("inform_user");
             localStorage.removeItem("inform_admin_token");
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#1e3a8a", color: "#fff", border: "2px solid #1e40af", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2 rounded-3" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem", boxShadow: "0 4px 12px rgba(220,38,38,0.4)" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -168,43 +168,38 @@ export default function SuperAdminDashboardPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="d-flex flex-column gap-0">
-          <div style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", borderRadius: "0", padding: "32px 32px 80px", position: "relative", overflow: "hidden" }}>
-            <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
-            <div style={{ position:"absolute", bottom:-60, right:160, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
-            <div style={{ position:"absolute", top:20, right:80, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
-
+          <div style={{ background: "#dc2626", borderRadius: "0", padding: "32px 32px 24px", position: "relative", overflow: "hidden" }}>
             <div style={{ position:"relative", zIndex:1 }}>
               <div className="d-flex align-items-start justify-content-between flex-wrap gap-3">
                 <div>
                   <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Super Admin Dashboard</h1>
-                  <p className="mb-3" style={{ color:"rgba(255,255,255,0.75)" }}>System Administration & Account Management</p>
+                  <p className="mb-3" style={{ color:"rgba(255,255,255,0.85)", fontSize:"0.95rem" }}>System Administration & Account Management</p>
                   <div className="d-flex gap-2 flex-wrap">
-                    <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>🔒 Full Access</span>
-                    <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>📅 SY 2025-2026</span>
+                    <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}> Full Access</span>
+                    <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}> SY 2025-2026</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="container-fluid px-3 px-md-4" style={{ marginTop:"-52px", paddingBottom:32 }}>
+          <div className="container-fluid px-3 px-md-4" style={{ marginTop:"32px", paddingBottom:32 }}>
             <div className="row g-3 mb-4">
               {stats.map(s => (
                 <div key={s.label} className="col-6 col-lg-3">
-                  <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
+                  <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden", background: "#fff" }}>
                     <div className="card-body p-4">
                       <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}`, color: "white" }}>
+                        <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:46, height:46, background: "#fef2f2", color: "#dc2626" }}>
                           {s.icon}
                         </div>
-                        <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
-                          <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}>↑ Live</div>
-                        </div>
+                        <button className="btn btn-sm px-2 py-1" style={{ background: "#fef2f2", color: "#dc2626", fontSize: "0.7rem", border: "none" }}>
+                          Live
+                        </button>
                       </div>
-                      <div className="fw-black" style={{ fontSize:"1.6rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
-                      <div className="text-muted mt-1" style={{ fontSize:"0.78rem" }}>{s.label}</div>
+                      <div className="fw-black mb-1" style={{ fontSize:"1.6rem", color:"#1f2937", lineHeight:1 }}>{s.value}</div>
+                      <div className="text-muted" style={{ fontSize:"0.78rem" }}>{s.label}</div>
                     </div>
-                    <div style={{ height:3, background:s.gradient }} />
                   </div>
                 </div>
               ))}
@@ -212,11 +207,11 @@ export default function SuperAdminDashboardPage() {
 
             <div className="row g-4 mb-4">
               <div className="col-12 col-lg-6">
-                <div className="card border-0 shadow-sm rounded-4 h-100">
+                <div className="card border-0 shadow-sm rounded-4 h-100" style={{ background: "#fff" }}>
                   <div className="card-body p-4">
                     <div className="d-flex align-items-center gap-2 mb-4">
-                      <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"#fef2f2", color: "#dc2626" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                         </svg>
                       </div>
@@ -232,7 +227,7 @@ export default function SuperAdminDashboardPage() {
                                 <div className="rounded" style={{ width:12, height:12, background:role.color }} />
                                 <span className="small fw-semibold">{role.role}</span>
                               </div>
-                              <span className="badge px-2 py-1" style={{ background:"#eff6ff", color:"#3b82f6", fontSize:"0.7rem" }}>{role.count}</span>
+                              <span className="badge px-2 py-1" style={{ background:"#fef2f2", color:"#dc2626", fontSize:"0.7rem" }}>{role.count}</span>
                             </div>
                             <div className="progress" style={{ height:8, background:"#f1f5f9" }}>
                               <div className="progress-bar" style={{ width:`${role.percentage}%`, background:role.color }} />
@@ -251,44 +246,44 @@ export default function SuperAdminDashboardPage() {
                 <div className="card border-0 shadow-sm rounded-4 h-100">
                   <div className="card-body p-4">
                     <div className="d-flex align-items-center gap-2 mb-4">
-                      <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }}>
+                      <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"#fef2f2", color:"#dc2626" }}>
                         <Icon name="briefcase" size={16} />
                       </div>
                       <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Admin Roles Breakdown</h3>
                     </div>
 
                     <div className="d-flex flex-column gap-3">
-                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#eff6ff" }}>
-                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }}>
+                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#fef2f2" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"#dc2626" }}>
                           <Icon name="shield" size={18} />
                         </div>
                         <div className="flex-grow-1">
                           <div className="small fw-bold text-dark">Principal Officers</div>
                           <div className="text-muted" style={{ fontSize:11 }}>Executive administration</div>
                         </div>
-                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#3b82f6", color:"white", fontSize:"0.85rem" }}>{principalCount}</span>
+                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#dc2626", color:"white", fontSize:"0.85rem" }}>{principalCount}</span>
                       </div>
 
-                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#f5f3ff" }}>
-                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"linear-gradient(135deg,#8b5cf6,#a78bfa)" }}>
+                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#fef2f2" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"#ef4444" }}>
                           <Icon name="user" size={18} />
                         </div>
                         <div className="flex-grow-1">
                           <div className="small fw-bold text-dark">Registrar Staff</div>
                           <div className="text-muted" style={{ fontSize:11 }}>Student records management</div>
                         </div>
-                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#8b5cf6", color:"white", fontSize:"0.85rem" }}>{registrarCount}</span>
+                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#ef4444", color:"white", fontSize:"0.85rem" }}>{registrarCount}</span>
                       </div>
 
-                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#ecfeff" }}>
-                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"linear-gradient(135deg,#06b6d4,#22d3ee)" }}>
+                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#fef2f2" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"#f87171" }}>
                           <Icon name="calculator" size={18} />
                         </div>
                         <div className="flex-grow-1">
                           <div className="small fw-bold text-dark">Accounting Staff</div>
                           <div className="text-muted" style={{ fontSize:11 }}>Financial operations</div>
                         </div>
-                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#06b6d4", color:"white", fontSize:"0.85rem" }}>{accountingCount}</span>
+                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#f87171", color:"white", fontSize:"0.85rem" }}>{accountingCount}</span>
                       </div>
                     </div>
                   </div>
@@ -298,7 +293,7 @@ export default function SuperAdminDashboardPage() {
 
               {loading ? (
               <div className="text-center py-5">
-                <div className="spinner-border" style={{ color:"#3b82f6" }} />
+                <div className="spinner-border" style={{ color:"#dc2626" }} />
                 <div className="mt-3 text-muted">Loading accounts...</div>
               </div>
             ) : (
@@ -308,12 +303,12 @@ export default function SuperAdminDashboardPage() {
                     <div className="card-body p-4">
                       <div className="d-flex align-items-center justify-content-between mb-4">
                         <div className="d-flex align-items-center gap-2">
-                          <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }}>
+                          <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:36, height:36, background:"#fef2f2", color:"#dc2626" }}>
                             <Icon name="users" size={16} />
                           </div>
                           <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Admin Accounts</h3>
                         </div>
-                        <button onClick={() => router.push("/admin/super-admin/create")} className="btn btn-sm px-3 py-2" style={{ background:"#3b82f6", color:"white", fontSize:"0.8rem" }}>
+                        <button onClick={() => router.push("/admin/super-admin/create")} className="btn btn-sm px-3 py-2" style={{ background:"#dc2626", color:"white", fontSize:"0.8rem" }}>
                           View All
                         </button>
                       </div>
@@ -337,8 +332,8 @@ export default function SuperAdminDashboardPage() {
                                 <td className="small">{admin.full_name}</td>
                                 <td>
                                   <span className="badge px-2 py-1 text-capitalize" style={{ 
-                                    background: admin.role === "principal" ? "#eff6ff" : admin.role === "registrar" ? "#f5f3ff" : "#ecfeff",
-                                    color: admin.role === "principal" ? "#3b82f6" : admin.role === "registrar" ? "#8b5cf6" : "#06b6d4",
+                                    background: "#fef2f2",
+                                    color: admin.role === "principal" ? "#dc2626" : admin.role === "registrar" ? "#ef4444" : "#f87171",
                                     fontSize:"0.7rem"
                                   }}>{admin.role}</span>
                                 </td>
@@ -378,14 +373,14 @@ export default function SuperAdminDashboardPage() {
 
       <div className="d-lg-none">
         <div className="d-flex flex-column gap-0">
-          <div style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", borderRadius: "0", padding: "32px 32px 80px", position: "relative", overflow: "hidden" }}>
+          <div style={{ background: "#dc2626", borderRadius: "0", padding: "32px 32px 80px", position: "relative", overflow: "hidden" }}>
             <button className="btn position-absolute top-0 start-0 m-3" onClick={() => setShowSidebar(true)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "white" }}>
               <Icon name="menu" size={20} />
             </button>
 
             <div style={{ position:"relative", zIndex:1, paddingTop: 40 }}>
               <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.5rem" }}>Super Admin Dashboard</h1>
-              <p className="mb-0" style={{ color:"rgba(255,255,255,0.75)", fontSize: "0.9rem" }}>System Administration</p>
+              <p className="mb-0" style={{ color:"rgba(255,255,255,0.85)", fontSize: "0.9rem" }}>System Administration</p>
             </div>
           </div>
 
@@ -432,7 +427,7 @@ export default function SuperAdminDashboardPage() {
               <div className="card-body p-3">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h3 className="fw-bold mb-0" style={{ fontSize:"0.9rem" }}>Recent Accounts</h3>
-                  <button onClick={() => router.push("/admin/super-admin/create")} className="btn btn-sm px-2 py-1" style={{ background:"#3b82f6", color:"white", fontSize:"0.7rem" }}>
+                  <button onClick={() => router.push("/admin/super-admin/create")} className="btn btn-sm px-2 py-1" style={{ background:"#dc2626", color:"white", fontSize:"0.7rem" }}>
                     View All
                   </button>
                 </div>
