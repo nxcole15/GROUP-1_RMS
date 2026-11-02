@@ -417,7 +417,14 @@ async function approveEnrollment(req, res, next) {
     if (enrollment.status !== "pending") return res.status(409).json({ error: "This request has already been processed." });
 
     const updated = await EnrollmentModel.approve(id, req.admin.admin_id);
-    sendNotification({ student_id: updated.student_id, message: `Your enrollment for ${updated.term} has been approved.`, type: "enrollment" });
+    
+    // Send enhanced notification using NotificationService
+    await NotificationService.notifyEnrollmentApproved({
+      student_id: updated.student_id,
+      student_name: updated.student_name || updated.student_id,
+      school_year: updated.term
+    });
+    
     await AuditModel.log({ admin_id: req.admin.admin_id, action: "APPROVE_ENROLLMENT", target_request_id: id });
     res.json({ message: "Enrollment approved.", enrollment: updated });
   } catch (err) { next(err); }

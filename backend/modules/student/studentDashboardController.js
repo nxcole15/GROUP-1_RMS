@@ -147,6 +147,39 @@ async function getDashboardData(req, res, next) {
       // Grades table might not exist yet
     }
 
+    // Get adviser information for current school year
+    let adviser = null;
+    try {
+      const [adviserRows] = await db.query(`
+        SELECT 
+          t.full_name as adviser_name,
+          t.email as adviser_email,
+          t.department as adviser_department,
+          ec.school_year,
+          ec.current_term
+        FROM student_adviser_assignments saa
+        INNER JOIN teachers t ON saa.teacher_id = t.id
+        INNER JOIN enrollment_config ec ON saa.school_year_id = ec.id
+        WHERE saa.student_id = ?
+          AND saa.status = 'active'
+          AND ec.status = 'active'
+        LIMIT 1
+      `, [studentId]);
+      
+      if (adviserRows && adviserRows[0]) {
+        adviser = {
+          name: adviserRows[0].adviser_name,
+          email: adviserRows[0].adviser_email,
+          department: adviserRows[0].adviser_department,
+          school_year: adviserRows[0].school_year,
+          current_term: adviserRows[0].current_term
+        };
+      }
+    } catch (err) {
+      console.error("Error fetching adviser:", err.message);
+      // Table might not exist yet
+    }
+
     res.json({
       student: {
         student_id: student.student_id,
@@ -165,7 +198,8 @@ async function getDashboardData(req, res, next) {
         balance_due: totalTuition - totalPaid,
         pending_docs: pendingDocs
       },
-      recent_grades: recentGradesRows
+      recent_grades: recentGradesRows,
+      adviser: adviser
     });
 
   } catch (err) {
@@ -182,21 +216,72 @@ async function getProfileData(req, res, next) {
   try {
     const studentId = req.student.student_id;
     
-    // Get detailed info from enrollment_applications
+    // Get detailed info from enrollment_applications and students table
     const [rows] = await db.query(`
       SELECT 
-        date_of_birth,
-        phone,
-        address,
-        gender,
-        nationality,
-        guardian_name,
-        guardian_phone,
-        created_at as enrollment_date
-      FROM enrollment_applications
-      WHERE generated_student_id = ?
+        ea.date_of_birth,
+        ea.phone,
+        ea.address,
+        ea.gender,
+        ea.nationality,
+        ea.guardian_name,
+        ea.guardian_phone,
+        ea.created_at as enrollment_date,
+        ea.track,
+        ea.strand,
+        s.grade_level,
+        s.track as student_track,
+        s.strand as student_strand
+      FROM enrollment_applications ea
+      LEFT JOIN students s ON ea.generated_student_id = s.student_id
+      WHERE ea.generated_student_id = ?
       LIMIT 1
     `, [studentId]);
+
+    // Get current academic period and adviser
+    let academicInfo = {
+      school_year: null,
+      current_term: null,
+      adviser_name: null,
+      track: null,
+      strand: null,
+      grade_level: null
+    };
+
+    try {
+      const [academicRows] = await db.query(`
+        SELECT 
+          ec.school_year,
+          ec.current_term,
+          t.full_name as adviser_name,
+          s.track,
+          s.strand,
+          s.grade_level
+        FROM enrollment_config ec
+        CROSS JOIN students s
+        LEFT JOIN student_adviser_assignments saa 
+          ON saa.student_id = s.student_id 
+          AND saa.school_year_id = ec.id 
+          AND saa.status = 'active'
+        LEFT JOIN teachers t ON saa.teacher_id = t.id
+        WHERE ec.status = 'active'
+          AND s.student_id = ?
+        LIMIT 1
+      `, [studentId]);
+
+      if (academicRows && academicRows[0]) {
+        academicInfo = {
+          school_year: academicRows[0].school_year,
+          current_term: academicRows[0].current_term,
+          adviser_name: academicRows[0].adviser_name,
+          track: academicRows[0].track,
+          strand: academicRows[0].strand,
+          grade_level: academicRows[0].grade_level
+        };
+      }
+    } catch (err) {
+      console.error("Error fetching academic info:", err.message);
+    }
 
     if (!rows[0]) {
       return res.json({
@@ -207,11 +292,29 @@ async function getProfileData(req, res, next) {
         nationality: null,
         guardian_name: null,
         guardian_phone: null,
-        enrollment_date: null
+        enrollment_date: null,
+        school_year: academicInfo.school_year,
+        current_term: academicInfo.current_term,
+        adviser_name: academicInfo.adviser_name,
+        track: academicInfo.track,
+        strand: academicInfo.strand,
+        grade_level: academicInfo.grade_level
       });
     }
 
-    res.json(rows[0]);
+    // Use track/strand from students table if available, otherwise from enrollment_applications
+    const finalTrack = academicInfo.track || rows[0].student_track || rows[0].track;
+    const finalStrand = academicInfo.strand || rows[0].student_strand || rows[0].strand;
+
+    res.json({
+      ...rows[0],
+      school_year: academicInfo.school_year,
+      current_term: academicInfo.current_term,
+      adviser_name: academicInfo.adviser_name,
+      track: finalTrack,
+      strand: finalStrand,
+      grade_level: academicInfo.grade_level || rows[0].grade_level
+    });
   } catch (err) {
     console.error("Profile fetch error:", err);
     next(err);

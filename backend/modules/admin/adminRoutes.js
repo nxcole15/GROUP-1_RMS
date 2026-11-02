@@ -81,6 +81,14 @@ const {
   getAllAccountingDocuments,
   accountingVerifyPayment
 } = require("./adminDocumentController");
+const {
+  getStudents,
+  getTeachers: getAdviserTeachers,
+  assignAdviser,
+  removeAdviser,
+  getStats: getAdviserStats,
+  getFilterOptions
+} = require("./adviserController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
 // ── Public admin auth ──────────────────────────────────────────────────────
@@ -192,5 +200,13 @@ router.put("/settings/school-years/:id", updateSchoolYear);
 router.delete("/settings/school-years/:id", deleteSchoolYear);
 router.post("/settings/complete-term", completeTerm);
 router.put("/settings/enrollment-config", updateEnrollmentConfig);
+
+// ── Adviser Assignment (Registrar) ────────────────────────────────────────
+router.get("/advisers/students", getStudents);
+router.get("/advisers/teachers", getAdviserTeachers);
+router.post("/advisers/assign", assignAdviser);
+router.delete("/advisers/:assignmentId", removeAdviser);
+router.get("/advisers/stats", getAdviserStats);
+router.get("/advisers/filters", getFilterOptions);
 
 module.exports = router;

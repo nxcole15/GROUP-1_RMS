@@ -12,15 +12,16 @@ const adminRoutes         = require("./modules/admin/adminRoutes");
 const enrollmentRoutes    = require("./modules/student/enrollmentRoutes");
 const studentDashboardRoutes = require("./modules/student/studentDashboardRoutes");
 const gradesRoutes        = require("./modules/grades/gradesRoutes");
-const attendanceRoutes    = require("./modules/attendance/attendanceRoutes");
 const paymentsRoutes      = require("./modules/payments/paymentsRoutes");
 const documentsRoutes     = require("./modules/documents/documentsRoutes");
 const notificationsRoutes = require("./modules/notifications/notificationsRoutes");
+const staffNotificationRoutes = require("./modules/notifications/staffNotificationRoutes");
 const teacherRoutes       = require("./modules/teacher/teacherRoutes");
 const gradeRequestRoutes = require("./modules/gradeRequests/gradeRequestRoutes");
 const applicationRoutes  = require("./modules/student/applicationRoutes");
 const feeRoutes          = require("./modules/fees/feeRoutes");
 const studentFeeRoutes   = require("./modules/fees/studentFeeRoutes");
+const publicRoutes       = require("./modules/shared/publicRoutes");
 
 
 const app = express();
@@ -76,10 +77,10 @@ app.use("/api/auth",          authRoutes);
 app.use("/api/enrollment",    enrollmentRoutes);
 app.use("/api/student",       studentDashboardRoutes);
 app.use("/api/grades",        gradesRoutes);
-app.use("/api/attendance",    attendanceRoutes);
 app.use("/api/payments",      paymentsRoutes);
 app.use("/api/documents",     documentsRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/staff-notifications", staffNotificationRoutes);
 
 
 /* ── Admin routes ── */
@@ -92,6 +93,9 @@ app.use("/api/grade-requests", gradeRequestRoutes);
 app.use("/api/applications",  applicationRoutes);
 app.use("/api/fees",           feeRoutes);
 app.use("/api/student/fees",   studentFeeRoutes); // Student-facing fee routes
+
+/* ── Public routes (no auth) ── */
+app.use("/api/public", publicRoutes);
 
 /* ── 404 handler ── */
 app.use((req, res) => res.status(404).json({ error: "Route not found." }));

@@ -4,6 +4,7 @@
  */
 const EnrollmentModel = require("./enrollmentModel");
 const ConfigModel     = require("../shared/configModel");
+const NotificationService = require("../notifications/notificationService");
 
 async function getMyEnrollment(req, res, next) {
   try {
@@ -88,6 +89,22 @@ async function submitEnrollment(req, res, next) {
       term: config.active_term,
       subjects,
     });
+
+    // Get student details for notification
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT full_name as name, grade_level, track FROM students WHERE student_id = ? LIMIT 1`,
+      [student_id]
+    );
+    
+    if (studentRow[0]) {
+      // Notify registrar of new enrollment
+      await NotificationService.notifyNewEnrollment({
+        student_name: studentRow[0].name,
+        grade_level: studentRow[0].grade_level,
+        track: studentRow[0].track
+      });
+    }
 
     res.status(201).json({
       message:          "Enrollment submitted successfully. Awaiting admin approval.",

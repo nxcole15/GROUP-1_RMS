@@ -97,7 +97,6 @@ const teacherSchedule: Array<{day: string; subject: string; room: string; time: 
 const students: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}> = [];
 const grades: Array<{student_id: string; name: string; subject: string; percentage: number; term: string}> = [];
 const gradeRequestsTeacher: Array<{id: number; student: string; subject: string; status: string; requestedAt: string}> = [];
-const attendance: Array<{student_id: string; name: string; subject: string; total: number; present: number; percentage: number}> = [];
 const recentActivity: Array<{action: string; name: string; time: string; icon: string}> = [];
 const teacherNotifications: Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}> = [];
 const documentApprovals: Array<{id: number; student: string; type: string; status: string; requestedAt?: string; approvedAt?: string}> = [];
@@ -118,12 +117,13 @@ function isDeadlinePassed() {
   return new Date() > TEACHER_TERM_DEADLINES[getActiveTerm()];
 }
 
-type Panel = "overview"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog"|"profile";
+type Panel = "overview"|"schedule"|"students"|"advisees"|"grades"|"requests"|"documents"|"notifications"|"timelog"|"profile";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "overview",       label: "Overview",          icon: "overview" },
   { id: "schedule",       label: "My Schedule",        icon: "calendar" },
   { id: "students",       label: "My Students",        icon: "students" },
+  { id: "advisees",       label: "My Advisees",        icon: "user" },
   { id: "grades",         label: "Submit Grades",      icon: "chart" },
   { id: "requests",       label: "Grade Requests",     icon: "requests" },
   { id: "documents",      label: "Document Requests",  icon: "documents" },
@@ -239,6 +239,11 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
     const fetchOverview = async () => {
       try {
         const token = localStorage.getItem("inform_token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        
         const res = await fetch(`${API_BASE}/api/teacher/overview`, {
           headers: { 
             Authorization: `Bearer ${token}`,
@@ -246,14 +251,29 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
           },
           credentials: "include"
         });
+        
         if (res.ok) {
           const data = await res.json();
           setOverviewData(data);
         } else {
           console.error("Overview fetch failed:", res.status, res.statusText);
+          // Set default empty data to prevent errors
+          setOverviewData({
+            total_students: 0,
+            avg_grade: 0,
+            pending_requests: 0,
+            active_term: "Term 1"
+          });
         }
       } catch (err) {
         console.error("Failed to fetch overview:", err);
+        // Set default empty data to prevent errors
+        setOverviewData({
+          total_students: 0,
+          avg_grade: 0,
+          pending_requests: 0,
+          active_term: "Term 1"
+        });
       } finally {
         setLoading(false);
       }
@@ -2514,47 +2534,14 @@ function DocumentApprovalsPanel() {
 }
 
 /* -- Notifications -- */
-function NotificationsPanel() {
-  const [notifs, setNotifs] = useState(teacherNotifications);
-
-  function fetchNotifs() {
-    const token = localStorage.getItem("inform_token");
-    if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.notifications?.length) {
-          setNotifs(data.notifications.map((n: {
-            id: number; type: string; title: string; message: string; created_at: string; is_read: boolean;
-          }) => ({
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            message: n.message,
-            time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-            read: !!n.is_read,
-            icon: n.type === "grade_request" ? "??" : "?",
-          })));
-        }
-      })
-      .catch(() => {});
-  }
-
-  useEffect(() => {
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 15000);
-    return () => clearInterval(interval);
-  }, []);
+function NotificationsPanel({ notifs, setNotifs }: { notifs: Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}>; setNotifs: React.Dispatch<React.SetStateAction<Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}>>> }) {
 
   function markAllRead() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/staff-notifications/read`, {
+    fetch(`${API_BASE}/api/staff-notifications/read`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       credentials: "include",
     }).catch(() => {});
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
@@ -2570,13 +2557,16 @@ function NotificationsPanel() {
       </div>
       {unread.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">🔔 Unread</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2">
+            <Icon name="bell" size={16} />
+            Unread
+          </h3>
           <div className="d-flex flex-column gap-2">
             {unread.map(n => (
               <div key={n.id} className="card border-0 shadow-sm rounded-3" style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.12)" }}>
                 <div className="card-body p-3">
                   <div className="d-flex align-items-start gap-3">
-                    <span style={{ fontSize: 18 }}>{n.icon}</span>
+                    <div className="text-muted"><Icon name={(n.icon as IconName) || 'bell'} size={18} /></div>
                     <div className="flex-grow-1">
                       <div className="fw-bold small text-dark">{n.title}</div>
                       <div className="text-muted small mt-1">{n.message}</div>
@@ -2585,10 +2575,24 @@ function NotificationsPanel() {
                     <div className="d-flex gap-1">
                       <button onClick={() => {
                         const token = localStorage.getItem("inform_token");
-                        if (token) fetch(`${API_BASE}/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        if (!token) return;
                         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
-                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>?</button>
-                      <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}/read`, { 
+                          method: "PATCH", 
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                          credentials: "include" 
+                        }).catch(() => {});
+                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>
+                      <button onClick={() => {
+                        const token = localStorage.getItem("inform_token");
+                        if (!token) return;
+                        setNotifs(prev => prev.filter(x => x.id !== n.id));
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}`, { 
+                          method: "DELETE", 
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                          credentials: "include" 
+                        }).catch(() => {});
+                      }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -2599,133 +2603,32 @@ function NotificationsPanel() {
       )}
       {read.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Read</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2">
+            <Icon name="checkCircle" size={16} />
+            Read
+          </h3>
           <div className="d-flex flex-column gap-2">
             {read.map(n => (
               <div key={n.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-start gap-3">
-                  <span style={{ fontSize: 16 }}>{n.icon}</span>
+                  <div className="text-muted"><Icon name={(n.icon as IconName) || 'bell'} size={16} /></div>
                   <div className="flex-grow-1"><div className="fw-bold small text-dark">{n.title}</div><div className="text-muted small">{n.message}</div></div>
-                  <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
+                  <button onClick={() => {
+                    const token = localStorage.getItem("inform_token");
+                    if (!token) return;
+                    setNotifs(prev => prev.filter(x => x.id !== n.id));
+                    fetch(`${API_BASE}/api/staff-notifications/${n.id}`, { 
+                      method: "DELETE", 
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                      credentials: "include" 
+                    }).catch(() => {});
+                  }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* -- Attendance Panel -- */
-function AttendancePanel({ teacherSubjects = subjects }: { teacherSubjects?: Array<{ id: number; name: string }> }) {
-  const [selectedSubject, setSelectedSubject] = useState<number | null>(teacherSubjects[0]?.id ?? null);
-  const [apiAttendance, setApiAttendance] = useState<{student_id:string;full_name:string;total_meetings:number;days_present:number}[]>([]);
-  const [attLoading, setAttLoading] = useState(false);
-  const [attError, setAttError] = useState(false);
-  const [attToast, setAttToast] = useState<string|null>(null);
-
-  function showAttToast(msg: string) { setAttToast(msg); setTimeout(() => setAttToast(null), 3000); }
-
-  useEffect(() => {
-    if (selectedSubject === null) return;
-    const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return;
-    setAttLoading(true);
-    setAttError(false);
-    fetch(`${API_BASE}/api/teacher/attendance/${selectedSubject}`, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.attendance?.length) setApiAttendance(data.attendance);
-        else setApiAttendance([]);
-      })
-      .catch(() => setAttError(true))
-      .finally(() => setAttLoading(false));
-  }, [selectedSubject]);
-
-  function markAttendance(studentId: string, present: boolean) {
-    const token = localStorage.getItem("inform_token");
-    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === teacherSubjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
-      .find(a => a.student_id === studentId);
-    const newPresent = present
-      ? Math.min((record?.days_present ?? 0) + 1, record?.total_meetings ?? 20)
-      : Math.max((record?.days_present ?? 1) - 1, 0);
-
-    // Optimistic update
-    setApiAttendance(prev => prev.map(a => a.student_id === studentId ? { ...a, days_present: newPresent } : a));
-    showAttToast(present ? "? Marked Present" : "? Marked Absent");
-
-    if (!token || token.startsWith("demo_")) return;
-    fetch(`${API_BASE}/api/teacher/attendance`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ student_id: studentId, subject_id: selectedSubject, total_meetings: record?.total_meetings ?? 20, days_present: newPresent }),
-    }).catch(() => {}); // UI already updated
-  }
-
-  const displayAttendance = apiAttendance.length > 0
-    ? apiAttendance.map(a => ({ student_id: a.student_id, name: a.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", present: a.days_present, total: a.total_meetings, percentage: a.total_meetings > 0 ? Math.round((a.days_present/a.total_meetings)*100) : 0 }))
-    : attendance.filter(a => a.subject === teacherSubjects.find(s => s.id === selectedSubject)?.name);
-
-  const avgAttendance = displayAttendance.length > 0 ? Math.round(displayAttendance.reduce((a, att) => a + att.percentage, 0) / displayAttendance.length) : 0;
-  return (
-    <div className="d-flex flex-column gap-4">
-      {attToast && <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 220, animation: "fadeInUp 0.3s ease" }}>{attToast}</div>}
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Attendance Management</h2><p className="text-muted small mb-0">Track student attendance per subject</p></div>
-      <div className="d-flex gap-3 flex-wrap align-items-center">
-        <div style={{ width: 220 }}>
-          <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Select Subject</label>
-          <select value={selectedSubject ?? ""} onChange={e => setSelectedSubject(e.target.value ? Number(e.target.value) : null)} className="form-select form-select-sm rounded-3">
-            {teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
-          <div className="card-body p-3 d-flex align-items-center gap-3">
-            <span style={{ fontSize: 24 }}></span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{teacherSubjects.find(s => s.id === selectedSubject)?.name ?? "No subject assigned"}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
-            <div className="fw-black fs-3 text-success">{avgAttendance}%</div>
-          </div>
-        </div>
-      </div>
-      {teacherSubjects.length === 0 && <div className="alert alert-info small">No subjects are assigned to your account yet.</div>}
-      {attError && <div className="alert alert-warning small">Could not load attendance from server. Showing cached data.</div>}
-      <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Present</th>
-                <th className="small text-muted fw-semibold text-uppercase text-center" style={{ letterSpacing: "0.05em" }}>Action</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attLoading ? (
-                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
-              ) : (
-                displayAttendance.map((a, i) => (
-                  <tr key={i}>
-                    <td className="ps-4 small fw-medium text-dark">{a.name}</td>
-                    <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center gap-2">
-                        <button onClick={() => markAttendance(a.student_id, true)}  className="btn btn-success btn-sm" style={{ fontSize: 11 }}>? Present</button>
-                        <button onClick={() => markAttendance(a.student_id, false)} className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>? Absent</button>
-                      </div>
-                    </td>
-                    <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
@@ -2888,6 +2791,295 @@ function TimeLogPanel() {
 }
 
 /* -- Main Page -- */
+/* -- Advisees Panel -- */
+function AdviseesPanel() {
+  const [advisees, setAdvisees] = useState<Array<{
+    student_id: string;
+    full_name: string;
+    grade_level: number;
+    track: string | null;
+    strand: string | null;
+    email: string;
+  }>>([]);
+  const [grouped, setGrouped] = useState<Array<{
+    gradeLevel: number;
+    track: string;
+    strand: string;
+    students: Array<{
+      student_id: string;
+      full_name: string;
+      grade_level: number;
+      track: string | null;
+      strand: string | null;
+      email: string;
+    }>;
+  }>>([]);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const fetchAdvisees = async () => {
+      try {
+        const token = localStorage.getItem("inform_token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch academic config
+        const config = await getAcademicConfig();
+        setAcademicConfig(config);
+
+        // Fetch advisees
+        const res = await fetch(`${API_BASE}/api/teacher/advisees`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setAdvisees(data.advisees || []);
+            setGrouped(data.grouped || []);
+            setTotal(data.total || 0);
+            if (data.academicPeriod) {
+              setAcademicConfig({
+                school_year: data.academicPeriod.schoolYear,
+                current_term: data.academicPeriod.term,
+                status: "active",
+                enrollment_is_open: false,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch advisees:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdvisees();
+  }, []);
+
+  return (
+    <div className="p-3 p-md-4">
+      <div className="mb-4">
+        <h2 className="fw-bold mb-1" style={{ fontSize: "1.5rem", color: "#1e293b" }}>
+          My Advisees
+        </h2>
+        <p className="text-muted" style={{ fontSize: "0.875rem" }}>
+          Students assigned to you as adviser
+        </p>
+      </div>
+
+      {/* Academic Period */}
+      {academicConfig && (
+        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)" }}>
+          <div className="card-body p-4">
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  SCHOOL YEAR
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {academicConfig.school_year}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  CURRENT TERM
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {academicConfig.current_term}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  TOTAL ADVISEES
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {total}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-5 text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted mt-3 mb-0">Loading advisees...</p>
+          </div>
+        </div>
+      )}
+
+      {/* No Advisees */}
+      {!loading && advisees.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-5 text-center">
+            <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+              style={{ width: 64, height: 64, background: "#f1f5f9" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            </div>
+            <h5 className="fw-bold mb-2">No Advisees Assigned</h5>
+            <p className="text-muted">You have not been assigned as an adviser to any students for this academic period.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Grouped by Grade/Track/Strand */}
+      {!loading && grouped.length > 0 && (
+        <div className="row g-4">
+          {grouped.map((group, idx) => (
+            <div key={idx} className="col-12">
+              <div className="card border-0 shadow-sm rounded-4">
+                <div className="card-header bg-white border-bottom py-3 px-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="fw-bold mb-0" style={{ fontSize: "1rem" }}>
+                        Grade {group.gradeLevel} – {group.track}
+                        {group.strand && ` / ${group.strand}`}
+                      </h5>
+                      <p className="text-muted mb-0 small">
+                        {group.students.length} student{group.students.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span className="badge rounded-pill px-3 py-2" style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd" }}>
+                      {group.students.length}
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body p-0">
+                  <div className="table-responsive">
+                    <table className="table table-hover mb-0">
+                      <thead style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
+                        <tr>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STUDENT ID
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STUDENT NAME
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            GRADE
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            TRACK
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STRAND
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            EMAIL
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.students.map((student) => (
+                          <tr key={student.student_id}>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.student_id}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                              {student.full_name}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.grade_level}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.track || "—"}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.strand || "—"}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.email}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Ungrouped List (fallback) */}
+      {!loading && advisees.length > 0 && grouped.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
+                  <tr>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STUDENT ID
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STUDENT NAME
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      GRADE
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      TRACK
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STRAND
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      EMAIL
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {advisees.map((student) => (
+                    <tr key={student.student_id}>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.student_id}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                        {student.full_name}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.grade_level}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.track || "—"}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.strand || "—"}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.email}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* -- Profile Panel -- */
 function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; department: string; email: string } | null }) {
   const name       = teacher?.full_name   ?? "Teacher";
@@ -3125,7 +3317,8 @@ export default function TeacherDashboardPage() {
     function fetchNotifs() {
       const token = localStorage.getItem("inform_token");
       if (!token) return;
-      fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
+      
+      fetch(`${API_BASE}/api/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -3135,18 +3328,21 @@ export default function TeacherDashboardPage() {
             setNotifs(prev => {
               // Preserve locally-marked-read states so poll doesn't undo them
               const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
-              return data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
-                id: n.id, type: n.type, title: n.title, message: n.message,
+              return data.notifications.map((n: { id: number; type: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id, 
+                type: n.type, 
+                title: n.type === 'grade_request' ? 'Grade Request' : n.type.charAt(0).toUpperCase() + n.type.slice(1),
+                message: n.message,
                 time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                 read: readIds.has(n.id) ? true : !!n.is_read,
-                icon: "??",
+                icon: n.type === 'grade_request' ? 'chart' : 'bell',
               }));
             });
           }
         })
         .catch(() => {});
     }
-    const interval = setInterval(fetchNotifs, 15000);
+    const interval = setInterval(fetchNotifs, 30000); // Poll every 30 seconds
     fetchNotifs();
     return () => clearInterval(interval);
   }, []);
@@ -3232,10 +3428,11 @@ export default function TeacherDashboardPage() {
           track_strand: trackStrand
         };
       }) : undefined} />;
+      case "advisees":      return <AdviseesPanel />;
       case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "documents":     return <DocumentApprovalsPanel />;
-      case "notifications": return <NotificationsPanel />;
+      case "notifications": return <NotificationsPanel notifs={notifs} setNotifs={setNotifs} />;
       case "profile":       return <ProfilePanel teacher={apiTeacher} />;
       default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} academicConfig={academicConfig} />;
     }
@@ -3294,27 +3491,64 @@ export default function TeacherDashboardPage() {
             <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize: 11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
-                {unreadCount > 0 && <button onClick={() => setNotifs(prev => prev.map(n => ({ ...n, read: true })))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 11 }}>Mark all read</button>}
+                {unreadCount > 0 && <button onClick={() => {
+                  const token = localStorage.getItem("inform_token");
+                  if (token) {
+                    // Optimistically update UI
+                    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+                    // Call API
+                    fetch(`${API_BASE}/api/staff-notifications/read`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      credentials: "include",
+                    }).catch(() => {});
+                  }
+                }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 11 }}>Mark all read</button>}
                 <button onClick={() => setShowNotif(false)} className="btn btn-link btn-sm p-0 text-muted" aria-label="Close"><Icon name="close" size={18} className="text-muted" /></button>
               </div>
             </div>
             {notifs.length === 0
-              ? <div className="px-4 py-5 text-center text-muted"><div className="mb-2"><Icon name="bell" size={32} className="text-muted opacity-50" /></div><small>No notifications</small></div>
+              ? <div className="px-4 py-5 text-center text-muted"><small>No notifications</small></div>
               : notifs.map(n => (
                 <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={(n.icon || 'bell') as IconName} size={18} /></div>
+                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={(n.icon as IconName) || 'bell'} size={18} /></div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{n.title || 'Notification'}</div>
                     <div className="text-muted" style={{ fontSize: 12, lineHeight: 1.4 }}>{n.message}</div>
                     <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark as read">?</button>}
-                    <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }} aria-label="Delete">?</button>
+                    {!n.read && <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                        // Call API
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}/read`, {
+                          method: 'PATCH',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark as read"><Icon name="check" size={14} /></button>}
+                    <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifs(prev => prev.filter(x => x.id !== n.id));
+                        // Call API to delete
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                   </div>
                 </div>
               ))
             }
+            {notifs.length > 0 && <div className="px-4 py-2 border-top text-center"><button onClick={() => { setPanel("notifications"); setShowNotif(false); }} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize: 12 }}>View all <Icon name="arrowRight" size={12} /></button></div>}
           </div>
           <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 9998 }} onClick={() => setShowNotif(false)} />
         </>

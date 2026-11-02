@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { API_BASE, getAcademicConfig, type AcademicConfig } from "../../lib/auth";
 
 interface ProfileData {
   id: string;
@@ -16,6 +17,13 @@ interface ProfileData {
   guardianContact: string;
   enrollmentDate: string;
   profilePicture?: string;
+  track?: string;
+  strand?: string;
+  school_year?: string;
+  current_term?: string;
+  adviser_name?: string;
+  lrn?: string;
+  grade_level?: number;
 }
 
 const INITIAL_PROFILE: ProfileData = {
@@ -115,11 +123,68 @@ function Sidebar({ show, setShow }: { show: boolean; setShow: (b: boolean) => vo
 export default function ProfilePage() {
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [editMode, setEditMode] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [sidebarShow, setSidebarShow] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string>("/cfei-logo.jpg");
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch profile data from API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("inform_token");
+        if (!token) {
+          window.location.href = "/login";
+          return;
+        }
+
+        // Fetch academic config
+        const config = await getAcademicConfig();
+        setAcademicConfig(config);
+
+        // Fetch profile data
+        const res = await fetch(`${API_BASE}/api/student/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setProfile({
+            id: localStorage.getItem("inform_user") ? JSON.parse(localStorage.getItem("inform_user")!).student_id : "",
+            name: localStorage.getItem("inform_user") ? JSON.parse(localStorage.getItem("inform_user")!).full_name : "",
+            email: data.email || "",
+            phone: data.phone || "",
+            address: data.address || "",
+            course: data.strand || "STEM",
+            yearLevel: `Grade ${data.grade_level || 11}`,
+            dateOfBirth: data.date_of_birth ? new Date(data.date_of_birth).toISOString().split('T')[0] : "",
+            guardianName: data.guardian_name || "",
+            guardianContact: data.guardian_phone || "",
+            enrollmentDate: data.enrollment_date ? new Date(data.enrollment_date).toISOString().split('T')[0] : "",
+            track: data.track,
+            strand: data.strand,
+            school_year: data.school_year || config.school_year,
+            current_term: data.current_term || config.current_term,
+            adviser_name: data.adviser_name,
+            lrn: data.lrn,
+            grade_level: data.grade_level
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleSave = () => {
     setLoading(true);
@@ -281,6 +346,13 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="row g-4">
+                    {/* Personal Details Section */}
+                    <div className="col-12">
+                      <div className="border-bottom pb-3 mb-4">
+                        <h5 className="fw-bold mb-0" style={{ color: "#6366f1" }}>Personal Details</h5>
+                      </div>
+                    </div>
+                    
                     <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold small text-uppercase text-muted">Full Name</label>
                       <input type="text" className="form-control" value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} disabled={!editMode} />
@@ -289,6 +361,22 @@ export default function ProfilePage() {
                       <label className="form-label fw-semibold small text-uppercase text-muted">Student ID</label>
                       <input type="text" className="form-control" value={profile.id} disabled style={{ background: "#f1f5f9" }} />
                     </div>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted">Date of Birth</label>
+                      <input type="date" className="form-control" value={profile.dateOfBirth} onChange={e => setProfile({ ...profile, dateOfBirth: e.target.value })} disabled={!editMode} />
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted">LRN</label>
+                      <input type="text" className="form-control" value={profile.lrn || "—"} disabled style={{ background: "#f1f5f9" }} />
+                    </div>
+
+                    {/* Contact Information Section */}
+                    <div className="col-12 mt-4">
+                      <div className="border-bottom pb-3 mb-4">
+                        <h5 className="fw-bold mb-0" style={{ color: "#6366f1" }}>Contact Information</h5>
+                      </div>
+                    </div>
+                    
                     <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold small text-uppercase text-muted">Email</label>
                       <input type="email" className="form-control" value={profile.email} onChange={e => setProfile({ ...profile, email: e.target.value })} disabled={!editMode} />
@@ -301,29 +389,37 @@ export default function ProfilePage() {
                       <label className="form-label fw-semibold small text-uppercase text-muted">Address</label>
                       <input type="text" className="form-control" value={profile.address} onChange={e => setProfile({ ...profile, address: e.target.value })} disabled={!editMode} />
                     </div>
+
+                    {/* Academic Details Section */}
+                    <div className="col-12 mt-4">
+                      <div className="border-bottom pb-3 mb-4">
+                        <h5 className="fw-bold mb-0" style={{ color: "#6366f1" }}>Academic Details</h5>
+                      </div>
+                    </div>
+                    
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold small text-uppercase text-muted">Course</label>
-                      <select className="form-select" value={profile.course} onChange={e => setProfile({ ...profile, course: e.target.value })} disabled={!editMode}>
-                        <option value="STEM">STEM</option>
-                        <option value="HUMSS">HUMSS</option>
-                        <option value="ABM">ABM</option>
-                        <option value="TVL-TechPro">TVL-TechPro</option>
-                      </select>
+                      <label className="form-label fw-semibold small text-uppercase text-muted">Track</label>
+                      <input type="text" className="form-control" value={profile.track || "Academic"} disabled style={{ background: "#f1f5f9" }} />
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted">Strand</label>
+                      <input type="text" className="form-control" value={profile.strand || profile.course} disabled style={{ background: "#f1f5f9" }} />
                     </div>
                     <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold small text-uppercase text-muted">Year Level</label>
-                      <select className="form-select" value={profile.yearLevel} onChange={e => setProfile({ ...profile, yearLevel: e.target.value })} disabled={!editMode}>
-                        <option value="Grade 11">Grade 11</option>
-                        <option value="Grade 12">Grade 12</option>
-                      </select>
+                      <input type="text" className="form-control" value={profile.yearLevel} disabled style={{ background: "#f1f5f9" }} />
                     </div>
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold small text-uppercase text-muted">Date of Birth</label>
-                      <input type="date" className="form-control" value={profile.dateOfBirth} onChange={e => setProfile({ ...profile, dateOfBirth: e.target.value })} disabled={!editMode} />
+                      <label className="form-label fw-semibold small text-uppercase text-muted">School Year</label>
+                      <input type="text" className="form-control" value={profile.school_year || academicConfig?.school_year || "—"} disabled style={{ background: "#f1f5f9" }} />
                     </div>
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold small text-uppercase text-muted">Enrollment Date</label>
-                      <input type="date" className="form-control" value={profile.enrollmentDate} disabled style={{ background: "#f1f5f9" }} />
+                      <label className="form-label fw-semibold small text-uppercase text-muted">Adviser</label>
+                      <input type="text" className="form-control" value={profile.adviser_name || "Not yet assigned"} disabled style={{ background: "#f1f5f9" }} />
+                    </div>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label fw-semibold small text-uppercase text-muted">Current Term</label>
+                      <input type="text" className="form-control" value={profile.current_term || academicConfig?.current_term || "—"} disabled style={{ background: "#f1f5f9" }} />
                     </div>
                     <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold small text-uppercase text-muted">Guardian Name</label>

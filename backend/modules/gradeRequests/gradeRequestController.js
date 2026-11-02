@@ -3,12 +3,13 @@
  */
 const db = require("../../config/db");
 const GradeRequestModel = require("./gradeRequestModel");
+const NotificationService = require("../notifications/notificationService");
 
-/* ── Notification helpers ── */
+/* ── Notification helpers (legacy - keeping for backward compatibility) ── */
 async function notifyStudent(student_id, message, type = "system") {
   try {
     await db.query(
-      `INSERT INTO notifications (student_id, message, type) VALUES (?, ?, ?)`,
+      `INSERT INTO notifications (student_id, message, type, created_at) VALUES (?, ?, ?, NOW())`,
       [student_id, message, type]
     );
   } catch (_) { /* non-fatal */ }
@@ -17,7 +18,7 @@ async function notifyStudent(student_id, message, type = "system") {
 async function notifyStaff(recipient, role, title, message, type = "grade_request") {
   try {
     await db.query(
-      `INSERT INTO staff_notifications (recipient, role, title, message, type) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO staff_notifications (recipient, role, title, message, type, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
       [recipient, role, title, message, type]
     );
   } catch (_) { /* non-fatal */ }
@@ -137,12 +138,23 @@ async function teacherSubmitGrade(req, res, next) {
         score: s, remarks: remarks || ""
     });
 
-    // Notify all principals
-    await notifyAllAdmins(
-      "principal",
-      "Grade Submitted for Review",
-      `${request.student_name} — ${request.subject_name} (${request.term}): Score ${s}. Awaiting your review.`
+    // Get teacher name for notification
+    const [teacherRow] = await db.query(
+      `SELECT full_name as name FROM teachers WHERE id = ? LIMIT 1`,
+      [req.teacher.id]
     );
+    const teacherName = teacherRow[0]?.name || 'Teacher';
+
+    // Enhanced notification to principals using NotificationService
+    await NotificationService.notifyGradeSubmitted({
+      student_id: request.student_id,
+      student_name: request.student_name,
+      subject: request.subject_name,
+      term: request.term,
+      grade: s,
+      teacher_name: teacherName,
+      request_id: id
+    });
 
     res.json({ message: "Grade submitted to Principal for review.", request: updated });
   } catch (err) { 
@@ -245,12 +257,32 @@ async function principalApprove(req, res, next) {
     }
     const updated = await GradeRequestModel.updateStatus(id, "principal_approved", { principal_note });
 
-    // Notify all registrars that principal approved
-    await notifyAllAdmins(
-      "registrar",
-      "Grade Approved by Principal",
-      `${request.student_name} — ${request.subject_name} (${request.term}): Approved. Please release to teacher.`
+    // Get principal name
+    const [principalRow] = await db.query(
+      `SELECT name FROM admins WHERE admin_id = ? LIMIT 1`,
+      [req.admin.admin_id]
     );
+    const principalName = principalRow[0]?.name || 'Principal';
+
+    // Notify student that grade was approved
+    await NotificationService.notifyGradeApproved({
+      student_id: request.student_id,
+      student_name: request.student_name,
+      subject: request.subject_name,
+      term: request.term,
+      grade: request.score,
+      approved_by: principalName
+    });
+
+    // Notify registrar
+    await NotificationService.notifyRole({
+      role: 'registrar',
+      message: `Grade Approved: ${request.student_name} - ${request.subject_name} (${request.term}). Please release to teacher.`,
+      type: 'grade_request',
+      reference_id: id,
+      reference_type: 'grade_request',
+      link_url: '/admin/registrar/dashboard'
+    });
 
     res.json({ message: "Grade approved. Sent back to Registrar.", request: updated });
   } catch (err) { next(err); }
@@ -269,22 +301,36 @@ async function principalReject(req, res, next) {
       rejection_reason, rejected_by: "principal"
     });
 
-    // Notify teacher to resubmit with corrected grade
-    const [teacherRow] = await db.query(`SELECT teacher_id FROM teachers WHERE id = ? LIMIT 1`, [request.teacher_id]);
-    if (teacherRow[0]) {
-      await notifyStaff(
-        teacherRow[0].teacher_id, "teacher",
-        "Grade Returned — Correction Required",
-        `Principal returned ${request.student_name}'s grade request for ${request.subject_name} (${request.term}). Reason: ${rejection_reason}. Please re-enter the grade.`
-      );
-    }
-
-    // Notify registrar as well
-    await notifyAllAdmins(
-      "registrar",
-      "Grade Returned by Principal",
-      `${request.student_name} — ${request.subject_name} (${request.term}): Returned to teacher for correction. Reason: ${rejection_reason}`
+    // Get principal name
+    const [principalRow] = await db.query(
+      `SELECT name FROM admins WHERE admin_id = ? LIMIT 1`,
+      [req.admin.admin_id]
     );
+    const rejectedBy = principalRow[0]?.name || 'Principal';
+
+    // Get teacher_id for notification
+    const [teacherRow] = await db.query(`SELECT teacher_id FROM teachers WHERE id = ? LIMIT 1`, [request.teacher_id]);
+    
+    // Notify all parties using NotificationService
+    await NotificationService.notifyGradeRejected({
+      student_id: request.student_id,
+      teacher_id: teacherRow[0]?.teacher_id,
+      student_name: request.student_name,
+      subject: request.subject_name,
+      term: request.term,
+      grade: request.score,
+      reason: rejection_reason,
+      rejected_by: rejectedBy
+    });
+
+    // Notify registrar
+    await NotificationService.notifyRole({
+      role: 'registrar',
+      message: `Grade Returned: ${request.student_name} - ${request.subject_name} (${request.term}) returned to teacher. Reason: ${rejection_reason}`,
+      type: 'grade_request',
+      reference_id: id,
+      reference_type: 'grade_request'
+    });
 
     res.json({ message: "Grade returned to teacher for correction.", request: updated });
   } catch (err) { next(err); }

@@ -3,6 +3,8 @@
  * Fee management API handlers for Accounting
  */
 const FeeModel = require("./feeModel");
+const NotificationService = require("../notifications/notificationService");
+
 
 // ==================== FEE ITEMS MANAGEMENT ====================
 
@@ -209,16 +211,12 @@ async function assignFees(req, res, next) {
       notes
     });
 
-    // Send notification to student
-    const db = require("../../config/db");
-    await db.query(
-      `INSERT INTO notifications (student_id, message, type, created_at)
-       VALUES (?, ?, 'payment', NOW())`,
-      [
-        student_id,
-        `Your tuition fees for ${term} SY ${school_year} have been assessed. Total: ₱${assessment.net_assessment.toLocaleString()}. Please check your dashboard for the breakdown.`
-      ]
-    );
+    // Send real-time notification to student
+    await NotificationService.notifyFeesAssigned({
+      student_id,
+      total_amount: assessment.net_assessment,
+      assigned_by: assessed_by
+    });
 
     res.json({ 
       message: "Fees assigned successfully",

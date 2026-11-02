@@ -5,6 +5,7 @@ import Image from "next/image";
 import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
 import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
 import { SettingsPanel } from "../principal-dashboard/SettingsPanel";
+import { AdviserAssignmentPanel } from "./AdviserAssignmentPanel";
 
 type StudentRecord = {
   id: string;
@@ -27,8 +28,6 @@ type TeacherRecord = {
   subjects: TeacherSubject[];
   room: number;
 };
-
-type AnnouncementRecord = { id: number; title: string; date: string; target: string; status: string };
 
 type DashboardRecord = {
   id: number | string;
@@ -78,7 +77,6 @@ type NotificationRecord = {
 /* Data loaded from the live backend when available; empty arrays avoid seeded demo records in the UI. */
 const students: StudentRecord[] = [];
 const teachers: TeacherRecord[] = [];
-const announcements: AnnouncementRecord[] = [];
 const recentActivity: Array<Record<string, string>> = [];
 const allGradeRequests: GradeRequestRecord[] = [];
 const allDocumentRequests: DocumentRequestRecord[] = [];
@@ -86,7 +84,7 @@ const adminNotifications: NotificationRecord[] = [];
 
 type IconName =
   | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
-  | "enrollment" | "tuition" | "announcements" | "timelog" | "scheduling" | "settings"
+  | "enrollment" | "tuition" | "timelog" | "scheduling" | "settings"
   | "check" | "checkCircle" | "x" | "close" | "calendar" | "clock" | "bell"
 
   | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user" | "users"
@@ -108,7 +106,6 @@ function Icon({ name, size = 18, className }: { name: IconName; size?: number; c
     case "enrollment":    return <svg {...props}><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg>;
     case "tuition":       return <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>;
     case "scheduling":    return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-    case "announcements": return <svg {...props}><path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/><path d="M12 14v-6"/><path d="M9 11l3-3 3 3"/></svg>;
     case "settings":      return <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/></svg>;
     case "timelog":       return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case "check":         return <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>;
@@ -145,7 +142,7 @@ const navItems = [
   { id:"requests",      label:"Grade Requests"    },
   { id:"documents",     label:"Documents"         },
   { id:"enrollment",    label:"Enrollment"        },
-  { id:"announcements", label:"Announcements"     },
+  { id:"advisers",      label:"Adviser Assignment" },
   { id:"profile",       label:"My Profile"        },
   { id:"settings",      label:"Settings"          },
 ];
@@ -554,55 +551,6 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Announcements */}
-      <div className="row g-4 mt-0">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-4 h-100">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-4">
-                <div className="d-flex align-items-center gap-2">
-                  <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
-                    </svg>
-                  </div>
-                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Active Announcements</h3>
-                </div>
-                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
-                  View all <Icon name="arrowRight" size={12} />
-                </button>
-              </div>
-              {announcements.filter(a => a.status === "Active").length === 0 ? (
-                <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
-                  <div className="rounded-circle d-flex align-items-center justify-content-center mb-3" style={{ width:52, height:52, background:"#fef9c3" }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
-                    </svg>
-                  </div>
-                  <p className="text-muted small mb-0">No active announcements</p>
-                </div>
-              ) : (
-                <div className="d-flex flex-column gap-2">
-                  {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
-                    <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3" style={{ background:"#fffbeb", border:"1px solid #fef08a" }}>
-                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style={{ width:28, height:28, background:"#fef08a" }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 000 6h20v-6z"/></svg>
-                      </div>
-                      <div className="flex-grow-1 overflow-hidden">
-                        <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
-                        <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-lg-6" />
       </div>
 
       </div>
@@ -6686,60 +6634,6 @@ function SchedulingPanel() {
 
 
 
-/*  Announcements Panel  */
-function AnnouncementsPanel() {
-  const [items, setItems] = useState(announcements);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title:"", target:"All Students" });
-
-  function addAnnouncement() {
-    if (!form.title.trim()) return;
-    setItems(prev => [{ id:Date.now(), title:form.title, date:"Today", target:form.target, status:"Active" }, ...prev]);
-    setForm({ title:"", target:"All Students" }); setShowForm(false);
-  }
-
-  return (
-    <div className="d-flex flex-column gap-4">
-      <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Announcements</h2><p className="text-muted small mb-0">{items.filter(a=>a.status==="Active").length} active</p></div>
-        <button onClick={() => setShowForm(!showForm)} className="btn btn-primary btn-sm fw-bold shadow-sm">+ New Announcement</button>
-      </div>
-      {showForm && (
-        <div className="card border-primary border-opacity-25 rounded-3 shadow-sm">
-          <div className="card-body p-4 d-flex flex-column gap-3">
-            <h3 className="fw-bold small text-dark mb-0">New Announcement</h3>
-            <input value={form.title} onChange={e => setForm({...form,title:e.target.value})} placeholder="Announcement title..." className="form-control rounded-3" />
-            <select value={form.target} onChange={e => setForm({...form,target:e.target.value})} className="form-select rounded-3">
-              {["All Students","Active Students","Unpaid Students","4th Year","New Students"].map(t=><option key={t}>{t}</option>)}
-            </select>
-            <div className="d-flex gap-3">
-              <button onClick={() => setShowForm(false)} className="btn btn-outline-secondary flex-grow-1 rounded-3">Cancel</button>
-              <button onClick={addAnnouncement} className="btn btn-primary flex-grow-1 rounded-3 fw-bold shadow-sm">Post</button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="d-flex flex-column gap-2">
-        {items.map(a => (
-          <div key={a.id} className="card border-0 shadow-sm rounded-3">
-            <div className="card-body p-4 d-flex align-items-start gap-3">
-              <div className="rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}></div>
-              <div className="flex-grow-1 overflow-hidden">
-                <div className="fw-bold small text-dark">{a.title}</div>
-                <div className="text-muted" style={{ fontSize:11 }}>Target: {a.target} � {a.date}</div>
-              </div>
-              <div className="d-flex align-items-center gap-2 flex-shrink-0">
-                <span className={`badge ${a.status==="Active"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{a.status}</span>
-                <button className="btn btn-link btn-sm p-0 text-muted" onClick={() => setItems(items.filter(i=>i.id!==a.id))}></button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /*  Library Panel  */
 function LibraryPanel() {
   const libBooks = [
@@ -7124,10 +7018,12 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   // Poll staff notifications (grade request related) for registrar/principal
   useEffect(() => {
     if (!["registrar", "principal"].includes(role ?? "")) return;
+    
     function fetchStaffNotifs() {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (!token) return;
-      fetch(`${API_BASE}/api/grade-requests/admin-notifications`, {
+      
+      fetch(`${API_BASE}/api/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -7136,25 +7032,24 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
           if (data?.notifications?.length) {
             setNotifs(prev => {
               // Keep existing read states for items already marked read locally
-              const readIds = new Set(prev.filter((n: any) => n.read && n.type === "grade_request").map((n: any) => n.id));
-              const existing = prev.filter((n: any) => n.type !== "grade_request");
-              const fresh = data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
-                id: n.id + 100000,
-                type: "grade_request",
-                title: n.title,
+              const readIds = new Set(prev.filter((n: any) => n.read).map((n: any) => n.id));
+              const fresh = data.notifications.map((n: { id: number; type: string; title?: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id,
+                type: n.type,
+                title: n.title || (n.type === 'grade_request' ? 'Grade Request' : n.type === 'document_approved' ? 'Document Approved' : n.type === 'enrollment' ? 'New Enrollment' : 'Notification'),
                 message: n.message,
                 time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                 // Preserve local read state if already marked, otherwise use DB value
-                read: readIds.has(n.id + 100000) ? true : !!n.is_read,
+                read: readIds.has(n.id) ? true : !!n.is_read,
               }));
-              return [...fresh, ...existing];
+              return fresh;
             });
           }
         })
         .catch(() => {});
     }
     fetchStaffNotifs();
-    const interval = setInterval(fetchStaffNotifs, 15000);
+    const interval = setInterval(fetchStaffNotifs, 30000);
     return () => clearInterval(interval);
   }, [role]);
 
@@ -7162,38 +7057,41 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
   function markAsRead(id: number) {
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    // Persist to DB for grade_request type notifications
-    if (["registrar", "principal"].includes(role ?? "")) {
-      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-      // The ID is offset by 100000 for grade_request notifs � get the real DB id
-      const realId = id > 100000 ? id - 100000 : null;
-      if (token && realId) {
-        fetch(`${API_BASE}/api/grade-requests/admin-notifications/${realId}/read`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }).catch(() => {});
-      }
+    // Persist to DB using staff notifications API
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
     }
   }
 
   function markAllAsRead() {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-    // Also mark on server for grade request notifications
-    if (["registrar", "principal"].includes(role ?? "")) {
-      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-      if (token) {
-        fetch(`${API_BASE}/api/grade-requests/admin-notifications/read`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }).catch(() => {});
-      }
+    // Mark all as read on server
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
     }
   }
 
   function deleteNotif(id: number) {
     setNotifs(prev => prev.filter(n => n.id !== id));
+    // Delete from DB using staff notifications API
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
+    }
   }
 
   function renderPanel() {
@@ -7205,7 +7103,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "documents":     return <DocumentWorkflowPanel />;
       case "enrollment":    return <EnrollmentPanel role={role} />;
       case "scheduling":    return <SchedulingPanel />;
-      case "announcements": return <AnnouncementsPanel />;
+      case "advisers":      return <AdviserAssignmentPanel />;
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
       case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
@@ -7257,41 +7155,45 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       {/* Notification Dropdown - responsive */}
       {showNotifDropdown && (
         <>
-          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
-            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
+          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex:1998 }} onClick={() => setShowNotifDropdown(false)} />
+          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, display:"flex", flexDirection:"column", animation:"slideInDown 0.2s ease-out" }}>
+            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between flex-shrink-0">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
                 {unreadCount > 0 && <button onClick={markAllAsRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
                 <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close"><Icon name="close" size={16} /></button>
               </div>
             </div>
-            {notifs.length === 0 ? (
-              <div className="px-4 py-5 text-center text-muted"><div className="mb-2 text-muted"><Icon name="bell" size={32} /></div><small>No notifications</small></div>
-            ) : (
-              notifs.map(n => (
-                <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div className="text-primary" style={{ minWidth:24 }}>
-                    <Icon name={n.type === "grade" ? "grades" : n.type === "document" ? "documents" : n.type === "enrollment" ? "enrollment" : n.type === "payment" ? "tuition" : "bell"} size={18} />
+            <div style={{ overflowY:"auto", flex:"1 1 auto" }}>
+              {notifs.length === 0 ? (
+                <div className="px-4 py-5 text-center text-muted"><small>No notifications</small></div>
+              ) : (
+                notifs.map(n => (
+                  <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
+                    <div className="text-primary" style={{ minWidth:24 }}>
+                      <Icon name={n.type === "grade" ? "grades" : n.type === "document" ? "documents" : n.type === "enrollment" ? "enrollment" : n.type === "payment" ? "tuition" : "bell"} size={18} />
+                    </div>
+                    <div className="flex-grow-1">
+                      <div className="fw-bold small text-dark">{n.title}</div>
+                      <div className="text-muted" style={{ fontSize:12, lineHeight:1.4 }}>{n.message}</div>
+                      <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
+                    </div>
+                    <div className="d-flex gap-1 flex-shrink-0">
+                      {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read"><Icon name="check" size={14} /></button>}
+                      <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete"><Icon name="x" size={14} /></button>
+                    </div>
                   </div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{n.title}</div>
-                    <div className="text-muted" style={{ fontSize:12, lineHeight:1.4 }}>{n.message}</div>
-                    <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
-                  </div>
-                  <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read"><Icon name="check" size={14} /></button>}
-                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete"><Icon name="x" size={14} /></button>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
             {notifs.length > 0 && (
-              <div className="px-4 py-2 border-top text-center">
-                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>Close</button>
+              <div className="px-4 py-2 border-top text-center flex-shrink-0">
+                <button onClick={() => { setActiveNav("documents"); setShowNotifDropdown(false); }} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
+                  View all <Icon name="arrowRight" size={12} />
+                </button>
               </div>
             )}
           </div>
-          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex:9998 }} onClick={() => setShowNotifDropdown(false)} />
         </>
       )}
     </div>
