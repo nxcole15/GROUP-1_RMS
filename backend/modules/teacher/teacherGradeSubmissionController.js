@@ -89,9 +89,23 @@ async function getStudentsWithGradesForClass(req, res, next) {
     const config = submissionConfig[0];
     const now = new Date();
     
-    // Primary check: use is_open field (set by backend when opening/closing)
-    // This is the source of truth set by admin actions
-    let isOpen = config?.is_open === 1 || false;
+    // Calculate if window should be open based on schedule or manual override
+    let isOpen = false;
+    
+    if (config) {
+      if (config.manual_override === 'open') {
+        // Manual override to open - always open
+        isOpen = true;
+      } else if (config.manual_override === 'closed') {
+        // Manual override to close - always closed
+        isOpen = false;
+      } else if (config.start_date && config.end_date) {
+        // Scheduled window - check if current time is within the window
+        const start = new Date(config.start_date);
+        const end = new Date(config.end_date);
+        isOpen = now >= start && now <= end;
+      }
+    }
     
     const daysRemaining = config?.end_date ? Math.ceil((new Date(config.end_date) - now) / (1000 * 60 * 60 * 24)) : 0;
 
@@ -191,8 +205,6 @@ async function saveDraftGrade(req, res, next) {
     const teacherDbId = req.teacher?.id;
     const { student_id, subject_id, subject_name, strand, percentage, term } = req.body;
 
-    console.log(`[saveDraftGrade] Saving grade for student ${student_id}`);
-
     // Validation - need either subject_id OR (subject_name + strand)
     if (!student_id || percentage === undefined) {
       return res.status(400).json({
@@ -263,7 +275,6 @@ async function saveDraftGrade(req, res, next) {
       );
       gradeId = existing[0].id;
       
-      console.log(`[saveDraftGrade] Updated existing grade ID ${gradeId}`);
     } else {
       // Insert new draft grade
       if (useNewSystem) {
@@ -282,7 +293,6 @@ async function saveDraftGrade(req, res, next) {
         gradeId = result.insertId;
       }
       
-      console.log(`[saveDraftGrade] Created new grade ID ${gradeId}`);
     }
 
     // Log the action
@@ -354,9 +364,26 @@ async function submitGradesBatch(req, res, next) {
       [term]
     );
 
-    // Primary check: use is_open field (source of truth)
+    // Calculate if window should be open based on schedule or manual override
     const config = submissionConfig[0];
-    const isOpen = config?.is_open === 1;
+    let isOpen = false;
+    
+    if (config) {
+      const now = new Date();
+      
+      if (config.manual_override === 'open') {
+        // Manual override to open - always open
+        isOpen = true;
+      } else if (config.manual_override === 'closed') {
+        // Manual override to close - always closed
+        isOpen = false;
+      } else if (config.start_date && config.end_date) {
+        // Scheduled window - check if current time is within the window
+        const start = new Date(config.start_date);
+        const end = new Date(config.end_date);
+        isOpen = now >= start && now <= end;
+      }
+    }
 
     if (!isOpen) {
       await conn.rollback();
@@ -586,13 +613,31 @@ async function getSubmissionStatus(req, res, next) {
       [term]
     );
 
+    // Calculate if window should be open based on schedule or manual override
+    const gradeConfig = submissionConfig[0];
+    let isOpen = false;
+    
+    if (gradeConfig) {
+      const now = new Date();
+      
+      if (gradeConfig.manual_override === 'open') {
+        isOpen = true;
+      } else if (gradeConfig.manual_override === 'closed') {
+        isOpen = false;
+      } else if (gradeConfig.start_date && gradeConfig.end_date) {
+        const start = new Date(gradeConfig.start_date);
+        const end = new Date(gradeConfig.end_date);
+        isOpen = now >= start && now <= end;
+      }
+    }
+
     res.json({
       subject_id,
       term,
       batch: batch[0] || null,
       grade_counts: statusCounts,
-      submission_open: submissionConfig[0]?.is_open || false,
-      submission_config: submissionConfig[0] || null
+      submission_open: isOpen,
+      submission_config: gradeConfig || null
     });
   } catch (err) {
     next(err);
@@ -669,10 +714,8 @@ async function getTeacherSubjectsForGrades(req, res, next) {
       currentTerm = config.active_term || currentTerm;
       schoolYear = config.current_school_year || schoolYear;
     } catch (configErr) {
-      console.warn('[getTeacherSubjectsForGrades] No enrollment config found, using defaults:', currentTerm, schoolYear);
+      // Use defaults if config not found
     }
-
-    console.log(`[getTeacherSubjectsForGrades] Loading subjects for teacher: ${teacherId}, term: ${currentTerm}, year: ${schoolYear}`);
 
     // Query explanation:
     // 1. Get all teacher_schedules for this teacher
@@ -710,8 +753,6 @@ async function getTeacherSubjectsForGrades(req, res, next) {
       GROUP BY ts.subject_name, ts.strand, ts.term
       ORDER BY ts.term, ts.subject_name, ts.strand
     `, [teacherId]);
-
-    console.log(`[getTeacherSubjectsForGrades] Found ${subjects.length} unique subject combinations`);
 
     // Calculate progress percentage for each subject
     const subjectsWithProgress = subjects.map(subj => ({

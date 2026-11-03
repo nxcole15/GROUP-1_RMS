@@ -3,6 +3,7 @@
  * Registrar and Principal document request handling
  */
 const DocumentModel = require("../documents/documentModel");
+const NotificationService = require("../notifications/notificationService");
 
 // ===== REGISTRAR FUNCTIONS =====
 
@@ -97,6 +98,13 @@ async function registrarMarkAsReleased(req, res, next) {
 
     // Mark as ready for pickup first
     await DocumentModel.setReadyForPickup(id, released_by);
+    
+    // Notify student that document is ready
+    await NotificationService.notifyDocumentReady({
+      student_id: doc.student_id,
+      document_type: doc.document_type,
+      document_id: id
+    });
     
     res.json({ 
       message: "Document is ready for pickup.",

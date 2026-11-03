@@ -6,7 +6,7 @@ const db = require("../../config/db");
 const TeacherModel = {
   async findById(teacher_id) {
     const [rows] = await db.query(
-      `SELECT id, teacher_id, full_name, department, email, created_at
+      `SELECT id, teacher_id, full_name, email, created_at
        FROM teachers WHERE teacher_id = ? LIMIT 1`,
       [teacher_id]
     );
@@ -25,7 +25,7 @@ const TeacherModel = {
 
   async findAll() {
     const [rows] = await db.query(
-      "SELECT id, teacher_id, full_name, department, email, created_at FROM teachers ORDER BY full_name"
+      "SELECT id, teacher_id, full_name, email, created_at FROM teachers ORDER BY full_name"
     );
     return rows;
   },
@@ -175,13 +175,23 @@ const TeacherModel = {
       };
     }
 
-    // Get total students enrolled in this teacher's classes (using new teacher_schedules system)
-    const [studentRows] = await db.query(
-      `SELECT COUNT(DISTINCT sse.student_id) AS total_students
-       FROM teacher_schedules ts
-       INNER JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
-       WHERE ts.teacher_id = ?`,
-      [internalTeacherId]
+    // Get active school year
+    const [configRows] = await db.query(
+      `SELECT id, current_term FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1`
+    );
+    const activeSchoolYearId = configRows[0]?.id;
+    const activeTerm = configRows[0]?.current_term || 'Term 1';
+
+    // Get total advisees (students assigned to this teacher as adviser)
+    const [adviseeRows] = await db.query(
+      `SELECT COUNT(DISTINCT saa.student_id) AS total_students
+       FROM student_adviser_assignments saa
+       INNER JOIN students s ON saa.student_id = s.student_id
+       WHERE saa.teacher_id = ? 
+         AND saa.school_year_id = ?
+         AND saa.status = 'active'
+         AND s.account_status = 'active'`,
+      [internalTeacherId, activeSchoolYearId]
     );
 
     // Get average grade for this teacher's students
@@ -261,16 +271,11 @@ const TeacherModel = {
       [internalTeacherId]
     );
 
-    // Get active term from enrollment_config
-    const [termRows] = await db.query(
-      `SELECT active_term FROM enrollment_config LIMIT 1`
-    ).catch(() => [[]]);
-
     return {
-      total_students: studentRows[0]?.total_students || 0,
+      total_students: adviseeRows[0]?.total_students || 0,
       avg_grade: gradeRows[0]?.avg_grade || 0,
       pending_requests: (requestRows[0]?.pending_requests || 0) + (docRequestRows[0]?.pending_docs || 0),
-      active_term: termRows[0]?.active_term || 'Term 1'
+      active_term: activeTerm
     };
   },
 

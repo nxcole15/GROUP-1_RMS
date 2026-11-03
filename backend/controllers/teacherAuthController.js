@@ -30,7 +30,6 @@ async function login(req, res, next) {
       id:         teacher.id,
       teacher_id: teacher.teacher_id,
       full_name:  teacher.full_name,
-      department: teacher.department,
       role:       "teacher",
     };
     const token = jwt.sign(payload, TEACHER_JWT_SECRET, { expiresIn: "8h" });
@@ -44,7 +43,7 @@ async function login(req, res, next) {
       })
       .json({
         message: "Login successful.",
-        teacher: { teacher_id: teacher.teacher_id, full_name: teacher.full_name, department: teacher.department },
+        teacher: { teacher_id: teacher.teacher_id, full_name: teacher.full_name },
         token,
       });
   } catch (err) { next(err); }

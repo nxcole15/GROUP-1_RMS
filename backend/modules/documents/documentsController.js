@@ -4,6 +4,7 @@
  */
 const DocumentModel = require("./documentModel");
 const DocumentTypeModel = require("./documentTypeModel");
+const NotificationService = require("../notifications/notificationService");
 
 async function getMyDocuments(req, res, next) {
   try {
@@ -69,6 +70,23 @@ async function submitDocumentRequest(req, res, next) {
       copies:  parsedCopies,
       teacher_id: parsedTeacherId,
       payment_amount,
+    });
+
+    // Get student name for notification
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT full_name as name FROM students WHERE student_id = ? LIMIT 1`,
+      [student_id]
+    );
+    const studentName = studentRow[0]?.name || student_id;
+
+    // Notify teacher (adviser) of new document request
+    await NotificationService.notifyDocumentRequested({
+      student_id,
+      student_name: studentName,
+      document_type,
+      document_id: doc.id,
+      teacher_id: parsedTeacherId
     });
 
     res.status(201).json({

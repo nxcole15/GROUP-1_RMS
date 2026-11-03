@@ -20,6 +20,24 @@ async function markAllRead(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function markOneRead(req, res, next) {
+  try {
+    const { id } = req.params;
+    // Update the specific notification
+    await NotificationModel.markOneRead(id, req.student.student_id);
+    res.json({ message: "Notification marked as read.", id });
+  } catch (err) { next(err); }
+}
+
+async function deleteNotification(req, res, next) {
+  try {
+    const { id } = req.params;
+    // Delete the specific notification
+    await NotificationModel.delete(id, req.student.student_id);
+    res.json({ message: "Notification deleted.", id });
+  } catch (err) { next(err); }
+}
+
 async function registerDeviceToken(req, res, next) {
   try {
     const { student_id }   = req.student;
@@ -33,4 +51,4 @@ async function registerDeviceToken(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMyNotifications, markAllRead, registerDeviceToken };
+module.exports = { getMyNotifications, markAllRead, markOneRead, deleteNotification, registerDeviceToken };

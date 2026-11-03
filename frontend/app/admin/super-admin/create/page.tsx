@@ -210,34 +210,34 @@ export default function SuperAdminCreateAccountPage() {
   return (
     <>
       {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
-      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e3a8a 0%,#1e40af 100%)", overflowY: "auto" }}>
-        <div className="p-4 d-flex flex-column align-items-center border-bottom border-white border-opacity-10">
+      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#fff", overflowY: "auto", boxShadow: "2px 0 10px rgba(0,0,0,0.05)" }}>
+        <div className="p-4 d-flex flex-column align-items-center border-bottom" style={{ borderColor: "#f1f5f9" }}>
           <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3" width={80} height={80} />
           <div className="text-center">
-            <div className="text-white fw-bold" style={{ fontSize: "1.1rem" }}>Super Admin</div>
-            <div className="text-white-50 small">System Control Panel</div>
+            <div className="fw-bold" style={{ fontSize: "1.1rem", color: "#1f2937" }}>Super Admin</div>
+            <div className="small" style={{ color: "#6b7280" }}>System Control Panel</div>
           </div>
         </div>
 
         <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
-          <button onClick={() => router.push("/admin/super-admin/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/admin/super-admin/dashboard")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#6b7280", background: "transparent" }}>
             <Icon name="activity" size={20} />
             <span>Overview</span>
           </button>
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#3b82f6" }}>
+          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#dc2626", boxShadow: "0 2px 8px rgba(220,38,38,0.3)" }}>
             <Icon name="users" size={20} />
             <span>Manage Accounts</span>
           </button>
         </nav>
 
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
           <button onClick={() => {
             localStorage.removeItem("inform_token");
             localStorage.removeItem("inform_role");
             localStorage.removeItem("inform_user");
             localStorage.removeItem("inform_admin_token");
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#1e3a8a", color: "#fff", border: "2px solid #1e40af", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2 rounded-3" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem", boxShadow: "0 4px 12px rgba(220,38,38,0.4)" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -248,11 +248,11 @@ export default function SuperAdminCreateAccountPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
     <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-      <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "24px 0" }}>
+      <header style={{ background: "#dc2626", padding: "24px 0" }}>
         <div className="container-fluid px-4">
           <div>
             <h3 className="mb-0 fw-bold text-white">Manage Admin Accounts</h3>
-            <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Create, edit, and manage administrators</p>
+            <p className="mb-0" style={{ fontSize: 15, color: "rgba(255,255,255,0.85)" }}>Create, edit, and manage administrators</p>
           </div>
         </div>
       </header>
@@ -264,7 +264,7 @@ export default function SuperAdminCreateAccountPage() {
               <div className="card-body p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
-                    <h4 className="fw-bold mb-1" style={{ color: "#3b82f6" }}>{editingId ? "Edit Admin Account" : "Create Admin Account"}</h4>
+                    <h4 className="fw-bold mb-1" style={{ color: "#dc2626" }}>{editingId ? "Edit Admin Account" : "Create Admin Account"}</h4>
                     <p className="text-muted mb-0" style={{ fontSize: 15 }}>Enter account details below</p>
                   </div>
                   {editingId && (
@@ -308,7 +308,7 @@ export default function SuperAdminCreateAccountPage() {
                   )}
 
                   <div className="col-12 pt-2">
-                    <button type="submit" className="btn w-100 py-3 fw-semibold text-white" disabled={loading} style={{ fontSize: 16, background: "linear-gradient(135deg,#3b82f6,#60a5fa)", border: "none" }}>
+                    <button type="submit" className="btn w-100 py-3 fw-semibold text-white" disabled={loading} style={{ fontSize: 16, background: "#dc2626", border: "none" }}>
                       {loading ? (editingId ? "Saving changes..." : "Creating account...") : editingId ? "Save Changes" : `Create ${role.charAt(0).toUpperCase() + role.slice(1)} Account`}
                     </button>
                   </div>
@@ -322,7 +322,7 @@ export default function SuperAdminCreateAccountPage() {
               <div className="card-body p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                   <div>
-                    <h4 className="fw-bold mb-1" style={{ color: "#3b82f6" }}>Admin Accounts</h4>
+                    <h4 className="fw-bold mb-1" style={{ color: "#dc2626" }}>Admin Accounts</h4>
                     <p className="text-muted mb-0" style={{ fontSize: 15 }}>View and manage all admin accounts</p>
                   </div>
                   <input type="search" className="form-control form-control-lg" style={{ minWidth: 300, maxWidth: 400 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search accounts..." />
@@ -330,7 +330,7 @@ export default function SuperAdminCreateAccountPage() {
 
                 {loadingList ? (
                   <div className="text-center py-5">
-                    <div className="spinner-border mb-3" role="status" style={{ width: 50, height: 50, color: "#3b82f6" }}>
+                    <div className="spinner-border mb-3" role="status" style={{ width: 50, height: 50, color: "#dc2626" }}>
                       <span className="visually-hidden">Loading...</span>
                     </div>
                     <p className="text-muted fs-5">Loading accounts...</p>
@@ -358,8 +358,8 @@ export default function SuperAdminCreateAccountPage() {
                             <td className="py-3">
                               <span className="badge text-capitalize fw-semibold px-3 py-2" style={{ 
                                 fontSize: 14,
-                                background: admin.role === "principal" ? "#eff6ff" : admin.role === "registrar" ? "#f5f3ff" : "#ecfeff",
-                                color: admin.role === "principal" ? "#3b82f6" : admin.role === "registrar" ? "#8b5cf6" : "#06b6d4"
+                                background: "#fef2f2",
+                                color: admin.role === "principal" ? "#dc2626" : admin.role === "registrar" ? "#ef4444" : "#f87171"
                               }}>{admin.role}</span>
                             </td>
                             <td className="py-3">
@@ -371,7 +371,7 @@ export default function SuperAdminCreateAccountPage() {
                             </td>
                             <td className="py-3">
                               <div className="d-flex gap-2 flex-wrap align-items-center">
-                                <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => startEdit(admin)} style={{ fontSize: 14, background:"#eff6ff", color:"#2563eb", border:"1px solid #dbeafe" }}>Edit</button>
+                                <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => startEdit(admin)} style={{ fontSize: 14, background:"#fef2f2", color:"#dc2626", border:"1px solid #fee2e2" }}>Edit</button>
                                 <button type="button" className="btn btn-sm fw-semibold px-3" onClick={() => handleArchive(admin)} style={{ fontSize: 14, background:"#fffbeb", color:"#d97706", border:"1px solid #fef3c7" }}>
                                   {admin.is_archived ? "Restore" : "Archive"}
                                 </button>
@@ -400,13 +400,13 @@ export default function SuperAdminCreateAccountPage() {
 
       <div className="d-lg-none">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "24px 0", position: "relative" }}>
+          <header style={{ background: "#dc2626", padding: "24px 0", position: "relative" }}>
             <button className="btn position-absolute top-0 start-0 m-3" onClick={() => setShowSidebar(true)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "white" }}>
               <Icon name="menu" size={20} />
             </button>
             <div className="container-fluid px-4" style={{ paddingTop: 40 }}>
               <h3 className="mb-0 fw-bold text-white" style={{ fontSize: "1.3rem" }}>Manage Accounts</h3>
-              <p className="mb-0 text-white-50" style={{ fontSize: 14 }}>Create and edit administrators</p>
+              <p className="mb-0" style={{ fontSize: 14, color: "rgba(255,255,255,0.85)" }}>Create and edit administrators</p>
             </div>
           </header>
 
@@ -416,34 +416,34 @@ export default function SuperAdminCreateAccountPage() {
                 <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
                   <div className="card-body p-2">
                     <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Total</p>
-                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#3b82f6", lineHeight: 1 }}>{admins.length}</h3>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#dc2626", lineHeight: 1 }}>{admins.length}</h3>
                   </div>
-                  <div style={{ height:2, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }} />
+                  <div style={{ height:2, background:"#dc2626" }} />
                 </div>
               </div>
               <div className="col-4">
                 <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
                   <div className="card-body p-2">
                     <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Active</p>
-                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#8b5cf6", lineHeight: 1 }}>{admins.filter(a => !a.is_archived).length}</h3>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#dc2626", lineHeight: 1 }}>{admins.filter(a => !a.is_archived).length}</h3>
                   </div>
-                  <div style={{ height:2, background:"linear-gradient(135deg,#8b5cf6,#a78bfa)" }} />
+                  <div style={{ height:2, background:"#dc2626" }} />
                 </div>
               </div>
               <div className="col-4">
                 <div className="card border-0 shadow-sm rounded-3" style={{ overflow:"hidden" }}>
                   <div className="card-body p-2">
                     <p className="text-muted mb-1 fw-semibold" style={{ fontSize: 10 }}>Archived</p>
-                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#06b6d4", lineHeight: 1 }}>{admins.filter(a => a.is_archived).length}</h3>
+                    <h3 className="mb-0 fw-bold" style={{ fontSize: 24, color: "#dc2626", lineHeight: 1 }}>{admins.filter(a => a.is_archived).length}</h3>
                   </div>
-                  <div style={{ height:2, background:"linear-gradient(135deg,#06b6d4,#22d3ee)" }} />
+                  <div style={{ height:2, background:"#dc2626" }} />
                 </div>
               </div>
             </div>
 
             <div className="card border-0 shadow-sm rounded-3 mb-3">
               <div className="card-body p-3">
-                <h4 className="fw-bold mb-3" style={{ color: "#3b82f6", fontSize: "1rem" }}>{editingId ? "Edit Account" : "Create Account"}</h4>
+                <h4 className="fw-bold mb-3" style={{ color: "#dc2626", fontSize: "1rem" }}>{editingId ? "Edit Account" : "Create Account"}</h4>
                 {error && <div className="alert alert-danger border-0 p-2 mb-2" style={{ background:"#fef2f2", color:"#dc2626", fontSize: "0.8rem" }}>{error}</div>}
                 {success && <div className="alert alert-success border-0 p-2 mb-2" style={{ background:"#f0fdf4", color:"#16a34a", fontSize: "0.8rem" }}>{success}</div>}
                 <form onSubmit={handleSubmit} className="row g-2">
@@ -474,7 +474,7 @@ export default function SuperAdminCreateAccountPage() {
                     </div>
                   )}
                   <div className="col-12 d-flex gap-2">
-                    <button type="submit" className="btn flex-grow-1 py-2 fw-semibold text-white" disabled={loading} style={{ fontSize: "0.85rem", background: "linear-gradient(135deg,#3b82f6,#60a5fa)", border: "none" }}>
+                    <button type="submit" className="btn flex-grow-1 py-2 fw-semibold text-white" disabled={loading} style={{ fontSize: "0.85rem", background: "#dc2626", border: "none" }}>
                       {loading ? "Saving..." : editingId ? "Save" : "Create"}
                     </button>
                     {editingId && (
@@ -488,12 +488,12 @@ export default function SuperAdminCreateAccountPage() {
             <div className="card border-0 shadow-sm rounded-3">
               <div className="card-body p-3">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h4 className="fw-bold mb-0" style={{ color: "#3b82f6", fontSize: "1rem" }}>Accounts</h4>
+                  <h4 className="fw-bold mb-0" style={{ color: "#dc2626", fontSize: "1rem" }}>Accounts</h4>
                   <input type="search" className="form-control w-auto" style={{ fontSize: "0.8rem" }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." />
                 </div>
                 {loadingList ? (
                   <div className="text-center py-4">
-                    <div className="spinner-border spinner-border-sm" style={{ color:"#3b82f6" }} />
+                    <div className="spinner-border spinner-border-sm" style={{ color:"#dc2626" }} />
                   </div>
                 ) : (
                   <div className="d-flex flex-column gap-2">
@@ -505,14 +505,14 @@ export default function SuperAdminCreateAccountPage() {
                             <div className="text-muted small">{admin.admin_id}</div>
                           </div>
                           <span className="badge px-2 py-1" style={{ 
-                            background: admin.role === "principal" ? "#eff6ff" : admin.role === "registrar" ? "#f5f3ff" : "#ecfeff",
-                            color: admin.role === "principal" ? "#3b82f6" : admin.role === "registrar" ? "#8b5cf6" : "#06b6d4",
+                            background: "#fef2f2",
+                            color: admin.role === "principal" ? "#dc2626" : admin.role === "registrar" ? "#ef4444" : "#f87171",
                             fontSize:"0.65rem"
                           }}>{admin.role}</span>
                         </div>
                         <div className="d-flex gap-1">
-                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => startEdit(admin)} style={{ fontSize: "0.7rem", background:"#eff6ff", color:"#3b82f6", border:"none" }}>Edit</button>
-                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => handleArchive(admin)} style={{ fontSize: "0.7rem", background:"#f5f3ff", color:"#8b5cf6", border:"none" }}>
+                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => startEdit(admin)} style={{ fontSize: "0.7rem", background:"#fef2f2", color:"#dc2626", border:"none" }}>Edit</button>
+                          <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => handleArchive(admin)} style={{ fontSize: "0.7rem", background:"#fffbeb", color:"#d97706", border:"none" }}>
                             {admin.is_archived ? "Restore" : "Archive"}
                           </button>
                           <button type="button" className="btn btn-sm py-1 px-2" onClick={() => handleDelete(admin)} style={{ fontSize: "0.7rem", background:"#fef2f2", color:"#dc2626", border:"none" }}>Del</button>

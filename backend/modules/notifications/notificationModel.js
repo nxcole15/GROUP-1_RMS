@@ -32,6 +32,20 @@ const NotificationModel = {
     );
   },
 
+  async markOneRead(id, student_id) {
+    await db.query(
+      "UPDATE notifications SET is_read = 1 WHERE id = ? AND student_id = ?",
+      [id, student_id]
+    );
+  },
+
+  async delete(id, student_id) {
+    await db.query(
+      "DELETE FROM notifications WHERE id = ? AND student_id = ?",
+      [id, student_id]
+    );
+  },
+
   async create({ student_id, message, type }) {
     const [result] = await db.query(
       `INSERT INTO notifications (student_id, message, type, is_read, created_at)

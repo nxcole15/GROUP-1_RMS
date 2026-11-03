@@ -24,7 +24,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit:    10,
   queueLimit:         0,
-  timezone:           "+00:00",
+  timezone:           "+08:00", // Philippine Time (UTC+8)
 });
 
 module.exports = pool;

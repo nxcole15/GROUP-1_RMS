@@ -561,12 +561,12 @@ export default function AccountingDashboardPage() {
   return (
     <>
       {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
-      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e3a8a 0%,#1e40af 100%)", overflowY: "auto" }}>
-        <div className="p-4 d-flex flex-column align-items-center border-bottom border-white border-opacity-10">
-          <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3" width={80} height={80} />
+      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}>
+        <div className="p-4 d-flex flex-column align-items-center border-bottom" style={{ borderColor: "#f1f5f9" }}>
+          <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3 sidebar-brand-logo" width={180} height={180} />
           <div className="text-center">
-            <div className="text-white fw-bold" style={{ fontSize: "1.1rem" }}>Accounting</div>
-            <div className="text-white-50 small">Payment Management</div>
+            <div className="fw-bold" style={{ fontSize: "1.1rem", color: "#1f2937" }}>Accounting</div>
+            <div className="small" style={{ color: "#6b7280" }}>Payment Management</div>
           </div>
         </div>
 
@@ -574,7 +574,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("overview")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "overview" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "overview" ? "#3b82f6" : "transparent" }}
+            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#dc2626" : "transparent" }}
           >
             <Icon name="activity" size={20} />
             <span>Overview</span>
@@ -582,7 +582,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("documents")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "documents" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "documents" ? "#3b82f6" : "transparent" }}
+            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#dc2626" : "transparent" }}
           >
             <Icon name="file" size={20} />
             <span>Document Payments</span>
@@ -592,12 +592,12 @@ export default function AccountingDashboardPage() {
           </button>
           
           {/* Divider */}
-          <div className="border-top border-white border-opacity-10 my-2"></div>
+          <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
           
           <button 
             onClick={() => setActiveView("fee-items")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-items" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "fee-items" ? "#3b82f6" : "transparent" }}
+            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#dc2626" : "transparent" }}
           >
             <Icon name="settings" size={20} />
             <span>Fee Settings</span>
@@ -605,7 +605,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-management")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-management" ? "#fff" : "rgba(255,255,255,0.7)", background: activeView === "fee-management" ? "#3b82f6" : "transparent" }}
+            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#dc2626" : "transparent" }}
           >
             <Icon name="users" size={20} />
             <span>Fee Management</span>
@@ -615,15 +615,15 @@ export default function AccountingDashboardPage() {
           </button>
           
           {/* Divider */}
-          <div className="border-top border-white border-opacity-10 my-2"></div>
+          <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
           
-          <button onClick={() => router.push("/accounting/payments")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/accounting/payments")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
             <span>Tuition Payments</span>
           </button>
-          <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "rgba(255,255,255,0.7)", background: "transparent" }}>
+          <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
@@ -631,11 +631,11 @@ export default function AccountingDashboardPage() {
           </button>
         </nav>
 
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
           <button onClick={() => {
             localStorage.clear();
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#1e3a8a", color: "#fff", border: "2px solid #1e40af", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -646,7 +646,7 @@ export default function AccountingDashboardPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
+          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
             {/* Decorative circles */}
             <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
             <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />

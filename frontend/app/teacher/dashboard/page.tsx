@@ -79,7 +79,6 @@ function saveTimeLogs(logs: TimeLogEntry[]) {
 const teacherData = {
   teacher_id: "",
   full_name: "Teacher",
-  department: "",
   email: "",
 };
 
@@ -97,7 +96,6 @@ const teacherSchedule: Array<{day: string; subject: string; room: string; time: 
 const students: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}> = [];
 const grades: Array<{student_id: string; name: string; subject: string; percentage: number; term: string}> = [];
 const gradeRequestsTeacher: Array<{id: number; student: string; subject: string; status: string; requestedAt: string}> = [];
-const attendance: Array<{student_id: string; name: string; subject: string; total: number; present: number; percentage: number}> = [];
 const recentActivity: Array<{action: string; name: string; time: string; icon: string}> = [];
 const teacherNotifications: Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}> = [];
 const documentApprovals: Array<{id: number; student: string; type: string; status: string; requestedAt?: string; approvedAt?: string}> = [];
@@ -118,12 +116,13 @@ function isDeadlinePassed() {
   return new Date() > TEACHER_TERM_DEADLINES[getActiveTerm()];
 }
 
-type Panel = "overview"|"schedule"|"students"|"grades"|"attendance"|"requests"|"documents"|"notifications"|"timelog"|"profile";
+type Panel = "overview"|"schedule"|"students"|"advisees"|"grades"|"requests"|"documents"|"notifications"|"timelog"|"profile";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "overview",       label: "Overview",          icon: "overview" },
   { id: "schedule",       label: "My Schedule",        icon: "calendar" },
   { id: "students",       label: "My Students",        icon: "students" },
+  { id: "advisees",       label: "My Advisees",        icon: "user" },
   { id: "grades",         label: "Submit Grades",      icon: "chart" },
   { id: "requests",       label: "Grade Requests",     icon: "requests" },
   { id: "documents",      label: "Document Requests",  icon: "documents" },
@@ -141,14 +140,14 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: 256, zIndex: 1045, background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY: "auto", overflowX: "hidden" }}
+        style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", overflowX: "hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={180} height={180} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">Teacher Portal</div>
+              <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>Teacher Portal</div>
             </div>
           </div>
           <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
@@ -161,7 +160,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color: active === item.id ? "#fff" : "rgba(255,255,255,0.5)", background: active === item.id ? "#059669" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
+              style={{ color: active === item.id ? "#fff" : "#4b5563", background: active === item.id ? "#dc2626" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
               title={item.label}>
               <Icon name={item.icon as IconName} size={20} />
               {expanded && <span>{item.label}</span>}
@@ -170,10 +169,10 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
         </nav>
 
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 py-3 border-top border-white border-opacity-10">
-          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "rgba(220,38,38,0.15)", color: "#fca5a5", border: "1px solid rgba(220,38,38,0.3)", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.25)"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(220,38,38,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+        <div className="px-3 py-3 border-top" style={{ borderColor: "#f1f5f9" }}>
+          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#b91c1c"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#dc2626"; }}
             onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
             <Icon name="unlock" size={18} />
             <span>Log Out</span>
@@ -185,7 +184,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* -- Overview -- */
-function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects, academicConfig }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[]; academicConfig?: AcademicConfig | null }) {
+function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects, academicConfig }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[]; academicConfig?: AcademicConfig | null }) {
   const displayTeacher = teacher ?? teacherData;
   const [overviewData, setOverviewData] = useState<{
     total_students: number;
@@ -239,6 +238,11 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
     const fetchOverview = async () => {
       try {
         const token = localStorage.getItem("inform_token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        
         const res = await fetch(`${API_BASE}/api/teacher/overview`, {
           headers: { 
             Authorization: `Bearer ${token}`,
@@ -246,14 +250,29 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
           },
           credentials: "include"
         });
+        
         if (res.ok) {
           const data = await res.json();
           setOverviewData(data);
         } else {
           console.error("Overview fetch failed:", res.status, res.statusText);
+          // Set default empty data to prevent errors
+          setOverviewData({
+            total_students: 0,
+            avg_grade: 0,
+            pending_requests: 0,
+            active_term: "Term 1"
+          });
         }
       } catch (err) {
         console.error("Failed to fetch overview:", err);
+        // Set default empty data to prevent errors
+        setOverviewData({
+          total_students: 0,
+          avg_grade: 0,
+          pending_requests: 0,
+          active_term: "Term 1"
+        });
       } finally {
         setLoading(false);
       }
@@ -271,17 +290,15 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "My Students",
       value: loading ? "..." : totalStudents,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-      gradient: "linear-gradient(135deg,#6366f1,#818cf8)",
-      shadow: "rgba(99,102,241,0.35)",
-      textColor: "#6366f1",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#eef2ff",
     },
     {
       label: "Class Avg. Grade",
       value: loading ? "..." : `${avgGrade}%`,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-      gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)",
-      shadow: "rgba(245,158,11,0.35)",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
       textColor: "#d97706",
       bgLight: "#fffbeb",
     },
@@ -289,18 +306,16 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "Pending Requests",
       value: loading ? "..." : pendingRequests,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/></svg>,
-      gradient: "linear-gradient(135deg,#ef4444,#f87171)",
-      shadow: "rgba(239,68,68,0.35)",
-      textColor: "#dc2626",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#fef2f2",
     },
     {
       label: "Active Term",
       value: loading ? "..." : displayActiveTerm,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-      gradient: "linear-gradient(135deg,#059669,#10b981)",
-      shadow: "rgba(5,150,105,0.35)",
-      textColor: "#059669",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#f0fdf4",
     },
   ];
@@ -310,7 +325,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
 
       {/* ── Banner ──────────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#059669 0%,#10b981 100%)",
+        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 80px",
         position: "relative",
@@ -327,16 +342,15 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
                 Welcome back, {displayTeacher.full_name}
               </h1>
-              <p className="mb-3" style={{ color:"rgba(255,255,255,0.75)" }}>
-                {displayTeacher.department && displayTeacher.department !== "Unassigned" && <span>{displayTeacher.department} · </span>}
-                {displayTeacher.teacher_id && <span>{displayTeacher.teacher_id}</span>}
+              <p className="mb-3" style={{ color:"rgba(255,255,255,0.9)" }}>
+                {/* Removed department display */}
               </p>
               <div className="d-flex gap-2 flex-wrap">
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                  ✅ Active Teacher
+                   Active Teacher
                 </span>
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>
-                  📅 {academicConfig?.current_term || activeTerm} · SY {academicConfig?.school_year || "2025-2026"}
+                   {academicConfig?.current_term || activeTerm} · SY {academicConfig?.school_year || "2025-2026"}
                 </span>
               </div>
             </div>
@@ -370,11 +384,11 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center justify-content-between mb-3">
                     <div className="d-flex align-items-center justify-content-center rounded-3"
-                      style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}` }}>
+                      style={{ width:46, height:46, background:s.gradient }}>
                       {s.icon}
                     </div>
                     <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
-                      <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}>↑ Live</div>
+                      <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}></div>
                     </div>
                   </div>
                   <div className="fw-black" style={{ fontSize:"1.6rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
@@ -394,7 +408,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <div className="card-body p-4">
                 <div className="d-flex align-items-center gap-2 mb-4">
                   <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                     </svg>
@@ -406,7 +420,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {recentActivity.map((a, i) => (
                       <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                           <Icon name={a.icon as IconName} size={16} className="text-white" />
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
@@ -449,7 +463,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {apiSubjects.map(s => (
                       <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#d97706)" }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
                           </svg>
@@ -744,7 +758,7 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced - Fixed white box */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1276,7 +1290,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1372,6 +1386,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                   onClick={() => {
                     setSelectedTerm(term);
                     setSelectedSubject(null);
+                    setSubmissionWindow(null); // Reset submission window when changing terms
                   }}
                   style={{ padding: '10px 24px', fontSize: '0.9rem' }}
                 >
@@ -1417,7 +1432,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
       {/* Progress Card */}
       {selectedSubject && (
         <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div className="text-white">
                 <h3 className="fw-bold mb-1 fs-5">{selectedSubject.split("|")[0]}</h3>
@@ -1427,7 +1442,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
               </div>
               {lastAutoSave && timeSinceAutoSave !== null && (
                 <span className="badge bg-white text-primary fw-semibold px-3 py-2">
-                  💾 Auto-saved {timeSinceAutoSave}s ago
+                   Auto-saved {timeSinceAutoSave}s ago
                 </span>
               )}
             </div>
@@ -1888,7 +1903,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       )}
 
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1934,7 +1949,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
           <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto pb-2">
             {[
               { label: "Student Requested",    count: newRequests.length,     gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "bell" },
-              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "chart" },
+              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "chart" },
               { label: "Principal Review",     count: pendingAdmin.length,    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: "user" },
               { label: "Principal Verified",   count: verifiedByAdmin.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
               { label: "Released to Student",  count: released.length,        gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)", icon: "check" },
@@ -2260,7 +2275,7 @@ function DocumentApprovalsPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -2286,7 +2301,7 @@ function DocumentApprovalsPanel() {
         {[
           { label: "Pending Requests", value: pending.length, gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "clock" },
           { label: "Approved", value: approved.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
-          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", icon: "documents" },
+          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "documents" },
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
             <div className="card border-0 shadow-sm rounded-3 h-100">
@@ -2514,47 +2529,14 @@ function DocumentApprovalsPanel() {
 }
 
 /* -- Notifications -- */
-function NotificationsPanel() {
-  const [notifs, setNotifs] = useState(teacherNotifications);
-
-  function fetchNotifs() {
-    const token = localStorage.getItem("inform_token");
-    if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.notifications?.length) {
-          setNotifs(data.notifications.map((n: {
-            id: number; type: string; title: string; message: string; created_at: string; is_read: boolean;
-          }) => ({
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            message: n.message,
-            time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-            read: !!n.is_read,
-            icon: n.type === "grade_request" ? "??" : "?",
-          })));
-        }
-      })
-      .catch(() => {});
-  }
-
-  useEffect(() => {
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 15000);
-    return () => clearInterval(interval);
-  }, []);
+function NotificationsPanel({ notifs, setNotifs }: { notifs: Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}>; setNotifs: React.Dispatch<React.SetStateAction<Array<{id: number; type: string; message: string; time: string; read: boolean; icon?: string; title?: string}>>> }) {
 
   function markAllRead() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    fetch(`${API_BASE}/api/grade-requests/staff-notifications/read`, {
+    fetch(`${API_BASE}/api/staff-notifications/read`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       credentials: "include",
     }).catch(() => {});
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
@@ -2570,13 +2552,16 @@ function NotificationsPanel() {
       </div>
       {unread.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">🔔 Unread</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2">
+            <Icon name="bell" size={16} />
+            Unread
+          </h3>
           <div className="d-flex flex-column gap-2">
             {unread.map(n => (
               <div key={n.id} className="card border-0 shadow-sm rounded-3" style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.12)" }}>
                 <div className="card-body p-3">
                   <div className="d-flex align-items-start gap-3">
-                    <span style={{ fontSize: 18 }}>{n.icon}</span>
+                    <div className="text-muted"><Icon name={(n.icon as IconName) || 'bell'} size={18} /></div>
                     <div className="flex-grow-1">
                       <div className="fw-bold small text-dark">{n.title}</div>
                       <div className="text-muted small mt-1">{n.message}</div>
@@ -2585,10 +2570,24 @@ function NotificationsPanel() {
                     <div className="d-flex gap-1">
                       <button onClick={() => {
                         const token = localStorage.getItem("inform_token");
-                        if (token) fetch(`${API_BASE}/api/grade-requests/staff-notifications/${n.id}/read`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, credentials: "include" }).catch(() => {});
+                        if (!token) return;
                         setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
-                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }}>?</button>
-                      <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}/read`, { 
+                          method: "PATCH", 
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                          credentials: "include" 
+                        }).catch(() => {});
+                      }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>
+                      <button onClick={() => {
+                        const token = localStorage.getItem("inform_token");
+                        if (!token) return;
+                        setNotifs(prev => prev.filter(x => x.id !== n.id));
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}`, { 
+                          method: "DELETE", 
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                          credentials: "include" 
+                        }).catch(() => {});
+                      }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -2599,133 +2598,32 @@ function NotificationsPanel() {
       )}
       {read.length > 0 && (
         <div>
-          <h3 className="fw-bold small text-dark mb-3">? Read</h3>
+          <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2">
+            <Icon name="checkCircle" size={16} />
+            Read
+          </h3>
           <div className="d-flex flex-column gap-2">
             {read.map(n => (
               <div key={n.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-start gap-3">
-                  <span style={{ fontSize: 16 }}>{n.icon}</span>
+                  <div className="text-muted"><Icon name={(n.icon as IconName) || 'bell'} size={16} /></div>
                   <div className="flex-grow-1"><div className="fw-bold small text-dark">{n.title}</div><div className="text-muted small">{n.message}</div></div>
-                  <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }}>?</button>
+                  <button onClick={() => {
+                    const token = localStorage.getItem("inform_token");
+                    if (!token) return;
+                    setNotifs(prev => prev.filter(x => x.id !== n.id));
+                    fetch(`${API_BASE}/api/staff-notifications/${n.id}`, { 
+                      method: "DELETE", 
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                      credentials: "include" 
+                    }).catch(() => {});
+                  }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 12 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* -- Attendance Panel -- */
-function AttendancePanel({ teacherSubjects = subjects }: { teacherSubjects?: Array<{ id: number; name: string }> }) {
-  const [selectedSubject, setSelectedSubject] = useState<number | null>(teacherSubjects[0]?.id ?? null);
-  const [apiAttendance, setApiAttendance] = useState<{student_id:string;full_name:string;total_meetings:number;days_present:number}[]>([]);
-  const [attLoading, setAttLoading] = useState(false);
-  const [attError, setAttError] = useState(false);
-  const [attToast, setAttToast] = useState<string|null>(null);
-
-  function showAttToast(msg: string) { setAttToast(msg); setTimeout(() => setAttToast(null), 3000); }
-
-  useEffect(() => {
-    if (selectedSubject === null) return;
-    const token = localStorage.getItem("inform_token");
-    if (!token || token.startsWith("demo_")) return;
-    setAttLoading(true);
-    setAttError(false);
-    fetch(`${API_BASE}/api/teacher/attendance/${selectedSubject}`, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.attendance?.length) setApiAttendance(data.attendance);
-        else setApiAttendance([]);
-      })
-      .catch(() => setAttError(true))
-      .finally(() => setAttLoading(false));
-  }, [selectedSubject]);
-
-  function markAttendance(studentId: string, present: boolean) {
-    const token = localStorage.getItem("inform_token");
-    const record = (apiAttendance.length > 0 ? apiAttendance : attendance.filter(a => a.subject === teacherSubjects.find(s=>s.id===selectedSubject)?.name).map(a=>({student_id:a.student_id,full_name:a.name,total_meetings:a.total,days_present:a.present})))
-      .find(a => a.student_id === studentId);
-    const newPresent = present
-      ? Math.min((record?.days_present ?? 0) + 1, record?.total_meetings ?? 20)
-      : Math.max((record?.days_present ?? 1) - 1, 0);
-
-    // Optimistic update
-    setApiAttendance(prev => prev.map(a => a.student_id === studentId ? { ...a, days_present: newPresent } : a));
-    showAttToast(present ? "? Marked Present" : "? Marked Absent");
-
-    if (!token || token.startsWith("demo_")) return;
-    fetch(`${API_BASE}/api/teacher/attendance`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ student_id: studentId, subject_id: selectedSubject, total_meetings: record?.total_meetings ?? 20, days_present: newPresent }),
-    }).catch(() => {}); // UI already updated
-  }
-
-  const displayAttendance = apiAttendance.length > 0
-    ? apiAttendance.map(a => ({ student_id: a.student_id, name: a.full_name, subject: subjects.find(s=>s.id===selectedSubject)?.name ?? "", present: a.days_present, total: a.total_meetings, percentage: a.total_meetings > 0 ? Math.round((a.days_present/a.total_meetings)*100) : 0 }))
-    : attendance.filter(a => a.subject === teacherSubjects.find(s => s.id === selectedSubject)?.name);
-
-  const avgAttendance = displayAttendance.length > 0 ? Math.round(displayAttendance.reduce((a, att) => a + att.percentage, 0) / displayAttendance.length) : 0;
-  return (
-    <div className="d-flex flex-column gap-4">
-      {attToast && <div className="position-fixed bottom-0 end-0 m-4 alert alert-dark shadow-lg rounded-3 py-2 px-3" style={{ zIndex: 9999, fontSize: 13, minWidth: 220, animation: "fadeInUp 0.3s ease" }}>{attToast}</div>}
-      <div><h2 className="fw-black fs-4 text-dark mb-1">Attendance Management</h2><p className="text-muted small mb-0">Track student attendance per subject</p></div>
-      <div className="d-flex gap-3 flex-wrap align-items-center">
-        <div style={{ width: 220 }}>
-          <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 11 }}>Select Subject</label>
-          <select value={selectedSubject ?? ""} onChange={e => setSelectedSubject(e.target.value ? Number(e.target.value) : null)} className="form-select form-select-sm rounded-3">
-            {teacherSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div className="card border-0 bg-success-subtle flex-grow-1 rounded-3">
-          <div className="card-body p-3 d-flex align-items-center gap-3">
-            <span style={{ fontSize: 24 }}></span>
-            <div className="flex-grow-1"><div className="fw-bold text-dark small">{teacherSubjects.find(s => s.id === selectedSubject)?.name ?? "No subject assigned"}</div><div className="text-muted" style={{ fontSize: 11 }}>{displayAttendance.length} students tracked</div></div>
-            <div className="fw-black fs-3 text-success">{avgAttendance}%</div>
-          </div>
-        </div>
-      </div>
-      {teacherSubjects.length === 0 && <div className="alert alert-info small">No subjects are assigned to your account yet.</div>}
-      {attError && <div className="alert alert-warning small">Could not load attendance from server. Showing cached data.</div>}
-      <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing: "0.05em" }}>Student</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing: "0.05em" }}>Present</th>
-                <th className="small text-muted fw-semibold text-uppercase text-center" style={{ letterSpacing: "0.05em" }}>Action</th>
-                <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing: "0.05em" }}>%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attLoading ? (
-                <tr><td colSpan={4} className="text-center py-4"><div className="spinner-border text-success spinner-border-sm" role="status"></div></td></tr>
-              ) : (
-                displayAttendance.map((a, i) => (
-                  <tr key={i}>
-                    <td className="ps-4 small fw-medium text-dark">{a.name}</td>
-                    <td className="d-none d-sm-table-cell small text-muted">{a.present}/{a.total}</td>
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center gap-2">
-                        <button onClick={() => markAttendance(a.student_id, true)}  className="btn btn-success btn-sm" style={{ fontSize: 11 }}>? Present</button>
-                        <button onClick={() => markAttendance(a.student_id, false)} className="btn btn-danger btn-sm"  style={{ fontSize: 11 }}>? Absent</button>
-                      </div>
-                    </td>
-                    <td className="text-end pe-4 fw-black small text-success">{a.percentage}%</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
@@ -2793,7 +2691,7 @@ function TimeLogPanel() {
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Time Log</h2><p className="text-muted small mb-0">{today}</p></div>
 
       {/* Current status card */}
-      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#1e40af,#3b82f6)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#dc2626,#ef4444)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-3">
             <Icon name={currentSession ? "checkCircle" : "clock"} size={40} className="text-white" />
@@ -2805,7 +2703,7 @@ function TimeLogPanel() {
           <button
             onClick={currentSession ? handleTimeOut : handleTimeIn}
             className="btn btn-light fw-black w-100 rounded-3"
-            style={{ fontSize: 15, color: currentSession ? "#059669" : "#1e40af" }}
+            style={{ fontSize: 15, color: currentSession ? "#059669" : "#dc2626" }}
           >
             {currentSession ? "Time Out" : "Time In"}
           </button>
@@ -2888,12 +2786,300 @@ function TimeLogPanel() {
 }
 
 /* -- Main Page -- */
+/* -- Advisees Panel -- */
+function AdviseesPanel() {
+  const [advisees, setAdvisees] = useState<Array<{
+    student_id: string;
+    full_name: string;
+    grade_level: number;
+    track: string | null;
+    strand: string | null;
+    email: string;
+  }>>([]);
+  const [grouped, setGrouped] = useState<Array<{
+    gradeLevel: number;
+    track: string;
+    strand: string;
+    students: Array<{
+      student_id: string;
+      full_name: string;
+      grade_level: number;
+      track: string | null;
+      strand: string | null;
+      email: string;
+    }>;
+  }>>([]);
+  const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const fetchAdvisees = async () => {
+      try {
+        const token = localStorage.getItem("inform_token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch academic config
+        const config = await getAcademicConfig();
+        setAcademicConfig(config);
+
+        // Fetch advisees
+        const res = await fetch(`${API_BASE}/api/teacher/advisees`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setAdvisees(data.advisees || []);
+            setGrouped(data.grouped || []);
+            setTotal(data.total || 0);
+            if (data.academicPeriod) {
+              setAcademicConfig({
+                school_year: data.academicPeriod.schoolYear,
+                current_term: data.academicPeriod.term,
+                status: "active",
+                enrollment_is_open: false,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch advisees:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdvisees();
+  }, []);
+
+  return (
+    <div className="p-3 p-md-4">
+      <div className="mb-4">
+        <h2 className="fw-bold mb-1" style={{ fontSize: "1.5rem", color: "#1e293b" }}>
+          My Advisees
+        </h2>
+        <p className="text-muted" style={{ fontSize: "0.875rem" }}>
+          Students assigned to you as adviser
+        </p>
+      </div>
+
+      {/* Academic Period */}
+      {academicConfig && (
+        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+          <div className="card-body p-4">
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  SCHOOL YEAR
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {academicConfig.school_year}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  CURRENT TERM
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {academicConfig.current_term}
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                  TOTAL ADVISEES
+                </div>
+                <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
+                  {total}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-5 text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted mt-3 mb-0">Loading advisees...</p>
+          </div>
+        </div>
+      )}
+
+      {/* No Advisees */}
+      {!loading && advisees.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-5 text-center">
+            <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+              style={{ width: 64, height: 64, background: "#f1f5f9" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            </div>
+            <h5 className="fw-bold mb-2">No Advisees Assigned</h5>
+            <p className="text-muted">You have not been assigned as an adviser to any students for this academic period.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Grouped by Grade/Track/Strand */}
+      {!loading && grouped.length > 0 && (
+        <div className="row g-4">
+          {grouped.map((group, idx) => (
+            <div key={idx} className="col-12">
+              <div className="card border-0 shadow-sm rounded-4">
+                <div className="card-header bg-white border-bottom py-3 px-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h5 className="fw-bold mb-0" style={{ fontSize: "1rem" }}>
+                        Grade {group.gradeLevel} – {group.track}
+                        {group.strand && ` / ${group.strand}`}
+                      </h5>
+                      <p className="text-muted mb-0 small">
+                        {group.students.length} student{group.students.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <span className="badge rounded-pill px-3 py-2" style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd" }}>
+                      {group.students.length}
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body p-0">
+                  <div className="table-responsive">
+                    <table className="table table-hover mb-0">
+                      <thead style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
+                        <tr>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STUDENT ID
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STUDENT NAME
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            GRADE
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            TRACK
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            STRAND
+                          </th>
+                          <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                            EMAIL
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.students.map((student) => (
+                          <tr key={student.student_id}>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.student_id}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                              {student.full_name}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.grade_level}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.track || "—"}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.strand || "—"}
+                            </td>
+                            <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                              {student.email}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Ungrouped List (fallback) */}
+      {!loading && advisees.length > 0 && grouped.length === 0 && (
+        <div className="card border-0 shadow-sm rounded-4">
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
+                  <tr>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STUDENT ID
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STUDENT NAME
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      GRADE
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      TRACK
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      STRAND
+                    </th>
+                    <th className="px-4 py-3" style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b" }}>
+                      EMAIL
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {advisees.map((student) => (
+                    <tr key={student.student_id}>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.student_id}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                        {student.full_name}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.grade_level}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.track || "—"}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.strand || "—"}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: "0.875rem" }}>
+                        {student.email}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* -- Profile Panel -- */
-function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; department: string; email: string } | null }) {
+function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; email: string } | null }) {
   const name       = teacher?.full_name   ?? "Teacher";
   const teacherId  = teacher?.teacher_id  ?? "";
   const email      = teacher?.email       ?? "";
-  const department = teacher?.department  ?? "";
   const initials   = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "T";
 
   /* info rows for the quick-info list */
@@ -2903,12 +3089,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
       value: email || "—",
       bg: "#ede9fe", stroke: "#7c3aed",
       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
-    },
-    {
-      label: "Department",
-      value: department || "—",
-      bg: "#dbeafe", stroke: "#2563eb",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
     },
     {
       label: "Employment",
@@ -2923,7 +3103,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
 
       {/* ── Banner header ─────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
+        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 72px",
         position: "relative",
@@ -2949,7 +3129,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
               {/* avatar */}
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#667eea,#764ba2)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#d97706)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
                   {initials}
                 </div>
 
@@ -2958,10 +3138,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
 
                 {/* badges */}
                 <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2"
-                    style={{ background:"rgba(102,126,234,0.12)", color:"#667eea", border:"1px solid rgba(102,126,234,0.3)", fontWeight:600 }}>
-                    {department || "Teacher"}
-                  </span>
                   <span className="badge rounded-pill px-3 py-2"
                     style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>
                     Active
@@ -3051,7 +3227,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                 {/* Contact section */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -3069,10 +3245,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Professional Details</span>
                   </div>
                   <div className="row g-3">
-                    <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Department</label>
-                      <input type="text" className="form-control rounded-3" value={department} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
-                    </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Employment Type</label>
                       <input type="text" className="form-control rounded-3" value="Full-time" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
@@ -3093,10 +3265,10 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#991b1b" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
                       Please visit the Registrar&apos;s Office or email{" "}
-                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
+                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#b91c1c", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>
@@ -3125,7 +3297,8 @@ export default function TeacherDashboardPage() {
     function fetchNotifs() {
       const token = localStorage.getItem("inform_token");
       if (!token) return;
-      fetch(`${API_BASE}/api/grade-requests/staff-notifications`, {
+      
+      fetch(`${API_BASE}/api/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -3135,24 +3308,27 @@ export default function TeacherDashboardPage() {
             setNotifs(prev => {
               // Preserve locally-marked-read states so poll doesn't undo them
               const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
-              return data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
-                id: n.id, type: n.type, title: n.title, message: n.message,
+              return data.notifications.map((n: { id: number; type: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id, 
+                type: n.type, 
+                title: n.type === 'grade_request' ? 'Grade Request' : n.type.charAt(0).toUpperCase() + n.type.slice(1),
+                message: n.message,
                 time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                 read: readIds.has(n.id) ? true : !!n.is_read,
-                icon: "??",
+                icon: n.type === 'grade_request' ? 'chart' : 'bell',
               }));
             });
           }
         })
         .catch(() => {});
     }
-    const interval = setInterval(fetchNotifs, 15000);
+    const interval = setInterval(fetchNotifs, 30000); // Poll every 30 seconds
     fetchNotifs();
     return () => clearInterval(interval);
   }, []);
 
     const [apiTeacher, setApiTeacher] = useState<{
-    teacher_id: string; full_name: string; department: string; email: string;
+    teacher_id: string; full_name: string; email: string;
   } | null>(null);
   const [apiSubjects, setApiSubjects] = useState<{
     id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string;
@@ -3232,10 +3408,11 @@ export default function TeacherDashboardPage() {
           track_strand: trackStrand
         };
       }) : undefined} />;
+      case "advisees":      return <AdviseesPanel />;
       case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "documents":     return <DocumentApprovalsPanel />;
-      case "notifications": return <NotificationsPanel />;
+      case "notifications": return <NotificationsPanel notifs={notifs} setNotifs={setNotifs} />;
       case "profile":       return <ProfilePanel teacher={apiTeacher} />;
       default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} academicConfig={academicConfig} />;
     }
@@ -3294,27 +3471,64 @@ export default function TeacherDashboardPage() {
             <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize: 11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
-                {unreadCount > 0 && <button onClick={() => setNotifs(prev => prev.map(n => ({ ...n, read: true })))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 11 }}>Mark all read</button>}
+                {unreadCount > 0 && <button onClick={() => {
+                  const token = localStorage.getItem("inform_token");
+                  if (token) {
+                    // Optimistically update UI
+                    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+                    // Call API
+                    fetch(`${API_BASE}/api/staff-notifications/read`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      credentials: "include",
+                    }).catch(() => {});
+                  }
+                }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 11 }}>Mark all read</button>}
                 <button onClick={() => setShowNotif(false)} className="btn btn-link btn-sm p-0 text-muted" aria-label="Close"><Icon name="close" size={18} className="text-muted" /></button>
               </div>
             </div>
             {notifs.length === 0
-              ? <div className="px-4 py-5 text-center text-muted"><div className="mb-2"><Icon name="bell" size={32} className="text-muted opacity-50" /></div><small>No notifications</small></div>
+              ? <div className="px-4 py-5 text-center text-muted"><small>No notifications</small></div>
               : notifs.map(n => (
                 <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(5,150,105,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={(n.icon || 'bell') as IconName} size={18} /></div>
+                  <div className="text-muted" style={{ minWidth: 24 }}><Icon name={(n.icon as IconName) || 'bell'} size={18} /></div>
                   <div className="flex-grow-1">
                     <div className="fw-bold small text-dark">{n.title || 'Notification'}</div>
                     <div className="text-muted" style={{ fontSize: 12, lineHeight: 1.4 }}>{n.message}</div>
                     <div className="text-muted" style={{ fontSize: 11, marginTop: 4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark as read">?</button>}
-                    <button onClick={() => setNotifs(prev => prev.filter(x => x.id !== n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }} aria-label="Delete">?</button>
+                    {!n.read && <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                        // Call API
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}/read`, {
+                          method: 'PATCH',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize: 12 }} aria-label="Mark as read"><Icon name="check" size={14} /></button>}
+                    <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifs(prev => prev.filter(x => x.id !== n.id));
+                        // Call API to delete
+                        fetch(`${API_BASE}/api/staff-notifications/${n.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize: 14 }} aria-label="Delete"><Icon name="x" size={14} /></button>
                   </div>
                 </div>
               ))
             }
+            {notifs.length > 0 && <div className="px-4 py-2 border-top text-center"><button onClick={() => { setPanel("notifications"); setShowNotif(false); }} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize: 12 }}>View all <Icon name="arrowRight" size={12} /></button></div>}
           </div>
           <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 9998 }} onClick={() => setShowNotif(false)} />
         </>

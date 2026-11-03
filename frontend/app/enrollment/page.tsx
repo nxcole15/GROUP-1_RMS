@@ -254,7 +254,7 @@ export default function EnrollmentPage() {
       <div className="d-flex flex-column align-items-center justify-content-center px-3 py-5" style={bg}>
         <div className="card border-0 shadow-lg rounded-3 overflow-hidden" style={{ maxWidth: 560, width: "100%" }}>
           <div className="card-body p-5 text-center">
-            <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+            <div style={{ fontSize: 64, marginBottom: 16 }}></div>
             <h2 className="fw-black text-success mb-2">Application Submitted!</h2>
             <p className="text-muted mb-4">Your enrollment application has been received. The Registrar will review it and forward it to the Principal for approval.</p>
 
@@ -272,7 +272,7 @@ export default function EnrollmentPage() {
 
             <div className="card border-2 border-primary rounded-3 mb-4">
               <div className="card-body p-4">
-                <h5 className="fw-bold text-primary mb-3">📧 What Happens Next?</h5>
+                <h5 className="fw-bold text-primary mb-3"> What Happens Next?</h5>
                 <div className="d-flex flex-column gap-3 text-start">
                   {[
                     { n:"1", label:"Registrar Review", desc:"The Registrar will verify your submitted details." },
@@ -289,7 +289,7 @@ export default function EnrollmentPage() {
                     </div>
                   ))}
                 </div>
-                <small className="text-muted d-block mt-3">⚠️ Please check your inbox (and spam folder) for the credentials email. You will need it to log in.</small>
+                <small className="text-muted d-block mt-3"> Please check your inbox (and spam folder) for the credentials email. You will need it to log in.</small>
               </div>
             </div>
             <Link href="/" className="btn btn-primary btn-lg rounded-2 fw-bold">← Back to Home</Link>
@@ -386,7 +386,7 @@ export default function EnrollmentPage() {
             <div className="p-4 border-top bg-light">
               {!hasScrolledTerms && (
                 <div className="alert alert-info d-flex align-items-center gap-2 mb-3 py-2 small">
-                  <span>📖</span> Scroll down to read all terms before continuing.
+                  <span></span> Scroll down to read all terms before continuing.
                 </div>
               )}
               <div className="d-flex gap-2">
@@ -658,7 +658,7 @@ export default function EnrollmentPage() {
         {step === 3 && (
           <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
             <div className="p-4 text-white text-center" style={{ background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>
-              <h2 className="fw-black fs-5 mb-1">✍️ Student Declaration</h2>
+              <h2 className="fw-black fs-5 mb-1"> Student Declaration</h2>
               <p className="text-white-50 small mb-0">Please read and confirm the declaration below</p>
             </div>
 
@@ -709,7 +709,7 @@ export default function EnrollmentPage() {
         {step === 4 && (
           <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
             <div className="p-4 text-white text-center" style={{ background:"linear-gradient(135deg,#1e40af,#dc2626)" }}>
-              <h2 className="fw-black fs-5 mb-1">🔍 Review Your Information</h2>
+              <h2 className="fw-black fs-5 mb-1"> Review Your Information</h2>
               <p className="text-white-50 small mb-0">Check everything carefully. Click "Edit" to modify any fields below.</p>
             </div>
 
@@ -837,7 +837,7 @@ export default function EnrollmentPage() {
 
               {/* Declaration confirmation badge */}
               <div className="rounded-3 p-3 mb-4 d-flex align-items-center gap-2" style={{ background:"rgba(16,185,129,0.08)", border:"1.5px solid rgba(16,185,129,0.3)" }}>
-                <span style={{ fontSize:20 }}>✅</span>
+                <span style={{ fontSize:20 }}></span>
                 <div className="small text-success fw-semibold">You have agreed to the Terms &amp; Conditions and signed the Declaration.</div>
               </div>
 
@@ -858,7 +858,7 @@ export default function EnrollmentPage() {
               </div>
               {submitError && (
                 <div className="alert alert-danger mt-3 py-2 small rounded-3" role="alert">
-                  ⚠️ {submitError}
+                   {submitError}
                 </div>
               )}
             </div>

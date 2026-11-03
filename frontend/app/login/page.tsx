@@ -237,12 +237,11 @@ async function handleSubmit(e: React.FormEvent) {
                       name="identifier"
                       value={form.identifier}
                       onChange={handleChange}
-                      placeholder="e.g. 202500001, T001, R001, P001, A001"
+                      placeholder="Enter user ID"
                       autoComplete="username"
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
                     />
-                    <div className="form-text text-muted small">Enter your student, teacher, registrar, principal, or accounting ID.</div>
                   </div>
 
                   <div className="mb-4">

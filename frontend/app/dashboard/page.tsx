@@ -172,7 +172,6 @@ const navItems: { id: Panel; label: string; icon: ReactNode }[] = [
   { id:"schedule",      label:"My Schedule", icon:<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
   { id:"tuition",       label:"Tuition Fee", icon:<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
   { id:"documents",     label:"Documents",   icon:<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
-  { id:"notifications", label:"Notifications",icon:<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg> },
   { id:"profile",       label:"My Profile",  icon:<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
 ];
 
@@ -261,7 +260,17 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData, academicConf
   setPanel:(p:Panel)=>void; 
   onAskJobert:(p:string)=>void; 
   student?: { student_id: string; full_name: string; pathway: string; grade_level: number; term: string; email: string; photo_url?: string } | null;
-  dashboardData?: { stats: { average_grade: number; total_paid: number; total_tuition: number; balance_due: number; pending_docs: number }; recent_grades: any[] } | null;
+  dashboardData?: { 
+    stats: { average_grade: number; total_paid: number; total_tuition: number; balance_due: number; pending_docs: number }; 
+    recent_grades: any[];
+    adviser?: {
+      name: string;
+      email: string;
+      department: string;
+      school_year: string;
+      current_term: string;
+    } | null;
+  } | null;
   academicConfig?: AcademicConfig | null;
 }) {
   const avgGrade = dashboardData?.stats.average_grade || 0;
@@ -357,8 +366,65 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData, academicConf
           ))}
         </div>
 
-        {/* Recent Grades + Ask JOBERT */}
+        {/* Recent Grades + My Adviser + Ask JOBERT */}
         <div className="row g-4">
+          {/* My Adviser Card */}
+          <div className="col-12 col-lg-6">
+            <div className="card border-0 shadow-sm rounded-4 h-100">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-2 mb-4">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>My Adviser</h3>
+                  </div>
+                </div>
+                {dashboardData?.adviser ? (
+                  <div className="d-flex flex-column gap-2">
+                    <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#f0fdf4", border:"1px solid #bbf7d0" }}>
+                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white fw-bold"
+                        style={{ width:48, height:48, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                        {dashboardData.adviser.name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase()}
+                      </div>
+                      <div className="flex-grow-1">
+                        <div className="fw-bold text-dark" style={{ fontSize:"0.95rem" }}>{dashboardData.adviser.name}</div>
+                        <div className="text-muted" style={{ fontSize:"0.85rem" }}>
+                          Grade {student?.grade_level ?? "11"} • {student?.pathway ?? "STEM"}
+                        </div>
+                        {dashboardData.adviser.email && (
+                          <div className="text-muted" style={{ fontSize:"0.78rem" }}>
+                            <Icon name="message" size={12} className="me-1" />
+                            {dashboardData.adviser.email}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center px-2 pt-2" style={{ fontSize:"0.75rem", color:"#64748b" }}>
+                      <span>School Year: {dashboardData.adviser.school_year || academicConfig?.school_year}</span>
+                      <span>Term: {dashboardData.adviser.current_term || academicConfig?.current_term}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
+                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                      style={{ width:52, height:52, background:"#f1f5f9" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                    <p className="text-muted small mb-0">No adviser assigned yet</p>
+                    <p className="text-muted" style={{ fontSize:"0.70rem" }}>Please contact the Registrar&apos;s Office</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Recent Grades */}
           <div className="col-12 col-lg-6">
             <div className="card border-0 shadow-sm rounded-4 h-100">
               <div className="card-body p-4">
@@ -2053,16 +2119,83 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 }
 
 /* -- Notifications View -- */
-function NotificationsView() {
-  const [notifs, setNotifs] = useState(notifications);
+function NotificationsView({ notifs, setNotifs }: { notifs: any[]; setNotifs: React.Dispatch<React.SetStateAction<any[]>> }) {
   const unread = notifs.filter(n => !n.read);
   const read   = notifs.filter(n =>  n.read);
+  
+  // Mark all as read in API
+  function markAllAsRead() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    // Optimistically update UI
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    
+    // Call API
+    fetch(`${API_BASE}/api/notifications/read`, {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      credentials: "include",
+    }).catch(() => {});
+  }
+  
+  // Mark one as read in API
+  function markOneAsRead(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    // Optimistically update UI
+    setNotifs(prev => prev.map(x => x.id === id ? { ...x, read: true } : x));
+    
+    // Call API
+    fetch(`${API_BASE}/api/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      credentials: "include",
+    }).catch(() => {});
+  }
+  
+  // Delete a notification
+  function deleteNotification(id: number) {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    
+    // Optimistically update UI
+    setNotifs(prev => prev.filter(x => x.id !== id));
+    
+    // Call API to delete
+    fetch(`${API_BASE}/api/notifications/${id}`, {
+      method: 'DELETE',
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      credentials: "include",
+    }).catch(() => {});
+  }
+  
   return (
     <div className="d-flex flex-column gap-4">
       <div className="d-flex align-items-center justify-content-between">
         <div><h2 className="fw-black fs-4 text-dark mb-1">Notifications</h2><p className="text-muted small mb-0">{unread.length} unread</p></div>
-        {unread.length>0 && <button onClick={() => setNotifs(prev=>prev.map(n=>({...n,read:true})))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>Mark all read</button>}
+        {unread.length > 0 && (
+          <button onClick={markAllAsRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>
+            Mark all read
+          </button>
+        )}
       </div>
+      {notifs.length === 0 && (
+        <div className="text-center py-5">
+          <div className="text-muted mb-2"><Icon name="bell" size={48} /></div>
+          <p className="text-muted">No notifications yet</p>
+        </div>
+      )}
       {unread.length>0 && (
         <div>
           <h3 className="fw-bold small text-dark mb-3">Unread</h3>
@@ -2077,8 +2210,8 @@ function NotificationsView() {
                     <div className="text-muted mt-1" style={{ fontSize:11 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1">
-                    <button onClick={() => setNotifs(prev=>prev.map(x=>x.id===n.id?{...x,read:true}:x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>
-                    <button onClick={() => setNotifs(prev=>prev.filter(x=>x.id!==n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:12 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
+                    <button onClick={() => markOneAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>
+                    <button onClick={() => deleteNotification(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:12 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
                   </div>
                 </div>
               </div>
@@ -2094,8 +2227,8 @@ function NotificationsView() {
               <div key={n.id} className="card border-0 shadow-sm rounded-3 opacity-75">
                 <div className="card-body p-3 d-flex align-items-start gap-3">
                   <span className="text-muted"><Icon name={n.type === "grade" ? "chart" : n.type === "document" ? "file" : n.type === "enrollment" ? "graduation" : "bell"} size={16} /></span>
-                  <div className="flex-grow-1"><div className="fw-bold small text-dark">{n.title}</div><div className="text-muted small">{n.message}</div></div>
-                  <button onClick={() => setNotifs(prev=>prev.filter(x=>x.id!==n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:12 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
+                  <div className="flex-grow-1"><div className="fw-bold small text-dark">{n.title}</div><div className="text-muted small">{n.message}</div><div className="text-muted mt-1" style={{ fontSize:11 }}>{n.time}</div></div>
+                  <button onClick={() => deleteNotification(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:12 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
                 </div>
               </div>
             ))}
@@ -2126,6 +2259,11 @@ function ProfilePanel({ student }: { student?: {
     guardian_name?: string;
     guardian_phone?: string;
     enrollment_date?: string;
+    track?: string;
+    strand?: string;
+    school_year?: string;
+    current_term?: string;
+    adviser_name?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -2137,11 +2275,23 @@ function ProfilePanel({ student }: { student?: {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
     })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setProfileData(data);
+      .then(r => {
+        if (!r.ok) {
+          return r.json().then(err => {
+            console.error("Error response:", err);
+            return null;
+          }).catch(() => null);
+        }
+        return r.json();
       })
-      .catch(() => {});
+      .then(data => {
+        if (data) {
+          setProfileData(data);
+        }
+      })
+      .catch(err => {
+        console.error("Profile fetch error:", err);
+      });
   }, []);
 
   return (
@@ -2304,12 +2454,28 @@ function ProfilePanel({ student }: { student?: {
                   </div>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Course / Track</label>
-                      <input type="text" className="form-control rounded-3" value={student?.pathway || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Track</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.track || "Academic"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Strand</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.strand || student?.pathway || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Year Level</label>
                       <input type="text" className="form-control rounded-3" value={`Grade ${student?.grade_level || ""}`} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>School Year</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.school_year || "—"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Adviser</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.adviser_name || "Not yet assigned"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Current Term</label>
+                      <input type="text" className="form-control rounded-3" value={profileData?.current_term || "—"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     {profileData?.guardian_name && (
                       <>
@@ -2386,6 +2552,13 @@ export default function DashboardPage() {
       percentage: number;
       term: string;
     }>;
+    adviser?: {
+      name: string;
+      email: string;
+      department: string;
+      school_year: string;
+      current_term: string;
+    } | null;
   } | null>(null);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
 
@@ -2459,11 +2632,11 @@ export default function DashboardPage() {
     })
     .then(data => {
       if (data) {
-        console.log("Dashboard data received:", data);
         setStudent(data.student);
         setDashboardData({
           stats: data.stats,
-          recent_grades: data.recent_grades
+          recent_grades: data.recent_grades,
+          adviser: data.adviser
         });
       }
     })
@@ -2486,7 +2659,7 @@ export default function DashboardPage() {
       case "schedule":      return <ScheduleView     onAskJobert={askJobert} />;
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
-      case "notifications": return <NotificationsView />;
+      case "notifications": return <NotificationsView notifs={notifList} setNotifs={setNotifList} />;
       default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} dashboardData={dashboardData} academicConfig={academicConfig} />;
     }
   }
@@ -2531,7 +2704,19 @@ export default function DashboardPage() {
             <div className="px-4 py-3 border-bottom d-flex align-items-center justify-content-between">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
-                {unreadCount>0 && <button onClick={() => setNotifList(prev=>prev.map(n=>({...n,read:true})))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
+                {unreadCount>0 && <button onClick={() => {
+                  const token = localStorage.getItem("inform_token");
+                  if (token) {
+                    // Optimistically update UI
+                    setNotifList(prev => prev.map(n => ({ ...n, read: true })));
+                    // Call API
+                    fetch(`${API_BASE}/api/notifications/read`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      credentials: "include",
+                    }).catch(() => {});
+                  }
+                }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
                 <button onClick={() => setShowNotif(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close"><Icon name="close" size={16} /></button>
               </div>
             </div>
@@ -2546,8 +2731,32 @@ export default function DashboardPage() {
                     <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => setNotifList(prev=>prev.map(x=>x.id===n.id?{...x,read:true}:x))} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>}
-                    <button onClick={() => setNotifList(prev=>prev.filter(x=>x.id!==n.id))} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
+                    {!n.read && <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifList(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                        // Call API
+                        fetch(`${API_BASE}/api/notifications/${n.id}/read`, {
+                          method: 'PATCH',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} aria-label="Mark read"><Icon name="check" size={14} /></button>}
+                    <button onClick={() => {
+                      const token = localStorage.getItem("inform_token");
+                      if (token) {
+                        // Optimistically update UI
+                        setNotifList(prev => prev.filter(x => x.id !== n.id));
+                        // Call API to delete
+                        fetch(`${API_BASE}/api/notifications/${n.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                          credentials: "include",
+                        }).catch(() => {});
+                      }
+                    }} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} aria-label="Dismiss"><Icon name="x" size={14} /></button>
                   </div>
                 </div>
               ))

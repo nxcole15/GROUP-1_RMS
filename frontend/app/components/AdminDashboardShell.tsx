@@ -5,6 +5,7 @@ import Image from "next/image";
 import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
 import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
 import { SettingsPanel } from "../principal-dashboard/SettingsPanel";
+import { AdviserAssignmentPanel } from "./AdviserAssignmentPanel";
 
 type StudentRecord = {
   id: string;
@@ -27,8 +28,6 @@ type TeacherRecord = {
   subjects: TeacherSubject[];
   room: number;
 };
-
-type AnnouncementRecord = { id: number; title: string; date: string; target: string; status: string };
 
 type DashboardRecord = {
   id: number | string;
@@ -78,7 +77,6 @@ type NotificationRecord = {
 /* Data loaded from the live backend when available; empty arrays avoid seeded demo records in the UI. */
 const students: StudentRecord[] = [];
 const teachers: TeacherRecord[] = [];
-const announcements: AnnouncementRecord[] = [];
 const recentActivity: Array<Record<string, string>> = [];
 const allGradeRequests: GradeRequestRecord[] = [];
 const allDocumentRequests: DocumentRequestRecord[] = [];
@@ -86,7 +84,7 @@ const adminNotifications: NotificationRecord[] = [];
 
 type IconName =
   | "overview" | "students" | "teachers" | "grades" | "requests" | "documents"
-  | "enrollment" | "tuition" | "announcements" | "timelog" | "scheduling" | "settings"
+  | "enrollment" | "tuition" | "timelog" | "scheduling" | "settings"
   | "check" | "checkCircle" | "x" | "close" | "calendar" | "clock" | "bell"
 
   | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user" | "users"
@@ -108,7 +106,6 @@ function Icon({ name, size = 18, className }: { name: IconName; size?: number; c
     case "enrollment":    return <svg {...props}><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg>;
     case "tuition":       return <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>;
     case "scheduling":    return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-    case "announcements": return <svg {...props}><path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/><path d="M12 14v-6"/><path d="M9 11l3-3 3 3"/></svg>;
     case "settings":      return <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/></svg>;
     case "timelog":       return <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case "check":         return <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>;
@@ -145,7 +142,7 @@ const navItems = [
   { id:"requests",      label:"Grade Requests"    },
   { id:"documents",     label:"Documents"         },
   { id:"enrollment",    label:"Enrollment"        },
-  { id:"announcements", label:"Announcements"     },
+  { id:"advisers",      label:"Adviser Assignment" },
   { id:"profile",       label:"My Profile"        },
   { id:"settings",      label:"Settings"          },
 ];
@@ -188,6 +185,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
+  } else if (role === "principal") {
+    // Principal: Remove adviser assignment (registrar only)
+    filteredNavItems = navItems.filter(item => item.id !== "advisers");
   } else if (role === "accounting") {
     // Accounting: Only settings for principal
     filteredNavItems = navItems.filter(item => item.id !== "settings");
@@ -204,19 +204,21 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         style={{ 
           width: 256,
           zIndex: 1000, 
-          background: "linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", 
+          background: "#ffffff", 
           overflowY: "auto",
-          overflowX: "hidden"
+          overflowX: "hidden",
+          boxShadow: "2px 0 10px rgba(0,0,0,0.05)",
+          borderRight: "1px solid #f1f5f9"
         }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}>
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={180} height={180} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">{config.title}</div><div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{config.subtitle}</div></div>
+              <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>{config.title}</div><div style={{ color:"#6b7280", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
-          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
+          <button className="btn-close sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
         {/* Nav */}
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
@@ -224,15 +226,15 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center px-3 py-2 rounded-3 border-0"
               style={{
-                color: active === item.id ? "#fff" : "rgba(255,255,255,0.55)",
-                background: active === item.id ? "linear-gradient(135deg,#4f46e5,#6366f1)" : "transparent",
+                color: active === item.id ? "#fff" : "#6b7280",
+                background: active === item.id ? "linear-gradient(135deg,#dc2626,#ef4444)" : "transparent",
                 fontWeight: active === item.id ? 600 : 500,
                 fontSize: 13.5,
                 justifyContent: "flex-start",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s",
-                boxShadow: active === item.id ? "0 2px 12px rgba(79,70,229,0.4)" : "none",
-                borderLeft: active === item.id ? "3px solid rgba(255,255,255,0.4)" : "3px solid transparent",
+                boxShadow: active === item.id ? "0 2px 12px rgba(220,38,38,0.4)" : "none",
+                borderLeft: active === item.id ? "3px solid #dc2626" : "3px solid transparent",
               }}
               title={item.label}>
               <span>{item.label}</span>
@@ -241,26 +243,26 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid rgba(255,255,255,0.08)" }}>
-          <div className="rounded-3 p-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f1f5f9" }}>
+          <div className="rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", boxShadow:"0 2px 8px rgba(99,102,241,0.4)" }}>
+                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 2px 8px rgba(220,38,38,0.4)" }}>
                 {config.initials}
               </div>
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white fw-semibold text-truncate" style={{ fontSize:13 }}>
+                <div className="fw-semibold text-truncate" style={{ fontSize:13, color:"#1f2937" }}>
                   {adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}
                 </div>
-                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.35)", fontSize:11 }}>{config.email}</div>
+                <div className="text-truncate" style={{ color:"#6b7280", fontSize:11 }}>{config.email}</div>
               </div>
             </div>
             <button
               onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }}
               className="btn w-100 fw-semibold"
-              style={{ fontSize:12, borderRadius:8, background:"rgba(220,38,38,0.15)", color:"#fca5a5", border:"1px solid rgba(220,38,38,0.3)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.28)"; (e.currentTarget as HTMLButtonElement).style.color="#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="rgba(220,38,38,0.15)"; (e.currentTarget as HTMLButtonElement).style.color="#fca5a5"; }}
+              style={{ fontSize:12, borderRadius:8, background:"#dc2626", color:"#fff", border:"none" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#b91c1c"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#dc2626"; }}
             >
               Log Out
             </button>
@@ -364,7 +366,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {/* ── Banner ──────────────────────────────────────────────────── */}
       {!hideBanner && (
         <div style={{
-          background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)",
+          background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)",
           borderRadius: "16px 16px 0 0",
           padding: "32px 32px 80px",
           position: "relative",
@@ -382,11 +384,11 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             </p>
             <div className="d-flex gap-2 flex-wrap">
               <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                ✅ System Online
+                 System Online
               </span>
               {pendingStats && pendingStats.total > 0 && (
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(220,38,38,0.75)", color:"white", border:"1px solid rgba(220,38,38,0.5)", fontSize:"0.78rem" }}>
-                  ⚠️ {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
+                   {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -401,9 +403,9 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {!hideBanner && (
         <div className="row g-3 mb-4">
           {[
-            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6366f1,#818cf8)", shadow:"rgba(99,102,241,0.35)", bgLight:"#eef2ff", textColor:"#4f46e5",
+            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#dc2626,#ef4444)", shadow:"rgba(220,38,38,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#8b5cf6,#a78bfa)", shadow:"rgba(139,92,246,0.35)", bgLight:"#f5f3ff", textColor:"#7c3aed",
+            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#ef4444,#f87171)", shadow:"rgba(239,68,68,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
             { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#f59e0b,#fbbf24)", shadow:"rgba(245,158,11,0.35)", bgLight:"#fffbeb", textColor:"#d97706",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
@@ -439,7 +441,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             <div className="card-body p-4">
               <div className="d-flex align-items-center gap-2 mb-4">
                 <div className="d-flex align-items-center justify-content-center rounded-3"
-                  style={{ width:36, height:36, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                  style={{ width:36, height:36, background:"#fef2f2", color:"#dc2626" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 </div>
                 <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Activity</h3>
@@ -456,7 +458,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   recentActivity.map((a, i) => (
                     <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                       <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                        style={{ width:34, height:34, background:"linear-gradient(135deg,#6366f1,#818cf8)" }}>
+                        style={{ width:34, height:34, background:"#fef2f2", color:"#dc2626" }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div className="flex-grow-1 overflow-hidden">
@@ -524,7 +526,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   count: filteredData.filter(item => item.track === t.fullName).reduce((sum, item) => sum + item.count, 0),
                 }));
                 const maxCount = Math.max(1, ...countsByTrack.map(c => c.count));
-                const barColors = ["#6366f1","#8b5cf6","#a78bfa","#059669","#10b981"];
+                const barColors = ["#dc2626","#ef4444","#f87171","#f97316","#fb923c"];
                 return (
                   <div>
                     <div style={{ display:"flex", gap:8, alignItems:"flex-end", height:150 }}>
@@ -554,55 +556,6 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Announcements */}
-      <div className="row g-4 mt-0">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-4 h-100">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between mb-4">
-                <div className="d-flex align-items-center gap-2">
-                  <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
-                    </svg>
-                  </div>
-                  <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Active Announcements</h3>
-                </div>
-                <button onClick={() => setActive("announcements")} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
-                  View all <Icon name="arrowRight" size={12} />
-                </button>
-              </div>
-              {announcements.filter(a => a.status === "Active").length === 0 ? (
-                <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
-                  <div className="rounded-circle d-flex align-items-center justify-content-center mb-3" style={{ width:52, height:52, background:"#fef9c3" }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 17H2a3 3 0 000 6h20v-6z"/><path d="M21 6a3 3 0 00-3-3H6a3 3 0 00-3 3v11h18V6z"/>
-                    </svg>
-                  </div>
-                  <p className="text-muted small mb-0">No active announcements</p>
-                </div>
-              ) : (
-                <div className="d-flex flex-column gap-2">
-                  {announcements.filter(a => a.status === "Active").slice(0, 4).map(a => (
-                    <div key={a.id} className="d-flex align-items-start gap-3 p-3 rounded-3" style={{ background:"#fffbeb", border:"1px solid #fef08a" }}>
-                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style={{ width:28, height:28, background:"#fef08a" }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 17H2a3 3 0 000 6h20v-6z"/></svg>
-                      </div>
-                      <div className="flex-grow-1 overflow-hidden">
-                        <div className="small fw-semibold text-dark text-truncate">{a.title}</div>
-                        <div className="text-muted" style={{ fontSize:11 }}>{a.target} · {a.date}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-lg-6" />
       </div>
 
       </div>
@@ -1042,19 +995,47 @@ function GradesPanel({ role }: { role?: string } = {}) {
           const newForms: any = {};
           data.config.forEach((c: any) => {
             if (c.start_date && c.end_date) {
-              // Parse as local datetime (MySQL returns datetime without timezone)
-              const startStr = c.start_date.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
-              const endStr = c.end_date.replace(' ', 'T');
+              // Handle both ISO format and MySQL datetime format
+              let startDate: Date;
+              let endDate: Date;
               
-              // Extract date and time parts directly from the string
-              const [startDate, startTime] = startStr.split('T');
-              const [endDate, endTime] = endStr.split('T');
+              if (typeof c.start_date === 'string' && c.start_date.includes('T')) {
+                // ISO format: "2026-11-03T17:28:00.000Z" or "2026-11-03T17:28:00"
+                // Parse and convert to Philippine Time
+                startDate = new Date(c.start_date);
+                endDate = new Date(c.end_date);
+              } else {
+                // MySQL format: "2026-11-03 17:28:00"
+                // Treat as Philippine Time
+                const startStr = c.start_date.replace(' ', 'T') + '+08:00';
+                const endStr = c.end_date.replace(' ', 'T') + '+08:00';
+                startDate = new Date(startStr);
+                endDate = new Date(endStr);
+              }
+              
+              // Format for datetime-local inputs (YYYY-MM-DDTHH:MM)
+              const formatForInput = (date: Date) => {
+                // Get components in Philippine Time
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return {
+                  date: `${year}-${month}-${day}`,
+                  time: `${hours}:${minutes}`
+                };
+              };
+              
+              const start = formatForInput(startDate);
+              const end = formatForInput(endDate);
               
               newForms[c.term] = {
-                startDate: startDate, // "2026-09-30"
-                startTime: startTime.slice(0, 5), // "05:52"
-                endDate: endDate, // "2026-09-30"
-                endTime: endTime.slice(0, 5), // "05:54"
+                startDate: start.date,
+                startTime: start.time,
+                endDate: end.date,
+                endTime: end.time,
                 notes: c.notes || ""
               };
             } else {
@@ -1070,13 +1051,7 @@ function GradesPanel({ role }: { role?: string } = {}) {
 
   useEffect(() => {
     loadSubmissionConfig();
-    
-    // Auto-refresh every 30 seconds to update open/closed status
-    const interval = setInterval(() => {
-      loadSubmissionConfig();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
+    // Removed auto-refresh - status updates when Principal takes action
   }, []);
 
   async function setSchedule(term: string) {
@@ -1207,29 +1182,30 @@ function GradesPanel({ role }: { role?: string } = {}) {
   function formatDateTime(dateStr: string | null) {
     if (!dateStr) return "Not set";
     
-    // MySQL returns datetime as "YYYY-MM-DD HH:MM:SS" in local time
-    // Parse it directly without timezone conversion
-    const str = dateStr.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
-    const [datePart, timePart] = str.split('T');
-    const [year, month, day] = datePart.split('-');
-    const [hour, minute] = timePart.split(':');
+    // The backend now returns ISO strings (e.g., "2026-11-03T17:17:00.000Z")
+    // Or MySQL datetime strings (e.g., "2026-11-03 17:17:00")
+    // Parse and display in local timezone
     
-    // Create date using local timezone
-    const date = new Date(
-      parseInt(year),
-      parseInt(month) - 1, // Month is 0-indexed
-      parseInt(day),
-      parseInt(hour),
-      parseInt(minute)
-    );
+    let date: Date;
     
-    return date.toLocaleString("en-US", { 
+    if (dateStr.includes('T')) {
+      // ISO format - already has timezone info
+      date = new Date(dateStr);
+    } else {
+      // MySQL format "YYYY-MM-DD HH:MM:SS" - treat as Philippine Time
+      const str = dateStr.replace(' ', 'T');
+      // Append timezone offset for Philippine Time
+      date = new Date(str + '+08:00');
+    }
+    
+    return date.toLocaleString("en-PH", { 
       month: "short", 
       day: "numeric", 
       year: "numeric", 
       hour: "numeric", 
       minute: "2-digit",
-      hour12: true 
+      hour12: true,
+      timeZone: "Asia/Manila"
     });
   }
 
@@ -1931,9 +1907,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
             label: "Total Enrolled", 
             value: confirmed.length, 
             icon: "students" as IconName,
-            gradient: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-            bgColor: "rgba(59, 130, 246, 0.1)",
-            textColor: "#2563eb"
+            gradient: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+            bgColor: "rgba(220, 38, 38, 0.1)",
+            textColor: "#dc2626"
           },
           { 
             label: "Confirmed", 
@@ -2197,7 +2173,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
               <div 
                 className="modal-header border-0 text-white position-relative" 
                 style={{ 
-                  background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                  background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
                   padding: "2rem 2.5rem"
                 }}
               >
@@ -2822,6 +2798,11 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
 
   const [apiTeachers, setApiTeachers] = useState<Teacher[]>([]);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
+  const [showAdviseesModal, setShowAdviseesModal] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [advisees, setAdvisees] = useState<any[]>([]);
+  const [loadingAdvisees, setLoadingAdvisees] = useState(false);
+  const [adviseesError, setAdviseesError] = useState<string | null>(null);
   const [teacherForm, setTeacherForm] = useState({ 
     firstName: "", 
     lastName: "", 
@@ -3010,6 +2991,39 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
     }
   }
 
+  async function viewTeacherAdvisees(teacher: Teacher) {
+    setSelectedTeacher(teacher);
+    setShowAdviseesModal(true);
+    setLoadingAdvisees(true);
+    setAdviseesError(null);
+    setAdvisees([]);
+
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) {
+      setAdviseesError("Session expired. Please log in again.");
+      setLoadingAdvisees(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/advisers/teacher/${teacher.id}/advisees`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch advisees");
+      }
+
+      setAdvisees(data.advisees || []);
+    } catch (error) {
+      setAdviseesError(error instanceof Error ? error.message : "Unable to fetch advisees");
+    } finally {
+      setLoadingAdvisees(false);
+    }
+  }
+
   // Filter teachers
   const filtered = apiTeachers.filter(t => {
     const matchSearch = t.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -3066,7 +3080,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
       <div className="row g-3">
         <div className="col-12 col-md-8">
           <div className="input-group shadow-sm">
-            <span className="input-group-text bg-white border-end-0">🔍</span>
+            <span className="input-group-text bg-white border-end-0"></span>
             <input 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
@@ -3077,7 +3091,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
         </div>
         <div className="col-12 col-md-4">
           <div className="input-group shadow-sm">
-            <span className="input-group-text bg-white border-end-0">📅</span>
+            <span className="input-group-text bg-white border-end-0"></span>
             <select 
               value={termFilter}
               onChange={e => setTermFilter(e.target.value as "All Terms" | "Term 1" | "Term 2" | "Term 3")}
@@ -3256,6 +3270,13 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                       {role === "principal" && (
                         <td className="px-4 py-3">
                           <div className="d-flex gap-2">
+                            <button 
+                              onClick={() => viewTeacherAdvisees(teacher)}
+                              className="btn btn-sm btn-outline-info"
+                              title="View Advisees"
+                            >
+                              👥 Advisees
+                            </button>
                             <button 
                               onClick={() => openEditModal(teacher)}
                               className="btn btn-sm btn-outline-primary"
@@ -3510,6 +3531,76 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                     {processingAction ? "Processing..." : "Confirm"}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Advisees Modal */}
+      {showAdviseesModal && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1060 }} onClick={() => setShowAdviseesModal(false)}>
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <div className="modal-header border-0 pb-0">
+                <div>
+                  <h5 className="modal-title fw-bold mb-1">Advisees for {selectedTeacher?.full_name}</h5>
+                  <p className="text-muted small mb-0">Students assigned to this teacher as adviser</p>
+                </div>
+                <button type="button" className="btn-close" onClick={() => setShowAdviseesModal(false)} />
+              </div>
+              <div className="modal-body">
+                {loadingAdvisees && (
+                  <div className="text-center py-4">
+                    <div className="spinner-border spinner-border-sm text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="text-muted small mt-2 mb-0">Loading advisees...</p>
+                  </div>
+                )}
+                {adviseesError && (
+                  <div className="alert alert-danger mb-0">{adviseesError}</div>
+                )}
+                {!loadingAdvisees && !adviseesError && advisees.length === 0 && (
+                  <div className="text-center py-4 text-muted">
+                    No advisees assigned to this teacher.
+                  </div>
+                )}
+                {!loadingAdvisees && !adviseesError && advisees.length > 0 && (
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle mb-0">
+                      <thead className="bg-light">
+                        <tr>
+                          <th className="px-3 py-2 small fw-semibold text-muted">STUDENT ID</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">NAME</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">GRADE</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">TRACK</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">STRAND</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {advisees.map((advisee) => (
+                          <tr key={advisee.student_id}>
+                            <td className="px-3 py-2 small text-muted">{advisee.student_id}</td>
+                            <td className="px-3 py-2">
+                              <div className="fw-semibold text-dark">{advisee.student_name}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="badge bg-primary">Grade {advisee.grade_level}</span>
+                            </td>
+                            <td className="px-3 py-2 small">{advisee.track || <span className="text-muted">--</span>}</td>
+                            <td className="px-3 py-2 small">{advisee.strand || <span className="text-muted">--</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer border-0">
+                <button onClick={() => setShowAdviseesModal(false)} className="btn btn-secondary">
+                  Close
+                </button>
               </div>
             </div>
           </div>
@@ -6686,60 +6777,6 @@ function SchedulingPanel() {
 
 
 
-/*  Announcements Panel  */
-function AnnouncementsPanel() {
-  const [items, setItems] = useState(announcements);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title:"", target:"All Students" });
-
-  function addAnnouncement() {
-    if (!form.title.trim()) return;
-    setItems(prev => [{ id:Date.now(), title:form.title, date:"Today", target:form.target, status:"Active" }, ...prev]);
-    setForm({ title:"", target:"All Students" }); setShowForm(false);
-  }
-
-  return (
-    <div className="d-flex flex-column gap-4">
-      <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
-        <div><h2 className="fw-black fs-4 text-dark mb-0">Announcements</h2><p className="text-muted small mb-0">{items.filter(a=>a.status==="Active").length} active</p></div>
-        <button onClick={() => setShowForm(!showForm)} className="btn btn-primary btn-sm fw-bold shadow-sm">+ New Announcement</button>
-      </div>
-      {showForm && (
-        <div className="card border-primary border-opacity-25 rounded-3 shadow-sm">
-          <div className="card-body p-4 d-flex flex-column gap-3">
-            <h3 className="fw-bold small text-dark mb-0">New Announcement</h3>
-            <input value={form.title} onChange={e => setForm({...form,title:e.target.value})} placeholder="Announcement title..." className="form-control rounded-3" />
-            <select value={form.target} onChange={e => setForm({...form,target:e.target.value})} className="form-select rounded-3">
-              {["All Students","Active Students","Unpaid Students","4th Year","New Students"].map(t=><option key={t}>{t}</option>)}
-            </select>
-            <div className="d-flex gap-3">
-              <button onClick={() => setShowForm(false)} className="btn btn-outline-secondary flex-grow-1 rounded-3">Cancel</button>
-              <button onClick={addAnnouncement} className="btn btn-primary flex-grow-1 rounded-3 fw-bold shadow-sm">Post</button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="d-flex flex-column gap-2">
-        {items.map(a => (
-          <div key={a.id} className="card border-0 shadow-sm rounded-3">
-            <div className="card-body p-4 d-flex align-items-start gap-3">
-              <div className="rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, fontSize:20 }}></div>
-              <div className="flex-grow-1 overflow-hidden">
-                <div className="fw-bold small text-dark">{a.title}</div>
-                <div className="text-muted" style={{ fontSize:11 }}>Target: {a.target} � {a.date}</div>
-              </div>
-              <div className="d-flex align-items-center gap-2 flex-shrink-0">
-                <span className={`badge ${a.status==="Active"?"bg-success-subtle text-success border border-success-subtle":"bg-secondary-subtle text-secondary border border-secondary-subtle"}`}>{a.status}</span>
-                <button className="btn btn-link btn-sm p-0 text-muted" onClick={() => setItems(items.filter(i=>i.id!==a.id))}></button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /*  Library Panel  */
 function LibraryPanel() {
   const libBooks = [
@@ -6889,12 +6926,12 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
 
   const infoItems = [
     {
-      label: "Email", value: email, bg: "#ede9fe",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+      label: "Email", value: email, bg: "#fef2f2",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
     },
     {
-      label: "Role", value: roleLabel, bg: "#dbeafe",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+      label: "Role", value: roleLabel, bg: "#fef2f2",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     },
     {
       label: "Access Level", value: "Full Access", bg: "#dcfce7",
@@ -6905,7 +6942,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
   return (
     <div className="d-flex flex-column gap-0">
       {/* Banner */}
-      <div style={{ background:"linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+      <div style={{ background:"linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
         <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
         <div style={{ position:"relative", zIndex:1 }}>
@@ -6923,19 +6960,19 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
             <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow:"0 6px 20px rgba(79,70,229,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 6px 20px rgba(220,38,38,0.4)", border:"4px solid white" }}>
                   {initials2}
                 </div>
                 <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{name}</h4>
                 <p className="text-muted small mb-3">{email}</p>
                 <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(79,70,229,0.1)", color:"#4f46e5", border:"1px solid rgba(79,70,229,0.25)", fontWeight:600 }}>{roleLabel}</span>
+                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(220,38,38,0.1)", color:"#dc2626", border:"1px solid rgba(220,38,38,0.25)", fontWeight:600 }}>{roleLabel}</span>
                   <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>Active</span>
                 </div>
                 <div className="w-100 row g-2 mb-3">
                   <div className="col-6">
                     <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
-                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#4f46e5" }}>Full</div>
+                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#dc2626" }}>Full</div>
                       <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access</div>
                     </div>
                   </div>
@@ -6972,7 +7009,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
               <div className="card-body p-4 p-md-5">
                 <div className="d-flex align-items-center justify-content-between mb-4">
                   <div className="d-flex align-items-center gap-3">
-                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
@@ -6982,13 +7019,13 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                       <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
                     </div>
                   </div>
-                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontSize:"0.75rem" }}>Read-Only</span>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fee2e2", fontSize:"0.75rem" }}>Read-Only</span>
                 </div>
 
                 {/* Personal */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
                   </div>
                   <div className="row g-3">
@@ -7006,7 +7043,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 {/* Contact */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#3b82f6,#06b6d4)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#f97316)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -7036,17 +7073,17 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 </div>
 
                 {/* Info alert */}
-                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#eff6ff", border:"1px solid #bfdbfe" }}>
-                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#dbeafe" }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#fecaca" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#1d4ed8" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#3b82f6" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#dc2626" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
                       Please contact the system administrator or email{" "}
-                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#2563eb", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
+                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#dc2626", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>
@@ -7124,10 +7161,12 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
   // Poll staff notifications (grade request related) for registrar/principal
   useEffect(() => {
     if (!["registrar", "principal"].includes(role ?? "")) return;
+    
     function fetchStaffNotifs() {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       if (!token) return;
-      fetch(`${API_BASE}/api/grade-requests/admin-notifications`, {
+      
+      fetch(`${API_BASE}/api/staff-notifications`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       })
@@ -7136,25 +7175,24 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
           if (data?.notifications?.length) {
             setNotifs(prev => {
               // Keep existing read states for items already marked read locally
-              const readIds = new Set(prev.filter((n: any) => n.read && n.type === "grade_request").map((n: any) => n.id));
-              const existing = prev.filter((n: any) => n.type !== "grade_request");
-              const fresh = data.notifications.map((n: { id: number; type: string; title: string; message: string; created_at: string; is_read: boolean }) => ({
-                id: n.id + 100000,
-                type: "grade_request",
-                title: n.title,
+              const readIds = new Set(prev.filter((n: any) => n.read).map((n: any) => n.id));
+              const fresh = data.notifications.map((n: { id: number; type: string; title?: string; message: string; created_at: string; is_read: boolean }) => ({
+                id: n.id,
+                type: n.type,
+                title: n.title || (n.type === 'grade_request' ? 'Grade Request' : n.type === 'document_approved' ? 'Document Approved' : n.type === 'enrollment' ? 'New Enrollment' : 'Notification'),
                 message: n.message,
                 time: new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
                 // Preserve local read state if already marked, otherwise use DB value
-                read: readIds.has(n.id + 100000) ? true : !!n.is_read,
+                read: readIds.has(n.id) ? true : !!n.is_read,
               }));
-              return [...fresh, ...existing];
+              return fresh;
             });
           }
         })
         .catch(() => {});
     }
     fetchStaffNotifs();
-    const interval = setInterval(fetchStaffNotifs, 15000);
+    const interval = setInterval(fetchStaffNotifs, 30000);
     return () => clearInterval(interval);
   }, [role]);
 
@@ -7162,38 +7200,41 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
   function markAsRead(id: number) {
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    // Persist to DB for grade_request type notifications
-    if (["registrar", "principal"].includes(role ?? "")) {
-      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-      // The ID is offset by 100000 for grade_request notifs � get the real DB id
-      const realId = id > 100000 ? id - 100000 : null;
-      if (token && realId) {
-        fetch(`${API_BASE}/api/grade-requests/admin-notifications/${realId}/read`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }).catch(() => {});
-      }
+    // Persist to DB using staff notifications API
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
     }
   }
 
   function markAllAsRead() {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-    // Also mark on server for grade request notifications
-    if (["registrar", "principal"].includes(role ?? "")) {
-      const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
-      if (token) {
-        fetch(`${API_BASE}/api/grade-requests/admin-notifications/read`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }).catch(() => {});
-      }
+    // Mark all as read on server
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
     }
   }
 
   function deleteNotif(id: number) {
     setNotifs(prev => prev.filter(n => n.id !== id));
+    // Delete from DB using staff notifications API
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (token) {
+      fetch(`${API_BASE}/api/staff-notifications/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }).catch(() => {});
+    }
   }
 
   function renderPanel() {
@@ -7205,7 +7246,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "documents":     return <DocumentWorkflowPanel />;
       case "enrollment":    return <EnrollmentPanel role={role} />;
       case "scheduling":    return <SchedulingPanel />;
-      case "announcements": return <AnnouncementsPanel />;
+      case "advisers":      return <AdviserAssignmentPanel />;
       case "library":       return <LibraryPanel />;
       case "reports":       return <ReportsPanel />;
       case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
@@ -7257,41 +7298,45 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       {/* Notification Dropdown - responsive */}
       {showNotifDropdown && (
         <>
-          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, overflowY:"auto", animation:"slideInDown 0.2s ease-out" }}>
-            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between">
+          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex:1998 }} onClick={() => setShowNotifDropdown(false)} />
+          <div style={{ position:"fixed", top:60, right:"clamp(8px, 2vw, 20px)", width:"min(360px, calc(100vw - 32px))", maxHeight:"min(480px, calc(100vh - 100px))", background:"white", borderRadius:"0.75rem", border:"1px solid rgba(0,0,0,0.1)", boxShadow:"0 10px 40px rgba(0,0,0,0.15)", zIndex:2000, display:"flex", flexDirection:"column", animation:"slideInDown 0.2s ease-out" }}>
+            <div className="px-3 px-md-4 py-3 border-bottom d-flex align-items-center justify-content-between flex-shrink-0">
               <div><div className="fw-bold text-dark small">Notifications</div><div className="text-muted" style={{ fontSize:11 }}>{unreadCount} unread</div></div>
               <div className="d-flex align-items-center gap-2">
                 {unreadCount > 0 && <button onClick={markAllAsRead} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:11 }}>Mark all read</button>}
                 <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-muted" style={{ fontSize:18 }} aria-label="Close"><Icon name="close" size={16} /></button>
               </div>
             </div>
-            {notifs.length === 0 ? (
-              <div className="px-4 py-5 text-center text-muted"><div className="mb-2 text-muted"><Icon name="bell" size={32} /></div><small>No notifications</small></div>
-            ) : (
-              notifs.map(n => (
-                <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
-                  <div className="text-primary" style={{ minWidth:24 }}>
-                    <Icon name={n.type === "grade" ? "grades" : n.type === "document" ? "documents" : n.type === "enrollment" ? "enrollment" : n.type === "payment" ? "tuition" : "bell"} size={18} />
+            <div style={{ overflowY:"auto", flex:"1 1 auto" }}>
+              {notifs.length === 0 ? (
+                <div className="px-4 py-5 text-center text-muted"><small>No notifications</small></div>
+              ) : (
+                notifs.map(n => (
+                  <div key={n.id} className="px-3 px-md-4 py-3 border-bottom d-flex gap-2 gap-md-3" style={{ background: n.read ? "white" : "rgba(99,102,241,0.04)", opacity: n.read ? 0.7 : 1 }}>
+                    <div className="text-primary" style={{ minWidth:24 }}>
+                      <Icon name={n.type === "grade" ? "grades" : n.type === "document" ? "documents" : n.type === "enrollment" ? "enrollment" : n.type === "payment" ? "tuition" : "bell"} size={18} />
+                    </div>
+                    <div className="flex-grow-1">
+                      <div className="fw-bold small text-dark">{n.title}</div>
+                      <div className="text-muted" style={{ fontSize:12, lineHeight:1.4 }}>{n.message}</div>
+                      <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
+                    </div>
+                    <div className="d-flex gap-1 flex-shrink-0">
+                      {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read"><Icon name="check" size={14} /></button>}
+                      <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete"><Icon name="x" size={14} /></button>
+                    </div>
                   </div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{n.title}</div>
-                    <div className="text-muted" style={{ fontSize:12, lineHeight:1.4 }}>{n.message}</div>
-                    <div className="text-muted" style={{ fontSize:11, marginTop:4 }}>{n.time}</div>
-                  </div>
-                  <div className="d-flex gap-1 flex-shrink-0">
-                    {!n.read && <button onClick={() => markAsRead(n.id)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }} title="Mark as read" aria-label="Mark as read"><Icon name="check" size={14} /></button>}
-                    <button onClick={() => deleteNotif(n.id)} className="btn btn-link btn-sm p-0 text-danger" style={{ fontSize:14 }} title="Delete" aria-label="Delete"><Icon name="x" size={14} /></button>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
             {notifs.length > 0 && (
-              <div className="px-4 py-2 border-top text-center">
-                <button onClick={() => setShowNotifDropdown(false)} className="btn btn-link btn-sm p-0 text-primary" style={{ fontSize:12 }}>Close</button>
+              <div className="px-4 py-2 border-top text-center flex-shrink-0">
+                <button onClick={() => { setActiveNav("documents"); setShowNotifDropdown(false); }} className="btn btn-link btn-sm p-0 text-primary d-inline-flex align-items-center gap-1" style={{ fontSize:12 }}>
+                  View all <Icon name="arrowRight" size={12} />
+                </button>
               </div>
             )}
           </div>
-          <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex:9998 }} onClick={() => setShowNotifDropdown(false)} />
         </>
       )}
     </div>

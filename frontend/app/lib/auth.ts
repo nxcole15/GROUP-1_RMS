@@ -96,34 +96,21 @@ export async function getAcademicConfig(): Promise<AcademicConfig> {
   }
 
   try {
-    const token = getToken();
-    if (!token) {
-      // Return default if not authenticated
-      return {
-        school_year: getCurrentSchoolYear(),
-        current_term: "Term 1",
-        status: "active",
-        enrollment_is_open: false
-      };
-    }
-
-    const res = await fetch(`${API_BASE}/api/admin/settings/academic-config`, {
-      headers: { Authorization: `Bearer ${token}` },
+    // Use public endpoint - no authentication required
+    const res = await fetch(`${API_BASE}/api/public/academic-config`, {
       credentials: "include"
-    });
+    }).catch(() => null);
 
-    if (res.ok) {
+    if (res && res.ok) {
       const data = await res.json();
-      if (data.active) {
-        cachedConfig = {
-          school_year: data.active.school_year,
-          current_term: data.active.current_term,
-          status: data.active.status,
-          enrollment_is_open: data.active.enrollment_is_open === 1
-        };
-        cacheTimestamp = now;
-        return cachedConfig;
-      }
+      cachedConfig = {
+        school_year: data.school_year,
+        current_term: data.current_term,
+        status: data.status || "active",
+        enrollment_is_open: data.enrollment_is_open === 1 || data.enrollment_is_open === true
+      };
+      cacheTimestamp = now;
+      return cachedConfig;
     }
   } catch (err) {
     console.error("Failed to fetch academic config:", err);

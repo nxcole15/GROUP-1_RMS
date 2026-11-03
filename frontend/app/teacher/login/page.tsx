@@ -30,10 +30,11 @@ export default function TeacherLoginPage() {
   setError("");
 
   try {
-    const res = await fetch("/api/teacher/login", {
+    const res = await fetch("http://localhost:4000/api/teacher/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ teacher_id: form.id, password: form.password }),
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -42,6 +43,17 @@ export default function TeacherLoginPage() {
       setError(data.error || "Login failed. Please try again.");
       setLoading(false);
       return;
+    }
+
+    // Store token and user info in localStorage
+    if (data.token) {
+      localStorage.setItem("inform_token", data.token);
+      localStorage.setItem("inform_role", "teacher");
+      localStorage.setItem("inform_user", JSON.stringify({
+        teacher_id: data.teacher.teacher_id,
+        full_name: data.teacher.full_name,
+        department: data.teacher.department
+      }));
     }
 
     // Login successful — redirect to dashboard

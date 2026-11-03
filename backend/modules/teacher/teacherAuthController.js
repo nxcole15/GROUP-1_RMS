@@ -29,7 +29,6 @@ async function login(req, res, next) {
       id:         teacher.id,
       teacher_id: teacher.teacher_id,
       full_name:  teacher.full_name,
-      department: teacher.department,
       role:       "teacher",
     };
 
@@ -47,7 +46,6 @@ async function login(req, res, next) {
         teacher: {
           teacher_id: teacher.teacher_id,
           full_name:  teacher.full_name,
-          department: teacher.department,
           email:      teacher.email,
         },
         token,

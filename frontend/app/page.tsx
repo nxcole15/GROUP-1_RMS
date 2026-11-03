@@ -234,7 +234,7 @@ export default function LandingPage() {
               <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid #dc2626" }} />
               <div>
                 <h5 className="mb-0 fw-bold" style={{ color: "#dc2626" }}>Cebu Far East Institute</h5>
-                <p className="mb-0 text-muted small">Student Information System</p>
+                <p className="mb-0 text-muted small">Student Record Management System</p>
               </div>
             </Link>
             <div className="d-flex align-items-center gap-3">
@@ -300,7 +300,7 @@ export default function LandingPage() {
                 Official Student Portal
               </div>
               <h1 className="display-4 display-md-3 display-lg-2 fw-extrabold mb-4">
-                <span style={{ color: "#dc2626" }}>Student Information</span><br />
+                <span style={{ color: "#dc2626" }}>Student Record</span><br />
                 <span style={{
                   background: "linear-gradient(135deg, #dc2626, #f97316, #fbbf24)",
                   WebkitBackgroundClip: "text",
@@ -401,7 +401,6 @@ export default function LandingPage() {
                     className={`scroll-reveal-scale ${idx === 0 ? 'float-slow' : idx === 1 ? 'float-slow-delay-1' : idx === 2 ? 'float-slow-delay-2' : 'float-slow-delay-3'} landing-feature-tile`}
                     onClick={(e) => handleFeatureClick(idx, e)}
                     style={{
-                      cursor: "pointer",
                       borderRadius: "1rem",
                       border: `2px solid ${isActive ? feature.color : "rgba(251,191,36,0.4)"}`,
                       background: isActive ? feature.bg : "linear-gradient(135deg, #fff7ed, #fef3c7)",
@@ -632,21 +631,23 @@ export default function LandingPage() {
                   Come visit Cebu Far East Institute and discover our state-of-the-art facilities, welcoming community, and dynamic learning environment. Our dedicated faculty and modern infrastructure are ready to inspire your academic journey.
                 </p>
                 <div className="mb-4">
-                  <p className="fw-semibold mb-2" style={{ color: "#fef3c7", fontSize: "1.05rem" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ marginRight: 6, verticalAlign: "middle" }}>
+                  <div className="d-flex flex-column align-items-center mb-3">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="mb-2">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="#fef3c7" strokeWidth="2"/>
                       <circle cx="12" cy="10" r="3" stroke="#fef3c7" strokeWidth="2"/>
                     </svg>
-                    Located at:
-                  </p>
+                    <p className="fw-semibold mb-0" style={{ color: "#fef3c7", fontSize: "1.05rem" }}>
+                      Located at:
+                    </p>
+                  </div>
                     <div style={{ background: "rgba(255,255,255,0.15)", padding: "12px 20px", borderRadius: "8px", backdropFilter: "blur(8px)" }}>
                       <p className="mb-0"><strong>Basak Lapu-Lapu Campus</strong></p>
                       <p className="small mb-0" style={{ color: "#fef3c7" }}>Basak, Lapu-Lapu City</p>
                     </div>
                 </div>
               </div>
-              <Link href="/visit-us" className="btn btn-lg px-6 py-3 fw-semibold rounded-xl btn-shimmer" style={{ background: "white", color: "#dc2626" }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ marginRight: 8, verticalAlign: "middle" }}>
+              <Link href="/visit-us" className="btn btn-lg px-6 py-3 fw-semibold rounded-xl btn-shimmer d-inline-flex align-items-center gap-2" style={{ background: "white", color: "#dc2626" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="#fbbf24"/>
                 </svg>
                 VISIT US TODAY
