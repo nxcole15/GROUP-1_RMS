@@ -141,9 +141,9 @@ const AdviserModel = {
         id, 
         teacher_id, 
         full_name, 
-        department, 
         email 
        FROM teachers 
+       WHERE account_status = 'active'
        ORDER BY full_name`
     );
     return rows;
@@ -382,7 +382,6 @@ const AdviserModel = {
       `SELECT 
         t.teacher_id,
         t.full_name,
-        t.department,
         t.email,
         saa.assigned_at
        FROM student_adviser_assignments saa

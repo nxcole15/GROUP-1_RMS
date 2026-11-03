@@ -530,7 +530,7 @@ async function rejectDocument(req, res, next) {
 async function getTeachers(req, res, next) {
   try {
     const [rows] = await db.query(
-      `SELECT id, teacher_id, full_name, department, email, employment_type, term, account_status, created_at
+      `SELECT id, teacher_id, full_name, email, employment_type, term, account_status, created_at
        FROM teachers
        ORDER BY full_name`
     );

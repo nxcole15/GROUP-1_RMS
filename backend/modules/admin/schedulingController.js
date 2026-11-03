@@ -14,7 +14,6 @@ async function getTeachersForScheduling(req, res, next) {
         t.id,
         t.teacher_id,
         t.full_name,
-        t.department,
         t.email,
         COUNT(DISTINCT ts.id) as schedule_count
       FROM teachers t
@@ -57,8 +56,7 @@ async function getTeacherSchedules(req, res, next) {
         ts.created_at,
         ts.created_by,
         t.teacher_id as teacher_code,
-        t.full_name as teacher_name,
-        t.department
+        t.full_name as teacher_name
       FROM teacher_schedules ts
       INNER JOIN teachers t ON ts.teacher_id = t.id
       WHERE 1=1
@@ -126,8 +124,7 @@ async function getTeacherScheduleDetails(req, res, next) {
         ts.max_capacity,
         ts.enrolled_count,
         ts.created_at,
-        t.full_name as teacher_name,
-        t.department
+        t.full_name as teacher_name
       FROM teacher_schedules ts
       INNER JOIN teachers t ON ts.teacher_id = t.id
       WHERE ts.teacher_id = ?
@@ -506,7 +503,6 @@ async function getStudentSchedules(req, res, next) {
         ts.term,
         ts.school_year,
         t.full_name as teacher_name,
-        t.department,
         sse.enrolled_at
       FROM student_schedule_enrollments sse
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
@@ -549,8 +545,7 @@ async function getWeeklyTimetable(req, res, next) {
         ts.enrolled_count,
         t.id as teacher_id,
         t.teacher_id as teacher_code,
-        t.full_name as teacher_name,
-        t.department
+        t.full_name as teacher_name
       FROM teacher_schedules ts
       INNER JOIN teachers t ON ts.teacher_id = t.id
       WHERE 1=1

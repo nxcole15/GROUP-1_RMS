@@ -154,7 +154,6 @@ async function getDashboardData(req, res, next) {
         SELECT 
           t.full_name as adviser_name,
           t.email as adviser_email,
-          t.department as adviser_department,
           ec.school_year,
           ec.current_term
         FROM student_adviser_assignments saa
@@ -342,7 +341,6 @@ async function getStudentSchedules(req, res, next) {
         ts.term,
         ts.school_year,
         t.full_name as teacher_name,
-        t.department,
         sse.enrolled_at
       FROM student_schedule_enrollments sse
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
