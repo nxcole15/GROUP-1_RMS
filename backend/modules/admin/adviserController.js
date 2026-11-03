@@ -131,6 +131,16 @@ const AdviserController = {
         });
       }
 
+      // Validate that all students have the same Grade Level, Track, and Strand
+      const validationResult = await AdviserModel.validateStudentsForAssignment(studentIds);
+      if (!validationResult.valid) {
+        return res.status(400).json({
+          success: false,
+          message: validationResult.message,
+          details: validationResult.details,
+        });
+      }
+
       if (studentIds.length === 1) {
         // Single assignment
         const result = await AdviserModel.assignAdviser({
@@ -259,6 +269,51 @@ const AdviserController = {
       res.status(500).json({
         success: false,
         message: "Failed to fetch statistics",
+        error: error.message,
+      });
+    }
+  },
+
+  /**
+   * GET /api/admin/advisers/teacher/:teacherId/advisees
+   * Get advisees for a specific teacher (for Principal view)
+   */
+  async getTeacherAdvisees(req, res) {
+    try {
+      const { teacherId } = req.params;
+
+      if (!teacherId) {
+        return res.status(400).json({
+          success: false,
+          message: "Teacher ID is required",
+        });
+      }
+
+      // Get active academic configuration
+      const activeConfig = await AdminSettingsModel.getActiveConfig();
+      if (!activeConfig) {
+        return res.status(400).json({
+          success: false,
+          message: "Academic period has not been configured",
+        });
+      }
+
+      const advisees = await AdviserModel.getAdviseesForTeacher(
+        teacherId,
+        activeConfig.id
+      );
+
+      res.json({
+        success: true,
+        advisees,
+        schoolYear: activeConfig.school_year,
+        currentTerm: activeConfig.current_term,
+      });
+    } catch (error) {
+      console.error("Error fetching teacher advisees:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch teacher advisees",
         error: error.message,
       });
     }

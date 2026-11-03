@@ -185,6 +185,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
+  } else if (role === "principal") {
+    // Principal: Remove adviser assignment (registrar only)
+    filteredNavItems = navItems.filter(item => item.id !== "advisers");
   } else if (role === "accounting") {
     // Accounting: Only settings for principal
     filteredNavItems = navItems.filter(item => item.id !== "settings");
@@ -992,19 +995,47 @@ function GradesPanel({ role }: { role?: string } = {}) {
           const newForms: any = {};
           data.config.forEach((c: any) => {
             if (c.start_date && c.end_date) {
-              // Parse as local datetime (MySQL returns datetime without timezone)
-              const startStr = c.start_date.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
-              const endStr = c.end_date.replace(' ', 'T');
+              // Handle both ISO format and MySQL datetime format
+              let startDate: Date;
+              let endDate: Date;
               
-              // Extract date and time parts directly from the string
-              const [startDate, startTime] = startStr.split('T');
-              const [endDate, endTime] = endStr.split('T');
+              if (typeof c.start_date === 'string' && c.start_date.includes('T')) {
+                // ISO format: "2026-11-03T17:28:00.000Z" or "2026-11-03T17:28:00"
+                // Parse and convert to Philippine Time
+                startDate = new Date(c.start_date);
+                endDate = new Date(c.end_date);
+              } else {
+                // MySQL format: "2026-11-03 17:28:00"
+                // Treat as Philippine Time
+                const startStr = c.start_date.replace(' ', 'T') + '+08:00';
+                const endStr = c.end_date.replace(' ', 'T') + '+08:00';
+                startDate = new Date(startStr);
+                endDate = new Date(endStr);
+              }
+              
+              // Format for datetime-local inputs (YYYY-MM-DDTHH:MM)
+              const formatForInput = (date: Date) => {
+                // Get components in Philippine Time
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return {
+                  date: `${year}-${month}-${day}`,
+                  time: `${hours}:${minutes}`
+                };
+              };
+              
+              const start = formatForInput(startDate);
+              const end = formatForInput(endDate);
               
               newForms[c.term] = {
-                startDate: startDate, // "2026-09-30"
-                startTime: startTime.slice(0, 5), // "05:52"
-                endDate: endDate, // "2026-09-30"
-                endTime: endTime.slice(0, 5), // "05:54"
+                startDate: start.date,
+                startTime: start.time,
+                endDate: end.date,
+                endTime: end.time,
                 notes: c.notes || ""
               };
             } else {
@@ -1020,13 +1051,7 @@ function GradesPanel({ role }: { role?: string } = {}) {
 
   useEffect(() => {
     loadSubmissionConfig();
-    
-    // Auto-refresh every 30 seconds to update open/closed status
-    const interval = setInterval(() => {
-      loadSubmissionConfig();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
+    // Removed auto-refresh - status updates when Principal takes action
   }, []);
 
   async function setSchedule(term: string) {
@@ -1157,29 +1182,30 @@ function GradesPanel({ role }: { role?: string } = {}) {
   function formatDateTime(dateStr: string | null) {
     if (!dateStr) return "Not set";
     
-    // MySQL returns datetime as "YYYY-MM-DD HH:MM:SS" in local time
-    // Parse it directly without timezone conversion
-    const str = dateStr.replace(' ', 'T'); // "2026-09-30 05:52:00" -> "2026-09-30T05:52:00"
-    const [datePart, timePart] = str.split('T');
-    const [year, month, day] = datePart.split('-');
-    const [hour, minute] = timePart.split(':');
+    // The backend now returns ISO strings (e.g., "2026-11-03T17:17:00.000Z")
+    // Or MySQL datetime strings (e.g., "2026-11-03 17:17:00")
+    // Parse and display in local timezone
     
-    // Create date using local timezone
-    const date = new Date(
-      parseInt(year),
-      parseInt(month) - 1, // Month is 0-indexed
-      parseInt(day),
-      parseInt(hour),
-      parseInt(minute)
-    );
+    let date: Date;
     
-    return date.toLocaleString("en-US", { 
+    if (dateStr.includes('T')) {
+      // ISO format - already has timezone info
+      date = new Date(dateStr);
+    } else {
+      // MySQL format "YYYY-MM-DD HH:MM:SS" - treat as Philippine Time
+      const str = dateStr.replace(' ', 'T');
+      // Append timezone offset for Philippine Time
+      date = new Date(str + '+08:00');
+    }
+    
+    return date.toLocaleString("en-PH", { 
       month: "short", 
       day: "numeric", 
       year: "numeric", 
       hour: "numeric", 
       minute: "2-digit",
-      hour12: true 
+      hour12: true,
+      timeZone: "Asia/Manila"
     });
   }
 
@@ -2772,6 +2798,11 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
 
   const [apiTeachers, setApiTeachers] = useState<Teacher[]>([]);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
+  const [showAdviseesModal, setShowAdviseesModal] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [advisees, setAdvisees] = useState<any[]>([]);
+  const [loadingAdvisees, setLoadingAdvisees] = useState(false);
+  const [adviseesError, setAdviseesError] = useState<string | null>(null);
   const [teacherForm, setTeacherForm] = useState({ 
     firstName: "", 
     lastName: "", 
@@ -2957,6 +2988,39 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
       setShowConfirmModal(false);
     } finally {
       setProcessingAction(false);
+    }
+  }
+
+  async function viewTeacherAdvisees(teacher: Teacher) {
+    setSelectedTeacher(teacher);
+    setShowAdviseesModal(true);
+    setLoadingAdvisees(true);
+    setAdviseesError(null);
+    setAdvisees([]);
+
+    const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
+    if (!token) {
+      setAdviseesError("Session expired. Please log in again.");
+      setLoadingAdvisees(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/advisers/teacher/${teacher.id}/advisees`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch advisees");
+      }
+
+      setAdvisees(data.advisees || []);
+    } catch (error) {
+      setAdviseesError(error instanceof Error ? error.message : "Unable to fetch advisees");
+    } finally {
+      setLoadingAdvisees(false);
     }
   }
 
@@ -3206,6 +3270,13 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                       {role === "principal" && (
                         <td className="px-4 py-3">
                           <div className="d-flex gap-2">
+                            <button 
+                              onClick={() => viewTeacherAdvisees(teacher)}
+                              className="btn btn-sm btn-outline-info"
+                              title="View Advisees"
+                            >
+                              👥 Advisees
+                            </button>
                             <button 
                               onClick={() => openEditModal(teacher)}
                               className="btn btn-sm btn-outline-primary"
@@ -3460,6 +3531,76 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                     {processingAction ? "Processing..." : "Confirm"}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Advisees Modal */}
+      {showAdviseesModal && (
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1060 }} onClick={() => setShowAdviseesModal(false)}>
+          <div className="modal-dialog modal-dialog-centered modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <div className="modal-header border-0 pb-0">
+                <div>
+                  <h5 className="modal-title fw-bold mb-1">Advisees for {selectedTeacher?.full_name}</h5>
+                  <p className="text-muted small mb-0">Students assigned to this teacher as adviser</p>
+                </div>
+                <button type="button" className="btn-close" onClick={() => setShowAdviseesModal(false)} />
+              </div>
+              <div className="modal-body">
+                {loadingAdvisees && (
+                  <div className="text-center py-4">
+                    <div className="spinner-border spinner-border-sm text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="text-muted small mt-2 mb-0">Loading advisees...</p>
+                  </div>
+                )}
+                {adviseesError && (
+                  <div className="alert alert-danger mb-0">{adviseesError}</div>
+                )}
+                {!loadingAdvisees && !adviseesError && advisees.length === 0 && (
+                  <div className="text-center py-4 text-muted">
+                    No advisees assigned to this teacher.
+                  </div>
+                )}
+                {!loadingAdvisees && !adviseesError && advisees.length > 0 && (
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle mb-0">
+                      <thead className="bg-light">
+                        <tr>
+                          <th className="px-3 py-2 small fw-semibold text-muted">STUDENT ID</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">NAME</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">GRADE</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">TRACK</th>
+                          <th className="px-3 py-2 small fw-semibold text-muted">STRAND</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {advisees.map((advisee) => (
+                          <tr key={advisee.student_id}>
+                            <td className="px-3 py-2 small text-muted">{advisee.student_id}</td>
+                            <td className="px-3 py-2">
+                              <div className="fw-semibold text-dark">{advisee.student_name}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="badge bg-primary">Grade {advisee.grade_level}</span>
+                            </td>
+                            <td className="px-3 py-2 small">{advisee.track || <span className="text-muted">--</span>}</td>
+                            <td className="px-3 py-2 small">{advisee.strand || <span className="text-muted">--</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer border-0">
+                <button onClick={() => setShowAdviseesModal(false)} className="btn btn-secondary">
+                  Close
+                </button>
               </div>
             </div>
           </div>

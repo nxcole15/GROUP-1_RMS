@@ -589,9 +589,9 @@ async function createTeacherAccount(req, res, next) {
     const fullName = `${firstName} ${lastName}`;
 
     const [result] = await db.query(
-      `INSERT INTO teachers (teacher_id, password, full_name, department, email, employment_type, term, account_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [teacherId, hashedPassword, fullName, "Unassigned", normalizedEmail, employmentType, teacherTerm, "active"]
+      `INSERT INTO teachers (teacher_id, password, full_name, email, employment_type, term, account_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [teacherId, hashedPassword, fullName, normalizedEmail, employmentType, teacherTerm, "active"]
     );
 
     res.status(201).json({
@@ -866,12 +866,22 @@ async function setGradeSubmissionSchedule(req, res, next) {
         start_date = ?,
         end_date = ?,
         manual_override = 'none',
-        opened_at = ${isCurrentlyOpen ? 'NOW()' : 'NULL'},
+        opened_at = ?,
+        opened_by = ?,
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
       WHERE term = ?
-    `, [isCurrentlyOpen, startMysql, endMysql, req.admin.admin_id, notes || null, term]);
+    `, [
+      isCurrentlyOpen, 
+      startMysql, 
+      endMysql, 
+      isCurrentlyOpen ? new Date() : null,
+      isCurrentlyOpen ? req.admin.admin_id : null,
+      req.admin.admin_id, 
+      notes || null, 
+      term
+    ]);
 
     res.json({ message: "Grade submission schedule set successfully." });
   } catch (err) {
@@ -898,13 +908,16 @@ async function openGradeSubmissionNow(req, res, next) {
         is_open = 1,
         manual_override = 'open',
         opened_at = NOW(),
+        opened_by = ?,
+        closed_at = NULL,
+        closed_by = NULL,
         start_date = NULL,
         end_date = NULL,
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
       WHERE term = ?
-    `, [req.admin.admin_id, notes || 'Manually opened', term]);
+    `, [req.admin.admin_id, req.admin.admin_id, notes || 'Manually opened', term]);
 
     res.json({ message: `Grade submission for ${term} opened successfully.` });
   } catch (err) {
@@ -930,13 +943,17 @@ async function closeGradeSubmissionNow(req, res, next) {
       SET 
         is_open = 0,
         manual_override = 'closed',
+        closed_at = NOW(),
+        closed_by = ?,
+        opened_at = NULL,
+        opened_by = NULL,
         start_date = NULL,
         end_date = NULL,
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
       WHERE term = ?
-    `, [req.admin.admin_id, notes || 'Manually closed', term]);
+    `, [req.admin.admin_id, req.admin.admin_id, notes || 'Manually closed', term]);
 
     res.json({ message: `Grade submission for ${term} closed successfully.` });
   } catch (err) {

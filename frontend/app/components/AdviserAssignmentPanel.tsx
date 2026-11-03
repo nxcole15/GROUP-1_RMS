@@ -143,7 +143,25 @@ export function AdviserAssignmentPanel() {
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedStudents(new Set(students.map((s) => s.student_id)));
+      // Only allow selecting students with the same Grade Level, Track, and Strand
+      if (students.length > 0) {
+        const firstStudent = students[0];
+        const matchingStudents = students.filter(
+          (s) =>
+            s.grade_level === firstStudent.grade_level &&
+            s.track === firstStudent.track &&
+            s.strand === firstStudent.strand
+        );
+        
+        if (matchingStudents.length < students.length) {
+          setMessage({
+            type: "warning",
+            text: `Only students with matching Grade Level (${firstStudent.grade_level}), Track (${firstStudent.track || "None"}), and Strand (${firstStudent.strand || "None"}) can be selected together. Applied filters to view matching students only.`
+          });
+        }
+        
+        setSelectedStudents(new Set(matchingStudents.map((s) => s.student_id)));
+      }
     } else {
       setSelectedStudents(new Set());
     }
@@ -152,11 +170,38 @@ export function AdviserAssignmentPanel() {
   // Handle individual selection
   const handleSelectStudent = (studentId: string, checked: boolean) => {
     const newSelected = new Set(selectedStudents);
+    
     if (checked) {
-      newSelected.add(studentId);
+      // Check if this is the first selection or if it matches existing selections
+      if (newSelected.size === 0) {
+        newSelected.add(studentId);
+      } else {
+        // Get the first selected student's details
+        const firstSelectedId = Array.from(newSelected)[0];
+        const firstSelected = students.find((s) => s.student_id === firstSelectedId);
+        const currentStudent = students.find((s) => s.student_id === studentId);
+        
+        if (firstSelected && currentStudent) {
+          // Check if they match
+          if (
+            firstSelected.grade_level === currentStudent.grade_level &&
+            firstSelected.track === currentStudent.track &&
+            firstSelected.strand === currentStudent.strand
+          ) {
+            newSelected.add(studentId);
+          } else {
+            setMessage({
+              type: "error",
+              text: `Cannot select ${currentStudent.full_name}. All selected students must have the same Grade Level (${firstSelected.grade_level}), Track (${firstSelected.track || "None"}), and Strand (${firstSelected.strand || "None"}).`
+            });
+            return;
+          }
+        }
+      }
     } else {
       newSelected.delete(studentId);
     }
+    
     setSelectedStudents(newSelected);
   };
 
@@ -231,7 +276,21 @@ export function AdviserAssignmentPanel() {
           });
           setShowConfirmModal(true);
         } else {
-          setMessage({ type: "error", text: data.message || "Failed to assign adviser" });
+          // Handle validation errors
+          let errorMessage = data.message || "Failed to assign adviser";
+          
+          if (data.details && data.details.mismatches) {
+            errorMessage += "\n\nMismatched students:";
+            data.details.mismatches.forEach((mismatch: any) => {
+              errorMessage += `\n• ${mismatch.student_name} (${mismatch.student_id}): ${mismatch.issues}`;
+            });
+            
+            if (data.details.expected) {
+              errorMessage += `\n\nExpected: Grade ${data.details.expected.grade_level}, Track: ${data.details.expected.track}, Strand: ${data.details.expected.strand}`;
+            }
+          }
+          
+          setMessage({ type: "error", text: errorMessage });
         }
         setLoading(false);
       })
@@ -333,6 +392,18 @@ export function AdviserAssignmentPanel() {
         </div>
       )}
 
+      {/* Assignment Rules Info */}
+      <div className="alert alert-info d-flex align-items-start gap-2 mb-4">
+        <div style={{ fontSize: "1.25rem" }}>📋</div>
+        <div>
+          <div className="fw-bold mb-1">Adviser Assignment Rules</div>
+          <div className="small">
+            Students can only be assigned to an adviser when they belong to the same <strong>Grade Level, Track, and Strand</strong>. 
+            Use the filters below to select the academic grouping, then select students and assign an adviser.
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="card border-0 shadow-sm rounded-4 mb-4">
         <div className="card-body p-4">
@@ -425,7 +496,10 @@ export function AdviserAssignmentPanel() {
 
       {/* Message */}
       {message && (
-        <div className={`alert alert-${message.type === "success" ? "success" : message.type === "warning" ? "warning" : "danger"} alert-dismissible fade show`}>
+        <div 
+          className={`alert alert-${message.type === "success" ? "success" : message.type === "warning" ? "warning" : "danger"} alert-dismissible fade show`}
+          style={{ whiteSpace: "pre-line" }}
+        >
           {message.text}
           <button type="button" className="btn-close" onClick={() => setMessage(null)}></button>
         </div>
@@ -435,6 +509,31 @@ export function AdviserAssignmentPanel() {
       {selectedStudents.size > 0 && (
         <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "#f8fafc" }}>
           <div className="card-body p-4">
+            {/* Show selected academic grouping */}
+            {(() => {
+              const firstSelectedId = Array.from(selectedStudents)[0];
+              const firstSelected = students.find((s) => s.student_id === firstSelectedId);
+              return firstSelected ? (
+                <div className="mb-3 pb-3" style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <div className="small fw-semibold text-muted mb-2">SELECTED ACADEMIC GROUPING:</div>
+                  <div className="d-flex gap-3 flex-wrap">
+                    <div>
+                      <span className="badge bg-primary">Grade {firstSelected.grade_level}</span>
+                    </div>
+                    <div>
+                      <span className="badge bg-info">{firstSelected.track || "No Track"}</span>
+                    </div>
+                    <div>
+                      <span className="badge bg-success">{firstSelected.strand || "No Strand"}</span>
+                    </div>
+                  </div>
+                  <div className="small text-muted mt-2">
+                    ℹ️ All selected students must match this Grade Level, Track, and Strand
+                  </div>
+                </div>
+              ) : null;
+            })()}
+            
             <div className="row g-3 align-items-end">
               <div className="col-md-auto">
                 <div className="fw-bold" style={{ fontSize: "0.875rem", color: "#475569" }}>

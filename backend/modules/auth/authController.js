@@ -91,7 +91,7 @@ async function universalLogin(req, res, next) {
 
       if (teacher && await bcrypt.compare(password, teacher.password)) {
         const token = jwt.sign(
-          { id: teacher.id, teacher_id: teacher.teacher_id, full_name: teacher.full_name, department: teacher.department, role: "teacher" },
+          { id: teacher.id, teacher_id: teacher.teacher_id, full_name: teacher.full_name, role: "teacher" },
           TEACHER_JWT_SECRET, { expiresIn: "8h" }
         );
         return res.cookie("teacher_token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "Strict", maxAge: 8 * 60 * 60 * 1000 })
@@ -147,8 +147,7 @@ async function getTeachers(req, res, next) {
       SELECT 
         id,
         teacher_id,
-        full_name,
-        department
+        full_name
       FROM teachers
       ORDER BY full_name ASC
     `);

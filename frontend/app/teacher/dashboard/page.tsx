@@ -79,7 +79,6 @@ function saveTimeLogs(logs: TimeLogEntry[]) {
 const teacherData = {
   teacher_id: "",
   full_name: "Teacher",
-  department: "",
   email: "",
 };
 
@@ -185,7 +184,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 }
 
 /* -- Overview -- */
-function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects, academicConfig }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string; department: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[]; academicConfig?: AcademicConfig | null }) {
+function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects, academicConfig }: { setActive?: (s: Panel) => void; isGradeLocked: boolean; activeTerm: string; teacher?: { teacher_id: string; full_name: string } | null; apiActivity?: { type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string }[]; apiSubjects?: { id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string }[]; academicConfig?: AcademicConfig | null }) {
   const displayTeacher = teacher ?? teacherData;
   const [overviewData, setOverviewData] = useState<{
     total_students: number;
@@ -343,8 +342,8 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
                 Welcome back, {displayTeacher.full_name}
               </h1>
-              <p className="mb-3" style={{ color:"dc2626" }}>
-                {displayTeacher.department && displayTeacher.department !== "Unassigned" && <span>{displayTeacher.department} · </span>}
+              <p className="mb-3" style={{ color:"rgba(255,255,255,0.9)" }}>
+                {/* Removed department display */}
               </p>
               <div className="d-flex gap-2 flex-wrap">
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
@@ -1387,6 +1386,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                   onClick={() => {
                     setSelectedTerm(term);
                     setSelectedSubject(null);
+                    setSubmissionWindow(null); // Reset submission window when changing terms
                   }}
                   style={{ padding: '10px 24px', fontSize: '0.9rem' }}
                 >
@@ -3076,11 +3076,10 @@ function AdviseesPanel() {
 }
 
 /* -- Profile Panel -- */
-function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; department: string; email: string } | null }) {
+function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: string; email: string } | null }) {
   const name       = teacher?.full_name   ?? "Teacher";
   const teacherId  = teacher?.teacher_id  ?? "";
   const email      = teacher?.email       ?? "";
-  const department = teacher?.department  ?? "";
   const initials   = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "T";
 
   /* info rows for the quick-info list */
@@ -3090,12 +3089,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
       value: email || "—",
       bg: "#ede9fe", stroke: "#7c3aed",
       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
-    },
-    {
-      label: "Department",
-      value: department || "—",
-      bg: "#dbeafe", stroke: "#2563eb",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
     },
     {
       label: "Employment",
@@ -3145,10 +3138,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
 
                 {/* badges */}
                 <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2"
-                    style={{ background:"rgba(102,126,234,0.12)", color:"#667eea", border:"1px solid rgba(102,126,234,0.3)", fontWeight:600 }}>
-                    {department || "Teacher"}
-                  </span>
                   <span className="badge rounded-pill px-3 py-2"
                     style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>
                     Active
@@ -3257,10 +3246,6 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                   </div>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Department</label>
-                      <input type="text" className="form-control rounded-3" value={department} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
-                    </div>
-                    <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Employment Type</label>
                       <input type="text" className="form-control rounded-3" value="Full-time" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
@@ -3343,7 +3328,7 @@ export default function TeacherDashboardPage() {
   }, []);
 
     const [apiTeacher, setApiTeacher] = useState<{
-    teacher_id: string; full_name: string; department: string; email: string;
+    teacher_id: string; full_name: string; email: string;
   } | null>(null);
   const [apiSubjects, setApiSubjects] = useState<{
     id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string;

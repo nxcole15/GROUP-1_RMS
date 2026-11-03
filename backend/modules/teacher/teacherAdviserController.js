@@ -12,8 +12,8 @@ const TeacherAdviserController = {
    */
   async getMyAdvisees(req, res) {
     try {
-      // Get teacher_id from authenticated teacher
-      const teacherId = req.teacher.teacher_id;
+      // Get teacher's numeric database ID from authenticated teacher
+      const teacherId = req.teacher.id;
 
       // Get active academic configuration
       const activeConfig = await AdminSettingsModel.getActiveConfig();

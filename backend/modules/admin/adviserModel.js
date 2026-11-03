@@ -150,6 +150,98 @@ const AdviserModel = {
   },
 
   /**
+   * Validate that all students being assigned have the same Grade Level, Track, and Strand
+   */
+  async validateStudentsForAssignment(studentIds) {
+    if (!studentIds || studentIds.length === 0) {
+      return {
+        valid: false,
+        message: "No students provided for validation",
+      };
+    }
+
+    // Get student details
+    const placeholders = studentIds.map(() => "?").join(",");
+    const [students] = await db.query(
+      `SELECT student_id, full_name, grade_level, track, strand
+       FROM students
+       WHERE student_id IN (${placeholders})
+         AND account_status = 'active'`,
+      studentIds
+    );
+
+    if (students.length === 0) {
+      return {
+        valid: false,
+        message: "No valid students found",
+      };
+    }
+
+    if (students.length !== studentIds.length) {
+      return {
+        valid: false,
+        message: "Some selected students were not found or are inactive",
+      };
+    }
+
+    // Get the first student's academic details as the reference
+    const reference = students[0];
+    const refGrade = reference.grade_level;
+    const refTrack = reference.track;
+    const refStrand = reference.strand;
+
+    // Check if all students match the reference
+    const mismatches = [];
+    
+    for (let i = 1; i < students.length; i++) {
+      const student = students[i];
+      const issues = [];
+
+      if (student.grade_level !== refGrade) {
+        issues.push(`Grade Level: ${student.grade_level} (expected: ${refGrade})`);
+      }
+      if (student.track !== refTrack) {
+        issues.push(`Track: ${student.track || "None"} (expected: ${refTrack || "None"})`);
+      }
+      if (student.strand !== refStrand) {
+        issues.push(`Strand: ${student.strand || "None"} (expected: ${refStrand || "None"})`);
+      }
+
+      if (issues.length > 0) {
+        mismatches.push({
+          student_id: student.student_id,
+          student_name: student.full_name,
+          issues: issues.join(", "),
+        });
+      }
+    }
+
+    if (mismatches.length > 0) {
+      return {
+        valid: false,
+        message: "Students must belong to the same Grade Level, Track, and Strand to be assigned to the same adviser",
+        details: {
+          expected: {
+            grade_level: refGrade,
+            track: refTrack || "None",
+            strand: refStrand || "None",
+          },
+          mismatches: mismatches,
+        },
+      };
+    }
+
+    return {
+      valid: true,
+      academicDetails: {
+        grade_level: refGrade,
+        track: refTrack,
+        strand: refStrand,
+      },
+    };
+  },
+
+  /**
    * Assign adviser to a student
    */
   async assignAdviser({
@@ -263,6 +355,7 @@ const AdviserModel = {
     const [rows] = await db.query(
       `SELECT 
         s.student_id,
+        s.full_name AS student_name,
         s.full_name,
         s.grade_level,
         s.track,
@@ -271,8 +364,7 @@ const AdviserModel = {
         saa.assigned_at
        FROM student_adviser_assignments saa
        INNER JOIN students s ON saa.student_id = s.student_id
-       INNER JOIN teachers t ON saa.teacher_id = t.id
-       WHERE t.teacher_id = ? 
+       WHERE saa.teacher_id = ? 
          AND saa.school_year_id = ? 
          AND saa.status = 'active'
          AND s.account_status = 'active'

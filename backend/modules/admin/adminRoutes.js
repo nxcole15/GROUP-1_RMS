@@ -84,6 +84,7 @@ const {
 const {
   getStudents,
   getTeachers: getAdviserTeachers,
+  getTeacherAdvisees,
   assignAdviser,
   removeAdviser,
   getStats: getAdviserStats,
@@ -204,6 +205,7 @@ router.put("/settings/enrollment-config", updateEnrollmentConfig);
 // ── Adviser Assignment (Registrar) ────────────────────────────────────────
 router.get("/advisers/students", getStudents);
 router.get("/advisers/teachers", getAdviserTeachers);
+router.get("/advisers/teacher/:teacherId/advisees", getTeacherAdvisees);
 router.post("/advisers/assign", assignAdviser);
 router.delete("/advisers/:assignmentId", removeAdviser);
 router.get("/advisers/stats", getAdviserStats);
