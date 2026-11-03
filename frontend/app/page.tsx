@@ -234,7 +234,7 @@ export default function LandingPage() {
               <img src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover", border: "2px solid #dc2626" }} />
               <div>
                 <h5 className="mb-0 fw-bold" style={{ color: "#dc2626" }}>Cebu Far East Institute</h5>
-                <p className="mb-0 text-muted small">Student Information System</p>
+                <p className="mb-0 text-muted small">Student Record Management System</p>
               </div>
             </Link>
             <div className="d-flex align-items-center gap-3">
@@ -300,7 +300,7 @@ export default function LandingPage() {
                 Official Student Portal
               </div>
               <h1 className="display-4 display-md-3 display-lg-2 fw-extrabold mb-4">
-                <span style={{ color: "#dc2626" }}>Student Information</span><br />
+                <span style={{ color: "#dc2626" }}>Student Record</span><br />
                 <span style={{
                   background: "linear-gradient(135deg, #dc2626, #f97316, #fbbf24)",
                   WebkitBackgroundClip: "text",

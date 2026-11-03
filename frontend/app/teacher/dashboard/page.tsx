@@ -291,17 +291,15 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "My Students",
       value: loading ? "..." : totalStudents,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-      gradient: "linear-gradient(135deg,#dc2626,#ef4444)",
-      shadow: "rgba(220,38,38,0.35)",
-      textColor: "#dc2626",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#eef2ff",
     },
     {
       label: "Class Avg. Grade",
       value: loading ? "..." : `${avgGrade}%`,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-      gradient: "linear-gradient(135deg,#f59e0b,#fbbf24)",
-      shadow: "rgba(245,158,11,0.35)",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
       textColor: "#d97706",
       bgLight: "#fffbeb",
     },
@@ -309,18 +307,16 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "Pending Requests",
       value: loading ? "..." : pendingRequests,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/></svg>,
-      gradient: "linear-gradient(135deg,#ef4444,#f87171)",
-      shadow: "rgba(239,68,68,0.35)",
-      textColor: "#dc2626",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#fef2f2",
     },
     {
       label: "Active Term",
       value: loading ? "..." : displayActiveTerm,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-      gradient: "linear-gradient(135deg,#059669,#10b981)",
-      shadow: "rgba(5,150,105,0.35)",
-      textColor: "#059669",
+      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
+      textColor: "#d97706",
       bgLight: "#f0fdf4",
     },
   ];
@@ -330,7 +326,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
 
       {/* ── Banner ──────────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#059669 0%,#10b981 100%)",
+        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 80px",
         position: "relative",
@@ -347,16 +343,15 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
                 Welcome back, {displayTeacher.full_name}
               </h1>
-              <p className="mb-3" style={{ color:"rgba(255,255,255,0.75)" }}>
+              <p className="mb-3" style={{ color:"dc2626" }}>
                 {displayTeacher.department && displayTeacher.department !== "Unassigned" && <span>{displayTeacher.department} · </span>}
-                {displayTeacher.teacher_id && <span>{displayTeacher.teacher_id}</span>}
               </p>
               <div className="d-flex gap-2 flex-wrap">
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                  ✅ Active Teacher
+                   Active Teacher
                 </span>
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>
-                  📅 {academicConfig?.current_term || activeTerm} · SY {academicConfig?.school_year || "2025-2026"}
+                   {academicConfig?.current_term || activeTerm} · SY {academicConfig?.school_year || "2025-2026"}
                 </span>
               </div>
             </div>
@@ -390,11 +385,11 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center justify-content-between mb-3">
                     <div className="d-flex align-items-center justify-content-center rounded-3"
-                      style={{ width:46, height:46, background:s.gradient, boxShadow:`0 4px 14px ${s.shadow}` }}>
+                      style={{ width:46, height:46, background:s.gradient }}>
                       {s.icon}
                     </div>
                     <div className="rounded-pill px-2 py-1" style={{ background:s.bgLight }}>
-                      <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}>↑ Live</div>
+                      <div className="fw-bold" style={{ fontSize:"0.7rem", color:s.textColor }}></div>
                     </div>
                   </div>
                   <div className="fw-black" style={{ fontSize:"1.6rem", color:s.textColor, lineHeight:1 }}>{s.value}</div>
@@ -469,7 +464,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {apiSubjects.map(s => (
                       <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#d97706)" }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
                           </svg>
@@ -764,7 +759,7 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced - Fixed white box */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1296,7 +1291,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1437,7 +1432,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
       {/* Progress Card */}
       {selectedSubject && (
         <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div className="text-white">
                 <h3 className="fw-bold mb-1 fs-5">{selectedSubject.split("|")[0]}</h3>
@@ -1447,7 +1442,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
               </div>
               {lastAutoSave && timeSinceAutoSave !== null && (
                 <span className="badge bg-white text-primary fw-semibold px-3 py-2">
-                  💾 Auto-saved {timeSinceAutoSave}s ago
+                   Auto-saved {timeSinceAutoSave}s ago
                 </span>
               )}
             </div>
@@ -1908,7 +1903,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       )}
 
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -2280,7 +2275,7 @@ function DocumentApprovalsPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -2879,7 +2874,7 @@ function AdviseesPanel() {
 
       {/* Academic Period */}
       {academicConfig && (
-        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)" }}>
+        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
           <div className="card-body p-4">
             <div className="row g-3">
               <div className="col-md-4">
@@ -3115,7 +3110,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
 
       {/* ── Banner header ─────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)",
+        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 72px",
         position: "relative",
@@ -3141,7 +3136,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
               {/* avatar */}
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#667eea,#764ba2)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#d97706)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
                   {initials}
                 </div>
 
