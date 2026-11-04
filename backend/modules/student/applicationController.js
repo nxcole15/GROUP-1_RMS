@@ -127,11 +127,11 @@ async function submitApplication(req, res, next) {
     });
 
     const [configRows] = await db.query(
-      "SELECT deadline FROM enrollment_config ORDER BY id DESC LIMIT 1"
+      "SELECT enrollment_end_date FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
       );
 
-      const dueDate = configRows[0]?.deadline
-      ? new Date(configRows[0].deadline).toLocaleDateString("en-PH", {
+      const dueDate = configRows[0]?.enrollment_end_date
+      ? new Date(configRows[0].enrollment_end_date).toLocaleDateString("en-PH", {
           year: "numeric",
           month: "long",
           day: "numeric",
@@ -263,10 +263,10 @@ async function approveApplication(req, res, next) {
     const hashedPass = await bcrypt.hash(tempPass, 10);
 
     const [configRows] = await db.query(
-      "SELECT active_term FROM enrollment_config ORDER BY id DESC LIMIT 1"
+      "SELECT current_term FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
     );
 
-    const term = configRows[0]?.active_term || "2nd Semester SY 2025-2026";
+    const term = configRows[0]?.current_term || "Term 1";
 
     await db.query(
       `INSERT INTO students

@@ -1,52 +1,82 @@
 /**
  * utils/mailer.js
- * resend — used to email credentials to applicants.
+ * Dual email provider system: Resend (primary) + Gmail SMTP (fallback)
+ * 
+ * CONFIGURATION:
+ *   Set EMAIL_PROVIDER in .env to choose provider:
+ *   - EMAIL_PROVIDER=resend (after domain verification)
+ *   - EMAIL_PROVIDER=gmail (temporary/immediate use)
  *
- * SMTP Configuration Required:
- *   Set these in server/.env:
- *   - SMTP_HOST (e.g., smtp.gmail.com)
- *   - SMTP_PORT (e.g., 587)
- *   - SMTP_USER (your email address)
- *   - SMTP_PASS (your app password or API key)
- *   - EMAIL_FROM (optional, defaults to SMTP_USER)
+ * RESEND Configuration:
+ *   RESEND_API_KEY=your_api_key
+ *   EMAIL_FROM="CFEI INFORM" <noreply@your-domain.com>
  *
- * Example for Gmail:
- *   SMTP_HOST=smtp.gmail.com
- *   SMTP_PORT=587
- *   SMTP_USER=your-email@gmail.com
- *   SMTP_PASS=xxxx xxxx xxxx xxxx (16-char app password)
- *   EMAIL_FROM="CFEI INFORM" <your-email@gmail.com>
- *
- * Example for SendGrid:
- *   SMTP_HOST=smtp.sendgrid.net
- *   SMTP_PORT=587
- *   SMTP_USER=apikey
- *   SMTP_PASS=SG.your_api_key_here
- *   EMAIL_FROM=noreply@cfei.edu
+ * GMAIL SMTP Configuration:
+ *   GMAIL_USER=your-email@gmail.com
+ *   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx (16-char app password)
+ *   
+ * To generate Gmail App Password:
+ *   1. Go to https://myaccount.google.com/security
+ *   2. Enable 2-Step Verification
+ *   3. Security → App passwords → Generate new
  */
-  require("dotenv").config();
-  const { Resend } = require("resend");
+require("dotenv").config();
+const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-  const resend = process.env.RESEND_API_KEY
-    ? new Resend(process.env.RESEND_API_KEY)
-    : null;
+// Resend setup
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-    async function deliverEmail(message) {
-      if (!resend) {
-        throw new Error("RESEND_API_KEY is not configured.");
-      }
+// Gmail SMTP setup
+const gmailTransporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
 
-      const { data, error } = await resend.emails.send(message);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data;
-    }
+// Determine which provider to use
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend';
 
 /**
- *Send enrollment credentials to an applicant.
+ * Send email using configured provider
+ */
+async function deliverEmail(message) {
+  if (EMAIL_PROVIDER === 'gmail' && gmailTransporter) {
+    // Use Gmail SMTP
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.GMAIL_USER,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+    };
+    
+    const info = await gmailTransporter.sendMail(mailOptions);
+    console.log(`✅ Email sent via Gmail to ${message.to}`);
+    return info;
+    
+  } else if (EMAIL_PROVIDER === 'resend' && resend) {
+    // Use Resend
+    const { data, error } = await resend.emails.send(message);
+    if (error) {
+      throw new Error(error.message);
+    }
+    console.log(`✅ Email sent via Resend to ${message.to}`);
+    return data;
+    
+  } else {
+    throw new Error(`Email provider ${EMAIL_PROVIDER} is not configured properly. Check .env file.`);
+  }
+}
+
+/**
+ * Send enrollment credentials to an applicant.
  * @param {object} opts
  * @param {string} opts.to         - Recipient email
  * @param {string} opts.fullName   - Student's full name
@@ -54,24 +84,18 @@
  * @param {string} opts.tempPass   - Temporary password
  */
 async function sendCredentials({ to, fullName, studentId, tempPass }) {
-  if (!resend) {
-    throw new Error("RESEND_API_KEY is not configured.");
-  }
-
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const from = process.env.EMAIL_FROM || process.env.GMAIL_USER || "onboarding@resend.dev";
   
-  // For emails, always use production URL if available (first URL in comma-separated list)
   const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
   const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
   const loginUrl = `${productionUrl}/login`;
   
-
-
-  const info = await deliverEmail({
-    from,
-    to,
-    subject: "CFEI Enrollment Application Received — Login Credentials",
-    html: `
+  try {
+    await deliverEmail({
+      from,
+      to,
+      subject: "CFEI Enrollment Application Received — Login Credentials",
+      html: `
 <!DOCTYPE html>
 <html>
 <body style="font-family:Arial,sans-serif;background:#f0f4ff;margin:0;padding:0;">
@@ -138,18 +162,18 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
     Please change your password after Principal approval.
 
     CFEI INFORM System`,
-  });
-
-  console.log(`✅  Email sent successfully to ${to}`);
-  return info;
+    });
+    
+    console.log(`✅ Credentials email sent successfully to ${to}`);
+  } catch (error) {
+    console.error(`❌ Failed to send credentials email to ${to}:`, error.message);
+    throw error;
+  }
 }
 
 async function sendRequirementsEmail({ to, fullName, dueDate }) {
-    if (!resend) {
-      throw new Error("RESEND_API_KEY is not configured.");
-    }
-
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const from = process.env.EMAIL_FROM || process.env.GMAIL_USER || "onboarding@resend.dev";
+  
   const requirements = [
     "School Form 9 / Report Card",
     "Birth Certificate",
@@ -159,11 +183,12 @@ async function sendRequirementsEmail({ to, fullName, dueDate }) {
     "School Form 10",
   ];
 
-  await deliverEmail({
-    from,
-    to,
-    subject: "CFEI Enrollment Application Received - Requirements Needed",
-    html: `
+  try {
+    await deliverEmail({
+      from,
+      to,
+      subject: "CFEI Enrollment Application Received - Requirements Needed",
+      html: `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#334155;">
         <h2 style="color:#1e40af;">Enrollment Application Received</h2>
 
@@ -212,7 +237,13 @@ Your application will be reviewed by the Registrar and then forwarded to the Pri
 Your student account and login credentials will be sent only after Principal approval.
 
 CFEI INFORM System`,
-  });
+    });
+    
+    console.log(`✅ Requirements email sent successfully to ${to}`);
+  } catch (error) {
+    console.error(`❌ Failed to send requirements email to ${to}:`, error.message);
+    // Don't throw - this is non-critical
+  }
 }
 
 module.exports = { sendCredentials, sendRequirementsEmail };
