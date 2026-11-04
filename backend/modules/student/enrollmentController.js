@@ -58,7 +58,7 @@ async function submitEnrollment(req, res, next) {
 
     const config = await ConfigModel.getEnrollmentConfig();
 
-    if (new Date() > config.deadline) {
+    if (config.deadline && new Date() > config.deadline) {
       return res.status(400).json({
         error: `Enrollment is closed. The deadline was ${config.deadline.toLocaleString()}.`,
       });

@@ -7,14 +7,18 @@ const db = require("../../config/db");
 const ConfigModel = {
   async getEnrollmentConfig() {
     const [rows] = await db.query(
-      "SELECT * FROM enrollment_config ORDER BY id DESC LIMIT 1"
+      "SELECT * FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
     );
     if (!rows[0]) {
       throw new Error("Enrollment configuration not found in database.");
     }
     return {
-      active_term: rows[0].active_term,
-      deadline:    new Date(rows[0].deadline),
+      active_term: rows[0].current_term,
+      deadline:    rows[0].enrollment_end_date ? new Date(rows[0].enrollment_end_date) : null,
+      school_year: rows[0].school_year,
+      enrollment_is_open: rows[0].enrollment_is_open,
+      enrollment_start_date: rows[0].enrollment_start_date,
+      enrollment_end_date: rows[0].enrollment_end_date,
     };
   },
 
