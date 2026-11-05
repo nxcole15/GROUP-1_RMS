@@ -983,11 +983,45 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  
+  // Grade Edit Request modal state
+  const [showEditRequestModal, setShowEditRequestModal] = useState(false);
+  const [selectedStudentForEdit, setSelectedStudentForEdit] = useState<any>(null);
+  const [editRequestReason, setEditRequestReason] = useState('');
+  const [proposedGrade, setProposedGrade] = useState('');
+  const [submittingEditRequest, setSubmittingEditRequest] = useState(false);
+  
+  // Grade Edit Requests tracking
+  const [editRequests, setEditRequests] = useState<Array<any>>([]);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedApprovedRequest, setSelectedApprovedRequest] = useState<any>(null);
+  const [correctionGrade, setCorrectionGrade] = useState('');
+  const [applyingCorrection, setApplyingCorrection] = useState(false);
 
   // ========== LOAD SUBJECTS ON MOUNT ==========
   useEffect(() => {
     loadSubjects();
+    loadEditRequests();
   }, [selectedTerm]);
+
+  async function loadEditRequests() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/grade-edit-requests/teacher/requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEditRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Failed to load edit requests:", err);
+    }
+  }
 
   async function loadSubjects() {
     const token = localStorage.getItem("inform_token");
@@ -1246,6 +1280,142 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
 
   function handleImageError(studentId: string) {
     setImageErrors(prev => new Set(prev).add(studentId));
+  }
+  
+  // ========== GRADE EDIT REQUEST ==========
+  function hasActiveEditRequest(student_id: string) {
+    if (!selectedSubject) return false;
+    const [subject_name] = selectedSubject.split("|");
+    
+    return editRequests.some(req => 
+      req.student_id === student_id &&
+      req.subject_name === subject_name &&
+      req.term === selectedTerm &&
+      ['pending', 'approved'].includes(req.status)
+    );
+  }
+
+  function getApprovedRequest(student_id: string) {
+    if (!selectedSubject) return null;
+    const [subject_name] = selectedSubject.split("|");
+    
+    return editRequests.find(req => 
+      req.student_id === student_id &&
+      req.subject_name === subject_name &&
+      req.term === selectedTerm &&
+      req.status === 'approved'
+    );
+  }
+  
+  async function submitEditRequest() {
+    if (!selectedStudentForEdit || !selectedSubject) return;
+    if (!editRequestReason.trim()) {
+      alert("Please provide a reason for the correction");
+      return;
+    }
+
+    const [subject_name, strand] = selectedSubject.split("|");
+    const originalGrade = selectedStudentForEdit.percentage;
+    
+    if (!originalGrade) {
+      alert("Cannot request edit for a grade that doesn't exist");
+      return;
+    }
+
+    setSubmittingEditRequest(true);
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/grade-edit-requests/teacher/requests`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            student_id: selectedStudentForEdit.student_id,
+            subject_name,
+            strand,
+            term: selectedTerm,
+            original_grade: originalGrade,
+            proposed_grade: proposedGrade || null,
+            reason: editRequestReason
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("✅ Grade edit request submitted to Principal!");
+        setShowEditRequestModal(false);
+        setSelectedStudentForEdit(null);
+        setEditRequestReason('');
+        setProposedGrade('');
+        loadEditRequests(); // Reload to update button states
+      } else {
+        alert("Error: " + (data.error || "Failed to submit request"));
+      }
+    } catch (err) {
+      console.error("Failed to submit edit request:", err);
+      alert("Error submitting request");
+    } finally {
+      setSubmittingEditRequest(false);
+    }
+  }
+
+  async function applyApprovedCorrection() {
+    if (!selectedApprovedRequest || !correctionGrade) {
+      alert("Please enter the corrected grade");
+      return;
+    }
+
+    const grade = parseFloat(correctionGrade);
+    if (isNaN(grade) || grade < 0 || grade > 100) {
+      alert("Grade must be between 0 and 100");
+      return;
+    }
+
+    setApplyingCorrection(true);
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/grade-edit-requests/teacher/requests/${selectedApprovedRequest.id}/apply`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({ corrected_grade: grade })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast("✅ Grade correction applied successfully!");
+        setShowApplyModal(false);
+        setSelectedApprovedRequest(null);
+        setCorrectionGrade('');
+        loadEditRequests(); // Reload requests
+        loadStudents(); // Reload to show updated grade
+      } else {
+        alert("Error: " + (data.error || "Failed to apply correction"));
+      }
+    } catch (err) {
+      console.error("Failed to apply correction:", err);
+      alert("Error applying correction");
+    } finally {
+      setApplyingCorrection(false);
+    }
   }
 
   // ========== CALCULATED VALUES ==========
@@ -1533,20 +1703,21 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                   <th className="py-3 small fw-bold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.08em" }}>Student ID</th>
                   <th className="py-3 small fw-bold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.08em" }}>Track/Strand</th>
                   <th className="py-3 small fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Grade (%)</th>
-                  <th className="pe-4 py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 100 }}>Status</th>
+                  <th className="py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 100 }}>Status</th>
+                  <th className="pe-4 py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 120 }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-4">
+                    <td colSpan={6} className="text-center py-4">
                       <div className="spinner-border spinner-border-sm text-primary me-2" />
                       <span className="text-muted small">Loading students...</span>
                     </td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-4 text-muted small">
+                    <td colSpan={6} className="text-center py-4 text-muted small">
                       {search ? `No students found matching "${search}"` : 'No students enrolled in this class'}
                     </td>
                   </tr>
@@ -1604,7 +1775,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                             )}
                           </div>
                         </td>
-                        <td className="pe-4 text-center">
+                        <td className="text-center">
                           {student.submission_status === 'approved' ? (
                             <span className="badge bg-success text-white fw-semibold">Approved</span>
                           ) : hasGrade && isValid ? (
@@ -1614,6 +1785,59 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                           ) : (
                             <span className="badge bg-secondary text-white fw-semibold">Pending</span>
                           )}
+                        </td>
+                        <td className="pe-4 text-center">
+                          {student.submission_status === 'approved' && (() => {
+                            const approvedReq = getApprovedRequest(student.student_id);
+                            const hasActive = hasActiveEditRequest(student.student_id);
+                            
+                            if (approvedReq) {
+                              // Has approved request - show Apply button
+                              return (
+                                <button
+                                  className="btn btn-sm btn-success"
+                                  onClick={() => {
+                                    setSelectedApprovedRequest(approvedReq);
+                                    setCorrectionGrade(approvedReq.proposed_grade || approvedReq.original_grade);
+                                    setShowApplyModal(true);
+                                  }}
+                                  title="Apply approved grade correction"
+                                >
+                                  <Icon name="checkCircle" size={14} className="me-1" />
+                                  Apply Correction
+                                </button>
+                              );
+                            } else if (hasActive) {
+                              // Has pending request
+                              return (
+                                <button
+                                  className="btn btn-sm btn-outline-secondary"
+                                  disabled
+                                  title="Request already submitted"
+                                >
+                                  <Icon name="clock" size={14} className="me-1" />
+                                  Pending
+                                </button>
+                              );
+                            } else {
+                              // No request - show Request Edit button
+                              return (
+                                <button
+                                  className="btn btn-sm btn-outline-primary"
+                                  onClick={() => {
+                                    setSelectedStudentForEdit(student);
+                                    setProposedGrade(editedGrades[student.student_id] || student.percentage?.toString() || '');
+                                    setEditRequestReason('');
+                                    setShowEditRequestModal(true);
+                                  }}
+                                  title="Request to edit this grade"
+                                >
+                                  <Icon name="send" size={14} className="me-1" />
+                                  Request Edit
+                                </button>
+                              );
+                            }
+                          })()}
                         </td>
                       </tr>
                     );
@@ -1719,6 +1943,239 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
             </div>
           </div>
         </div>
+      )}
+
+      {/* Grade Edit Request Modal */}
+      {showEditRequestModal && selectedStudentForEdit && selectedSubject && (
+        <>
+          <div className="modal show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title fw-bold">Request Grade Edit Permission</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEditRequestModal(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="alert alert-info d-flex align-items-start gap-2 mb-4">
+                    <Icon name="alert" size={18} />
+                    <div className="small">
+                      This request will be sent to the Principal for approval. Once approved, you can apply the correction.
+                    </div>
+                  </div>
+
+                  {/* Student Information - Read Only */}
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Student Name</label>
+                      <div className="form-control bg-light" style={{ cursor: 'not-allowed' }}>
+                        {selectedStudentForEdit.full_name}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Student ID</label>
+                      <div className="form-control bg-light" style={{ cursor: 'not-allowed' }}>
+                        {selectedStudentForEdit.student_id}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Subject</label>
+                      <div className="form-control bg-light" style={{ cursor: 'not-allowed' }}>
+                        {selectedSubject.split("|")[0]}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Track/Strand</label>
+                      <div className="form-control bg-light" style={{ cursor: 'not-allowed' }}>
+                        {selectedStudentForEdit.pathway || selectedSubject.split("|")[1]}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Term</label>
+                      <div className="form-control bg-light" style={{ cursor: 'not-allowed' }}>
+                        {selectedTerm}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold text-muted">Original Grade</label>
+                      <div className="form-control bg-light fw-bold" style={{ cursor: 'not-allowed' }}>
+                        {selectedStudentForEdit.percentage}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="my-4" />
+
+                  {/* Editable Fields */}
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold">Proposed Grade (Optional)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={proposedGrade}
+                      onChange={e => setProposedGrade(e.target.value)}
+                      placeholder="What the grade should be"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                    />
+                    <div className="form-text">
+                      Leave empty if you want to determine the correction later after approval.
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold">Reason for Correction *</label>
+                    <textarea
+                      className="form-control"
+                      rows={4}
+                      value={editRequestReason}
+                      onChange={e => setEditRequestReason(e.target.value)}
+                      placeholder="Explain why this grade needs to be corrected (calculation error, missing work, etc.)"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer border-top-0">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowEditRequestModal(false);
+                      setSelectedStudentForEdit(null);
+                      setEditRequestReason('');
+                      setProposedGrade('');
+                    }}
+                    disabled={submittingEditRequest}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={submitEditRequest}
+                    disabled={submittingEditRequest || !editRequestReason.trim()}
+                  >
+                    {submittingEditRequest ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="send" size={16} className="me-2" />
+                        Submit Request
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Apply Approved Correction Modal */}
+      {showApplyModal && selectedApprovedRequest && (
+        <>
+          <div className="modal show d-block" tabIndex={-1} style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-success text-white">
+                  <h5 className="modal-title fw-bold">
+                    <Icon name="checkCircle" size={20} className="me-2" />
+                    Apply Approved Grade Correction
+                  </h5>
+                  <button type="button" className="btn-close btn-close-white" onClick={() => setShowApplyModal(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="alert alert-success d-flex align-items-start gap-2 mb-4">
+                    <Icon name="checkCircle" size={18} />
+                    <div className="small">
+                      This request has been <strong>approved by the Principal</strong>. You can now apply the grade correction.
+                    </div>
+                  </div>
+
+                  {/* Request Information */}
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-muted">Student</label>
+                    <div className="fw-semibold">{selectedApprovedRequest.student_name}</div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-muted">Subject & Term</label>
+                    <div className="fw-semibold">
+                      {selectedApprovedRequest.subject_name} · {selectedApprovedRequest.term}
+                      {selectedApprovedRequest.strand && ` · ${selectedApprovedRequest.strand}`}
+                    </div>
+                  </div>
+                  <div className="row g-3 mb-3">
+                    <div className="col-6">
+                      <label className="form-label small fw-semibold text-muted">Original Grade</label>
+                      <div className="fw-bold text-danger fs-5">{selectedApprovedRequest.original_grade}%</div>
+                    </div>
+                    {selectedApprovedRequest.proposed_grade && (
+                      <div className="col-6">
+                        <label className="form-label small fw-semibold text-muted">Proposed Grade</label>
+                        <div className="fw-bold text-success fs-5">{selectedApprovedRequest.proposed_grade}%</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-muted">Reason</label>
+                    <div className="text-muted small">{selectedApprovedRequest.reason}</div>
+                  </div>
+
+                  <hr />
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold">Enter Corrected Grade *</label>
+                    <input
+                      type="number"
+                      className="form-control form-control-lg"
+                      value={correctionGrade}
+                      onChange={e => setCorrectionGrade(e.target.value)}
+                      placeholder="Enter the corrected grade"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      autoFocus
+                    />
+                    <div className="form-text">
+                      This will update the grade in the system and create an audit log entry.
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer border-top-0">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowApplyModal(false);
+                      setSelectedApprovedRequest(null);
+                      setCorrectionGrade('');
+                    }}
+                    disabled={applyingCorrection}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-success btn-lg"
+                    onClick={applyApprovedCorrection}
+                    disabled={applyingCorrection || !correctionGrade}
+                  >
+                    {applyingCorrection ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" />
+                        Applying...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="checkCircle" size={18} className="me-2" />
+                        Apply Correction
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -18,6 +18,7 @@ const notificationsRoutes = require("./modules/notifications/notificationsRoutes
 const staffNotificationRoutes = require("./modules/notifications/staffNotificationRoutes");
 const teacherRoutes       = require("./modules/teacher/teacherRoutes");
 const gradeRequestRoutes = require("./modules/gradeRequests/gradeRequestRoutes");
+const gradeEditRequestRoutes = require("./modules/gradeEditRequests/gradeEditRequestRoutes");
 const applicationRoutes  = require("./modules/student/applicationRoutes");
 const feeRoutes          = require("./modules/fees/feeRoutes");
 const studentFeeRoutes   = require("./modules/fees/studentFeeRoutes");
@@ -90,6 +91,7 @@ app.use("/api/admin",   adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 
 app.use("/api/grade-requests", gradeRequestRoutes);
+app.use("/api/grade-edit-requests", gradeEditRequestRoutes);
 app.use("/api/applications",  applicationRoutes);
 app.use("/api/fees",           feeRoutes);
 app.use("/api/student/fees",   studentFeeRoutes); // Student-facing fee routes

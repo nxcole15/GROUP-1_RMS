@@ -1396,6 +1396,9 @@ function GradesPanel({ role }: { role?: string } = {}) {
         {/* Submitted Grade Batches - Simple inline version */}
         {role === "principal" && <SubmittedGradesList />}
 
+        {/* Grade Edit Requests - Principal Only */}
+        {role === "principal" && <GradeEditRequestsList />}
+
       </div>
     );
   }
@@ -7345,3 +7348,536 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
 
 
 
+
+
+// Grade Edit Requests List Component
+function GradeEditRequestsList() {
+  const [requests, setRequests] = useState<Array<any>>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTerm, setSelectedTerm] = useState("Term 1");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterTeacher, setFilterTeacher] = useState("");
+  const [filterSubject, setFilterSubject] = useState("");
+
+  // Modal state
+  const [viewingRequest, setViewingRequest] = useState<any>(null);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    loadRequests();
+  }, [selectedTerm, filterStatus, filterTeacher, filterSubject]);
+
+  async function loadRequests() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedTerm) params.append('term', selectedTerm);
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterTeacher) params.append('teacher_id', filterTeacher);
+      if (filterSubject) params.append('subject_name', filterSubject);
+
+      const response = await fetch(
+        `${API_BASE}/api/grade-edit-requests/principal/requests?${params}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setRequests(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Failed to load edit requests:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function approveRequest(requestId: number) {
+    setProcessing(true);
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/grade-edit-requests/principal/requests/${requestId}/approve`,
+        {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        setShowApproveModal(false);
+        setViewingRequest(null);
+        loadRequests();
+        alert("✅ Grade edit request approved successfully!");
+      } else {
+        const data = await response.json();
+        alert("Error: " + (data.error || "Failed to approve request"));
+      }
+    } catch (err) {
+      console.error("Failed to approve request:", err);
+      alert("Error approving request");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function rejectRequest(requestId: number) {
+    if (!rejectionReason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+
+    setProcessing(true);
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/grade-edit-requests/principal/requests/${requestId}/reject`,
+        {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({ rejection_reason: rejectionReason })
+        }
+      );
+
+      if (response.ok) {
+        setShowRejectModal(false);
+        setViewingRequest(null);
+        setRejectionReason("");
+        loadRequests();
+        alert("✅ Grade edit request rejected");
+      } else {
+        const data = await response.json();
+        alert("Error: " + (data.error || "Failed to reject request"));
+      }
+    } catch (err) {
+      console.error("Failed to reject request:", err);
+      alert("Error rejecting request");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  function getStatusBadge(status: string) {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
+      pending: { bg: "warning", text: "dark", label: "Pending" },
+      approved: { bg: "success", text: "white", label: "Approved" },
+      rejected: { bg: "danger", text: "white", label: "Rejected" },
+      completed: { bg: "secondary", text: "white", label: "Completed" }
+    };
+    const badge = badges[status] || badges.pending;
+    return (
+      <span className={`badge bg-${badge.bg} text-${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  }
+
+  // Get unique values for filters
+  const teachers = Array.from(new Set(requests.map(r => r.teacher_name))).sort();
+  const subjects = Array.from(new Set(requests.map(r => r.subject_name))).sort();
+
+  return (
+    <>
+      <div className="card border-0 shadow-sm rounded-3 mt-4">
+        <div className="card-body p-4">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h3 className="fw-bold mb-1">Grade Edit Requests</h3>
+              <p className="text-muted small mb-0">
+                Review and approve teacher requests to correct submitted grades
+              </p>
+            </div>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "auto" }}
+              value={selectedTerm}
+              onChange={e => setSelectedTerm(e.target.value)}
+            >
+              <option value="">All Terms</option>
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
+          </div>
+
+          {/* Filters */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-3">
+              <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>
+                Status
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div className="col-md-4">
+              <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>
+                Teacher
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={filterTeacher}
+                onChange={e => setFilterTeacher(e.target.value)}
+              >
+                <option value="">All Teachers</option>
+                {teachers.map(teacher => (
+                  <option key={teacher} value={teacher}>{teacher}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-5">
+              <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize: 11 }}>
+                Subject
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={filterSubject}
+                onChange={e => setFilterSubject(e.target.value)}
+              >
+                <option value="">All Subjects</option>
+                {subjects.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {(filterStatus || filterTeacher || filterSubject) && (
+            <div className="mb-3">
+              <button 
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => {
+                  setFilterStatus("");
+                  setFilterTeacher("");
+                  setFilterSubject("");
+                }}
+              >
+                Clear Filters
+              </button>
+              <span className="text-muted small ms-2">
+                Showing {requests.length} request{requests.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-primary spinner-border-sm me-2" />
+              <span className="text-muted small">Loading edit requests...</span>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="text-center text-muted small py-4">
+              No grade edit requests found.
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th className="small fw-semibold text-uppercase">Teacher</th>
+                    <th className="small fw-semibold text-uppercase">Student</th>
+                    <th className="small fw-semibold text-uppercase">Subject</th>
+                    <th className="small fw-semibold text-uppercase">Term</th>
+                    <th className="small fw-semibold text-uppercase text-center">Original</th>
+                    <th className="small fw-semibold text-uppercase text-center">Proposed</th>
+                    <th className="small fw-semibold text-uppercase text-center">Status</th>
+                    <th className="small fw-semibold text-uppercase">Requested</th>
+                    <th className="small fw-semibold text-uppercase text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map(request => (
+                    <tr key={request.id}>
+                      <td className="align-middle">
+                        <div className="fw-semibold">{request.teacher_name}</div>
+                      </td>
+                      <td className="align-middle">
+                        <div className="fw-semibold">{request.student_name}</div>
+                        <div className="small text-muted">{request.student_id}</div>
+                      </td>
+                      <td className="align-middle">
+                        <div>{request.subject_name}</div>
+                        {request.strand && (
+                          <div className="small text-muted">{request.strand}</div>
+                        )}
+                      </td>
+                      <td className="align-middle">{request.term}</td>
+                      <td className="align-middle text-center">
+                        <span className="badge bg-light text-dark">
+                          {request.original_grade}%
+                        </span>
+                      </td>
+                      <td className="align-middle text-center">
+                        {request.proposed_grade ? (
+                          <span className="badge bg-info text-white">
+                            {request.proposed_grade}%
+                          </span>
+                        ) : (
+                          <span className="text-muted small">—</span>
+                        )}
+                      </td>
+                      <td className="align-middle text-center">
+                        {getStatusBadge(request.status)}
+                      </td>
+                      <td className="align-middle">
+                        <div className="small">{new Date(request.created_at).toLocaleDateString()}</div>
+                        <div className="small text-muted">
+                          {new Date(request.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="align-middle text-center">
+                        <button
+                          className="btn btn-sm btn-outline-primary me-1"
+                          onClick={() => setViewingRequest(request)}
+                        >
+                          View
+                        </button>
+                        {request.status === 'pending' && (
+                          <>
+                            <button
+                              className="btn btn-sm btn-success me-1"
+                              onClick={() => {
+                                setViewingRequest(request);
+                                setShowApproveModal(true);
+                              }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => {
+                                setViewingRequest(request);
+                                setShowRejectModal(true);
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* View Details Modal */}
+      {viewingRequest && !showApproveModal && !showRejectModal && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-bottom-0 pb-0">
+                <h5 className="modal-title fw-bold">Grade Edit Request Details</h5>
+                <button type="button" className="btn-close" onClick={() => setViewingRequest(null)} />
+              </div>
+              <div className="modal-body">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="small text-muted text-uppercase fw-semibold">Teacher</label>
+                    <div className="fw-semibold">{viewingRequest.teacher_name}</div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="small text-muted text-uppercase fw-semibold">Status</label>
+                    <div>{getStatusBadge(viewingRequest.status)}</div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="small text-muted text-uppercase fw-semibold">Student</label>
+                    <div className="fw-semibold">{viewingRequest.student_name}</div>
+                    <div className="small text-muted">{viewingRequest.student_id}</div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="small text-muted text-uppercase fw-semibold">Grade Level & Track</label>
+                    <div>Grade {viewingRequest.grade_level} - {viewingRequest.track}</div>
+                  </div>
+                  <div className="col-md-12">
+                    <label className="small text-muted text-uppercase fw-semibold">Subject</label>
+                    <div className="fw-semibold">{viewingRequest.subject_name}</div>
+                    {viewingRequest.strand && (
+                      <div className="small text-muted">{viewingRequest.strand}</div>
+                    )}
+                  </div>
+                  <div className="col-md-4">
+                    <label className="small text-muted text-uppercase fw-semibold">Term</label>
+                    <div>{viewingRequest.term}</div>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="small text-muted text-uppercase fw-semibold">Original Grade</label>
+                    <div className="fs-4 text-danger">{viewingRequest.original_grade}%</div>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="small text-muted text-uppercase fw-semibold">Proposed Grade</label>
+                    <div className="fs-4 text-success">
+                      {viewingRequest.proposed_grade ? `${viewingRequest.proposed_grade}%` : 'Not specified'}
+                    </div>
+                  </div>
+                  <div className="col-12">
+                    <label className="small text-muted text-uppercase fw-semibold">Reason for Correction</label>
+                    <div className="p-3 bg-light rounded">{viewingRequest.reason}</div>
+                  </div>
+                  {viewingRequest.rejection_reason && (
+                    <div className="col-12">
+                      <label className="small text-muted text-uppercase fw-semibold text-danger">Rejection Reason</label>
+                      <div className="p-3 bg-danger bg-opacity-10 rounded text-danger">
+                        {viewingRequest.rejection_reason}
+                      </div>
+                    </div>
+                  )}
+                  {viewingRequest.corrected_grade && (
+                    <div className="col-12">
+                      <div className="alert alert-success mb-0">
+                        <strong>✓ Correction Applied:</strong> Grade changed to {viewingRequest.corrected_grade}% on{' '}
+                        {new Date(viewingRequest.corrected_at).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer border-top-0">
+                <button className="btn btn-secondary" onClick={() => setViewingRequest(null)}>
+                  Close
+                </button>
+                {viewingRequest.status === 'pending' && (
+                  <>
+                    <button 
+                      className="btn btn-success"
+                      onClick={() => setShowApproveModal(true)}
+                    >
+                      Approve Request
+                    </button>
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => setShowRejectModal(true)}
+                    >
+                      Reject Request
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approve Confirmation Modal */}
+      {showApproveModal && viewingRequest && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-bottom-0 pb-0">
+                <h5 className="modal-title fw-bold">Approve Grade Edit Request</h5>
+                <button type="button" className="btn-close" onClick={() => setShowApproveModal(false)} />
+              </div>
+              <div className="modal-body">
+                <p>
+                  Are you sure you want to approve this grade edit request?
+                </p>
+                <div className="alert alert-info mb-0">
+                  <strong>{viewingRequest.teacher_name}</strong> will be authorized to change{' '}
+                  <strong>{viewingRequest.student_name}'s</strong> grade in{' '}
+                  <strong>{viewingRequest.subject_name}</strong> ({viewingRequest.term}) from{' '}
+                  <strong>{viewingRequest.original_grade}%</strong> to a corrected value.
+                </div>
+              </div>
+              <div className="modal-footer border-top-0">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowApproveModal(false)}
+                  disabled={processing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-success"
+                  onClick={() => approveRequest(viewingRequest.id)}
+                  disabled={processing}
+                >
+                  {processing ? 'Approving...' : 'Approve Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && viewingRequest && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-bottom-0 pb-0">
+                <h5 className="modal-title fw-bold">Reject Grade Edit Request</h5>
+                <button type="button" className="btn-close" onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectionReason("");
+                }} />
+              </div>
+              <div className="modal-body">
+                <p className="text-danger">
+                  Please provide a reason for rejecting this request:
+                </p>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  placeholder="Enter rejection reason..."
+                  value={rejectionReason}
+                  onChange={e => setRejectionReason(e.target.value)}
+                />
+              </div>
+              <div className="modal-footer border-top-0">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectionReason("");
+                  }}
+                  disabled={processing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-danger"
+                  onClick={() => rejectRequest(viewingRequest.id)}
+                  disabled={processing || !rejectionReason.trim()}
+                >
+                  {processing ? 'Rejecting...' : 'Reject Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
