@@ -574,7 +574,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("overview")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#374151" : "transparent" }}
           >
             <Icon name="activity" size={20} />
             <span>Overview</span>
@@ -582,7 +582,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("documents")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#374151" : "transparent" }}
           >
             <Icon name="file" size={20} />
             <span>Document Payments</span>
@@ -597,7 +597,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-items")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#374151" : "transparent" }}
           >
             <Icon name="settings" size={20} />
             <span>Fee Settings</span>
@@ -605,7 +605,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-management")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#374151" : "transparent" }}
           >
             <Icon name="users" size={20} />
             <span>Fee Management</span>
@@ -635,7 +635,7 @@ export default function AccountingDashboardPage() {
           <button onClick={() => {
             localStorage.clear();
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", fontSize: "1rem" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -646,7 +646,7 @@ export default function AccountingDashboardPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
+          <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
             {/* Decorative circles */}
             <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
             <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
@@ -661,10 +661,10 @@ export default function AccountingDashboardPage() {
               </p>
               <div className="d-flex gap-2 flex-wrap">
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                  ✅ System Online
+                  System Online
                 </span>
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
-                  💰 Payment Management
+                  Payment Management
                 </span>
               </div>
             </div>

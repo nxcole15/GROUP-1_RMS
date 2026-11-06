@@ -359,11 +359,11 @@ export function AdviserAssignmentPanel() {
 
       {/* Academic Period Display */}
       {academicConfig ? (
-        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}>
+        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #9ca3af  0%, #9ca3af  100%)" }}>
           <div className="card-body p-4">
             <div className="row g-3">
               <div className="col-md-6">
-                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                <div className="text-white-10" style={{ fontSize: "0.75rem", fontWeight: 900 }}>
                   SCHOOL YEAR
                 </div>
                 <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
@@ -371,7 +371,7 @@ export function AdviserAssignmentPanel() {
                 </div>
               </div>
               <div className="col-md-6">
-                <div className="text-white-50" style={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                <div className="text-white-10" style={{ fontSize: "0.75rem", fontWeight: 900 }}>
                   CURRENT TERM
                 </div>
                 <div className="text-white fw-bold" style={{ fontSize: "1.25rem" }}>
@@ -380,8 +380,8 @@ export function AdviserAssignmentPanel() {
               </div>
             </div>
             <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,255,255,0.2)" }}>
-              <small className="text-white-50">
-                ℹ️ These values are configured by the Principal Admin and cannot be changed here.
+              <small className="text-white-10">
+                These values are configured by the Principal Admin and cannot be changed here.
               </small>
             </div>
           </div>
@@ -394,7 +394,7 @@ export function AdviserAssignmentPanel() {
 
       {/* Assignment Rules Info */}
       <div className="alert alert-info d-flex align-items-start gap-2 mb-4">
-        <div style={{ fontSize: "1.25rem" }}>📋</div>
+        <div style={{ fontSize: "1.25rem" }}></div>
         <div>
           <div className="fw-bold mb-1">Adviser Assignment Rules</div>
           <div className="small">
@@ -483,7 +483,12 @@ export function AdviserAssignmentPanel() {
             </div>
             <div className="col-md-4 d-flex align-items-end">
               <button
-                className="btn btn-primary w-100"
+                className="btn w-100"
+                style={{
+                  background: "#374151",
+                  color: "#fff",
+                  border: "none"
+                }}
                 onClick={loadStudents}
                 disabled={loading}
               >
@@ -557,7 +562,8 @@ export function AdviserAssignmentPanel() {
               </div>
               <div className="col-md-auto">
                 <button
-                  className="btn btn-primary"
+                  className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }}
                   onClick={handleBulkAssign}
                   disabled={loading || !selectedTeacher}
                 >
@@ -745,7 +751,8 @@ export function AdviserAssignmentPanel() {
                   Cancel
                 </button>
                 <button
-                  className="btn btn-primary"
+                  className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }}
                   onClick={performIndividualAssignment}
                   disabled={!individualTeacher || loading}
                 >
@@ -799,7 +806,8 @@ export function AdviserAssignmentPanel() {
                   Skip Students with Advisers
                 </button>
                 <button
-                  className="btn btn-primary"
+                  className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }}
                   onClick={() => {
                     setShowConfirmModal(false);
                     performBulkAssignment(confirmData.studentIds, confirmData.teacherId, true);

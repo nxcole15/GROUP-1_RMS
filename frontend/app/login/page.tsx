@@ -111,7 +111,7 @@ async function handleSubmit(e: React.FormEvent) {
 
 
       // Redirect based on role returned from backend
-      if (data.role === "super_admin") router.push("/admin/super-admin/create");
+      if (data.role === "super_admin") router.push("/admin/super-admin/dashboard");
       else if (data.role === "principal") router.push("/admin/principal/dashboard");
       else if (data.role === "registrar") router.push("/admin/registrar/dashboard");
       else if (data.role === "accounting") router.push("/accounting/dashboard");
