@@ -27,8 +27,8 @@ async function getDocumentTypes(req, res, next) {
 
 async function submitDocumentRequest(req, res, next) {
   try {
-    const { student_id }                              = req.student;
-    const { document_type, purpose, copies, teacher_id } = req.body;
+    const { student_id }                    = req.student;
+    const { document_type, purpose, copies } = req.body;
 
     const errors = [];
     
@@ -45,11 +45,7 @@ async function submitDocumentRequest(req, res, next) {
     if (isNaN(parsedCopies) || parsedCopies < 1 || parsedCopies > 10) {
       errors.push("copies must be an integer between 1 and 10.");
     }
-    // Parse teacher_id to handle both string and number
-    const parsedTeacherId = parseInt(teacher_id, 10);
-    if (!teacher_id || isNaN(parsedTeacherId) || parsedTeacherId < 1) {
-      errors.push("teacher_id is required - please select your adviser.");
-    }
+    
     if (errors.length > 0) {
       return res.status(400).json({ error: "Validation failed.", details: errors });
     }
@@ -68,7 +64,6 @@ async function submitDocumentRequest(req, res, next) {
       document_type,
       purpose: purpose.trim(),
       copies:  parsedCopies,
-      teacher_id: parsedTeacherId,
       payment_amount,
     });
 
@@ -80,17 +75,18 @@ async function submitDocumentRequest(req, res, next) {
     );
     const studentName = studentRow[0]?.name || student_id;
 
-    // Notify teacher (adviser) of new document request
-    await NotificationService.notifyDocumentRequested({
-      student_id,
-      student_name: studentName,
-      document_type,
-      document_id: doc.id,
-      teacher_id: parsedTeacherId
+    // Notify registrar of new document request
+    await NotificationService.notifyStaff({
+      recipient: 'registrar',
+      role: 'registrar',
+      message: `New Document Request: ${studentName} requested ${document_type}`,
+      type: 'document_request',
+      reference_id: doc.id,
+      reference_type: 'document'
     });
 
     res.status(201).json({
-      message:          "Document request submitted successfully. Your adviser will review it.",
+      message:          "Document request submitted successfully. The Registrar will review it.",
       reference_number: doc.reference_number,
       document:         doc,
     });

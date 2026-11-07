@@ -182,18 +182,6 @@ const TeacherModel = {
     const activeSchoolYearId = configRows[0]?.id;
     const activeTerm = configRows[0]?.current_term || 'Term 1';
 
-    // Get total advisees (students assigned to this teacher as adviser)
-    const [adviseeRows] = await db.query(
-      `SELECT COUNT(DISTINCT saa.student_id) AS total_students
-       FROM student_adviser_assignments saa
-       INNER JOIN students s ON saa.student_id = s.student_id
-       WHERE saa.teacher_id = ? 
-         AND saa.school_year_id = ?
-         AND saa.status = 'active'
-         AND s.account_status = 'active'`,
-      [internalTeacherId, activeSchoolYearId]
-    );
-
     // Get average grade for this teacher's students
     // Check if teacher_schedule_id column exists in grades table
     const [columnCheck] = await db.query(
@@ -272,7 +260,7 @@ const TeacherModel = {
     );
 
     return {
-      total_students: adviseeRows[0]?.total_students || 0,
+      total_students: 0,
       avg_grade: gradeRows[0]?.avg_grade || 0,
       pending_requests: (requestRows[0]?.pending_requests || 0) + (docRequestRows[0]?.pending_docs || 0),
       active_term: activeTerm

@@ -559,16 +559,16 @@ export default function AccountingDashboardPage() {
 
   // Filter document payments
   const filteredDocumentPayments = documentPayments.filter(doc => {
-    if (documentFilter === "needs_verification") return doc.status === "pending_payment";
-    if (documentFilter === "verified") return doc.status === "payment_verified";
+    if (documentFilter === "needs_verification") return doc.status === "pending_payment_verification";
+    if (documentFilter === "verified") return doc.status === "ready_for_release";
     if (documentFilter === "completed") return doc.status === "released";
     return true; // "all"
   });
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, {bg: string; text: string; label: string}> = {
-      pending_payment: { bg: "#fef3c7", text: "#92400e", label: "Needs Verification" },
-      payment_verified: { bg: "#d1fae5", text: "#065f46", label: "Payment Verified" },
+      pending_payment_verification: { bg: "#fef3c7", text: "#92400e", label: "Needs Verification" },
+      ready_for_release: { bg: "#d1fae5", text: "#065f46", label: "Payment Verified" },
       released: { bg: "#f1f5f9", text: "#475569", label: "Picked Up" },
     };
     const info = statusMap[status] || { bg: "#f3f4f6", text: "#374151", label: status };
@@ -943,7 +943,7 @@ export default function AccountingDashboardPage() {
                             )}
 
                             {/* Verified Info */}
-                            {doc.status === "payment_verified" || doc.status === "released" ? (
+                            {doc.status === "ready_for_release" || doc.status === "released" ? (
                               <div className="alert alert-success mb-3 py-2 px-3">
                                 <div className="small">
                                   <div className="fw-semibold">✓ Payment Verified</div>
@@ -963,7 +963,7 @@ export default function AccountingDashboardPage() {
                             ) : null}
 
                             {/* Action Button */}
-                            {doc.status === "pending_payment" && (
+                            {doc.status === "pending_payment_verification" && (
                               <button
                                 onClick={() => {
                                   setSelectedDoc(doc);
