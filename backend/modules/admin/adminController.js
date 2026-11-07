@@ -202,7 +202,7 @@ async function getDashboard(req, res, next) {
     // Pending counts
     const pending = {
       enrollments: 0,
-      payments:    (await PaymentModel.findAllPending()).length,
+      // payments removed - now handled by accounting module (all verified immediately)
       documents:   (await DocumentModel.findAllPending()).length,
     };
     
@@ -213,7 +213,7 @@ async function getDashboard(req, res, next) {
        WHERE status IN ('submitted', 'registrar_review', 'principal_review')`
     );
     pending.enrollments = pendingAppsResult[0]?.count || 0;
-    pending.total = pending.enrollments + pending.payments + pending.documents;
+    pending.total = pending.enrollments + pending.documents;
 
     // Active students count
     const [activeStudentsResult] = await db.query(
@@ -250,7 +250,7 @@ async function getDashboard(req, res, next) {
        ORDER BY track, grade_level, gender`
     );
 
-    // Recent activity - enrollments and payments
+    // Recent activity - enrollments only (payments removed - accounting only)
     const [recentEnrollments] = await db.query(
       `SELECT 
         ea.id,
@@ -261,44 +261,16 @@ async function getDashboard(req, res, next) {
        FROM enrollment_applications ea
        WHERE ea.status IN ('pending', 'approved', 'rejected')
        ORDER BY ea.created_at DESC
-       LIMIT 5`
+       LIMIT 10`
     );
 
-    const [recentPayments] = await db.query(
-      `SELECT 
-        p.id,
-        p.student_id,
-        s.full_name,
-        p.amount,
-        p.fee_item,
-        p.status,
-        p.paid_at as created_at
-       FROM payments p
-       JOIN students s ON p.student_id = s.student_id
-       ORDER BY p.paid_at DESC
-       LIMIT 5`
-    );
-
-    // Combine and format recent activity
-    const recentActivity = [
-      ...recentEnrollments.map(e => ({
-        type: 'enrollment',
-        action: `Enrollment ${e.status}`,
-        name: e.full_name,
-        time: new Date(e.created_at).toLocaleDateString('en-PH'),
-        created_at: e.created_at
-      })),
-      ...recentPayments.map(p => ({
-        type: 'payment',
-        action: `Payment ${p.status} - ₱${Number(p.amount).toLocaleString()}`,
-        name: p.full_name,
-        time: new Date(p.created_at).toLocaleDateString('en-PH'),
-        created_at: p.created_at
-      }))
-    ]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10)
-    .map(({ created_at, ...rest }) => rest); // Remove created_at from response
+    // Format recent activity (enrollments only)
+    const recentActivity = recentEnrollments.map(e => ({
+      type: 'enrollment',
+      action: `Enrollment ${e.status}`,
+      name: e.full_name,
+      time: new Date(e.created_at).toLocaleDateString('en-PH')
+    }));
 
     res.json({ 
       pending,
@@ -450,32 +422,9 @@ async function rejectEnrollment(req, res, next) {
 }
 
 /* ── Payments ──────────────────────────────────────────────── */
-async function getPendingPayments(req, res, next) {
-  try {
-    const pending = await PaymentModel.findAllPending();
-    const result  = await Promise.all(
-      pending.map(async (p) => {
-        const [rows] = await db.query("SELECT full_name FROM students WHERE student_id = ? LIMIT 1", [p.student_id]);
-        return { ...p, student_name: rows[0]?.full_name || "Unknown" };
-      })
-    );
-    res.json({ payments: result });
-  } catch (err) { next(err); }
-}
-
-async function verifyPayment(req, res, next) {
-  try {
-    const id      = parseInt(req.params.id, 10);
-    const payment = await PaymentModel.findById(id);
-    if (!payment)                     return res.status(404).json({ error: "Payment not found." });
-    if (payment.status !== "pending") return res.status(409).json({ error: "This request has already been processed." });
-
-    const updated = await PaymentModel.verify(id, req.admin.admin_id);
-    sendNotification({ student_id: updated.student_id, message: `Your payment of ₱${Number(updated.amount).toLocaleString()} (${updated.fee_item}) has been verified.`, type: "payment" });
-    await AuditModel.log({ admin_id: req.admin.admin_id, action: "VERIFY_PAYMENT", target_request_id: id });
-    res.json({ message: "Payment verified.", payment: updated });
-  } catch (err) { next(err); }
-}
+// Old pending payment verification removed
+// Payments are now handled by /api/accounting/payments (accountingPaymentController)
+// All payments are verified immediately upon recording by accounting staff
 
 /* ── Documents ─────────────────────────────────────────────── */
 async function getPendingDocuments(req, res, next) {
@@ -1057,7 +1006,6 @@ module.exports = {
   reactivateStudent,
   deactivateStudent,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
-  getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
   getTeachers, createTeacherAccount, updateTeacher, deactivateTeacher, reactivateTeacher,
   getGradeSubmissionConfig,

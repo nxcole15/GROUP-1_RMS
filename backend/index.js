@@ -13,6 +13,7 @@ const enrollmentRoutes    = require("./modules/student/enrollmentRoutes");
 const studentDashboardRoutes = require("./modules/student/studentDashboardRoutes");
 const gradesRoutes        = require("./modules/grades/gradesRoutes");
 const paymentsRoutes      = require("./modules/payments/paymentsRoutes");
+const accountingPaymentRoutes = require("./modules/payments/accountingPaymentRoutes");
 const documentsRoutes     = require("./modules/documents/documentsRoutes");
 const notificationsRoutes = require("./modules/notifications/notificationsRoutes");
 const staffNotificationRoutes = require("./modules/notifications/staffNotificationRoutes");
@@ -95,6 +96,9 @@ app.use("/api/grade-edit-requests", gradeEditRequestRoutes);
 app.use("/api/applications",  applicationRoutes);
 app.use("/api/fees",           feeRoutes);
 app.use("/api/student/fees",   studentFeeRoutes); // Student-facing fee routes
+
+/* ── Accounting routes ── */
+app.use("/api/accounting", accountingPaymentRoutes); // Accounting payment management
 
 /* ── Public routes (no auth) ── */
 app.use("/api/public", publicRoutes);

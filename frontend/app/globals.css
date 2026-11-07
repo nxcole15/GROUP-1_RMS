@@ -34,8 +34,8 @@
   --dark-text-muted: #cbd5e1;
   
   /* Bootstrap Primary Override */
-  --bs-primary: #dc2626;
-  --bs-primary-rgb: 220, 38, 38;
+  --bs-primary: #374151;
+  --bs-primary-rgb: 55, 65, 81;
 }
 
 /* Dark Mode — landing page scoped to data-landing="dark" */
@@ -1503,51 +1503,69 @@ html:not([data-theme="dark"]) .kiosk-bg .display-4 span {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  padding: 1rem 1rem;
-  min-height: 80px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 1.5rem 1rem;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
 }
 
 .sidebar-brand:hover {
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 
 .sidebar-brand-group {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .sidebar-brand-logo {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 80px;
+  max-height: 80px;
   object-fit: cover;
   border-radius: 9999px;
   border: 1px solid rgba(255,255,255,0.2);
   transition: transform 0.25s ease;
+  flex-shrink: 0;
 }
 
 .sidebar-brand:hover .sidebar-brand-logo {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .sidebar-brand-info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .sidebar-brand-title {
   color: white;
   font-size: 0.9rem;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .sidebar-brand-subtitle {
   color: rgba(209,213,219,0.8);
   font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 .sidebar-brand-close {
@@ -1555,6 +1573,7 @@ html:not([data-theme="dark"]) .kiosk-bg .display-4 span {
   right: 1rem;
   top: 50%;
   transform: translateY(-50%);
+  flex-shrink: 0;
 }
 
 /* ── Chat panel ── */
@@ -4199,6 +4218,18 @@ html:not([data-theme="dark"]) .landing-premium .landing-headline-accent {
 
 .dashboard-sidebar {
   width: 256px !important;
+  max-width: 256px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure sidebar content doesn't overflow on zoom */
+.dashboard-sidebar > * {
+  max-width: 100%;
+  overflow: hidden;
 }
 
 @media (max-width: 991.98px) {

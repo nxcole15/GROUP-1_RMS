@@ -84,13 +84,13 @@ export default function TeacherProfilePage() {
           <div
             className="d-flex align-items-center gap-3 px-4 py-3 rounded-4 shadow-lg"
             style={{
-              background: toast === "warning" ? "#fef2f2" : "#f0fdf4",
-              border: toast === "warning" ? "1px solid #fecaca" : "1px solid #bbf7d0",
+              background: toast === "warning" ? "#f3f4f6" : "#f0fdf4",
+              border: toast === "warning" ? "1px solid #d1d5db" : "1px solid #bbf7d0",
               minWidth: "320px",
             }}
           >
             <span style={{ fontSize: 22 }}>{toast === "warning" ? "⚠️" : "✅"}</span>
-            <span className="fw-semibold" style={{ color: toast === "warning" ? "#dc2626" : "#16a34a" }}>
+            <span className="fw-semibold" style={{ color: toast === "warning" ? "#374151" : "#16a34a" }}>
               {toast === "warning" ? "File size must be less than 5MB" : "Profile updated successfully!"}
             </span>
           </div>
@@ -445,7 +445,7 @@ export default function TeacherProfilePage() {
                       className="d-flex align-items-center gap-2 mb-3 pb-2"
                       style={{ borderBottom: "2px solid #f1f5f9" }}
                     >
-                      <div style={{ width: 4, height: 18, background: "linear-gradient(135deg, #dc2626, #ef4444)", borderRadius: 4 }} />
+                      <div style={{ width: 4, height: 18, background: "linear-gradient(135deg, #6b7280, #9ca3af)", borderRadius: 4 }} />
                       <span className="fw-semibold text-uppercase" style={{ fontSize: "0.75rem", letterSpacing: "0.08em", color: "#64748b" }}>
                         Contact Information
                       </span>

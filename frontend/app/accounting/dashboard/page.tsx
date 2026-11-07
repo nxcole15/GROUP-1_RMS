@@ -17,7 +17,7 @@ type PaymentRecord = {
   admin_timestamp?: string;
 };
 
-type DocumentPaymentRecord = {
+type DocumentPaymentRecord = { 
   id: number;
   student_name: string;
   student_email: string;
@@ -157,14 +157,16 @@ export default function AccountingDashboardPage() {
     try {
       const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
       
-      // Load tuition payments
-      const res = await fetch(`${API_BASE}/api/payments`, {
+      // Load tuition payments with statistics from the new accounting endpoint
+      const res = await fetch(`${API_BASE}/api/accounting/payments`, {
         credentials: "include",
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (res.ok) {
         setPayments(data.payments || []);
+        // Update payment statistics for the overview cards
+        updatePaymentStats(data.stats || {});
       }
       
       // Load all document payments with stats
@@ -182,6 +184,21 @@ export default function AccountingDashboardPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // State for payment statistics
+  const [paymentStats, setPaymentStats] = useState({
+    verified_count: 0,
+    total_verified_amount: 0,
+    students_with_balance: 0  // Students who have unpaid or partial balances
+  });
+
+  function updatePaymentStats(stats: any) {
+    setPaymentStats({
+      verified_count: stats.verified_count || 0,
+      total_verified_amount: stats.total_verified_amount || 0,
+      students_with_balance: stats.students_with_balance || 0
+    });
   }
 
   async function loadFeeItems() {
@@ -574,7 +591,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("overview")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#374151" : "transparent" }}
           >
             <Icon name="activity" size={20} />
             <span>Overview</span>
@@ -582,7 +599,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("documents")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#374151" : "transparent" }}
           >
             <Icon name="file" size={20} />
             <span>Document Payments</span>
@@ -597,7 +614,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-items")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#374151" : "transparent" }}
           >
             <Icon name="settings" size={20} />
             <span>Fee Settings</span>
@@ -605,7 +622,7 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-management")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#dc2626" : "transparent" }}
+            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#374151" : "transparent" }}
           >
             <Icon name="users" size={20} />
             <span>Fee Management</span>
@@ -635,7 +652,7 @@ export default function AccountingDashboardPage() {
           <button onClick={() => {
             localStorage.clear();
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", fontSize: "1rem" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -646,7 +663,7 @@ export default function AccountingDashboardPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
+          <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
             {/* Decorative circles */}
             <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
             <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
@@ -661,10 +678,10 @@ export default function AccountingDashboardPage() {
               </p>
               <div className="d-flex gap-2 flex-wrap">
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                  ✅ System Online
+                  System Online
                 </span>
                 <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
-                  💰 Payment Management
+                  Payment Management
                 </span>
               </div>
             </div>
@@ -677,9 +694,9 @@ export default function AccountingDashboardPage() {
               <div className="col-md-4">
                 <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-4">
-                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Pending Payments</p>
-                    <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#f59e0b", lineHeight: 1 }}>{pendingCount}</h2>
-                    <p className="text-muted mb-0" style={{ fontSize: 14 }}>Awaiting verification</p>
+                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Unpaid Balances</p>
+                    <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#f59e0b", lineHeight: 1 }}>{paymentStats.students_with_balance}</h2>
+                    <p className="text-muted mb-0" style={{ fontSize: 14 }}>Students with balance</p>
                   </div>
                   <div style={{ height:3, background:"linear-gradient(135deg,#f59e0b,#fbbf24)" }} />
                 </div>
@@ -688,9 +705,9 @@ export default function AccountingDashboardPage() {
               <div className="col-md-4">
                 <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-4">
-                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Verified Payments</p>
-                    <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#10b981", lineHeight: 1 }}>{verifiedCount}</h2>
-                    <p className="text-muted mb-0" style={{ fontSize: 14 }}>Successfully processed</p>
+                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Payments</p>
+                    <h2 className="mb-3 fw-bold" style={{ fontSize: 42, color: "#10b981", lineHeight: 1 }}>{paymentStats.verified_count}</h2>
+                    <p className="text-muted mb-0" style={{ fontSize: 14 }}>Recorded transactions</p>
                   </div>
                   <div style={{ height:3, background:"linear-gradient(135deg,#10b981,#34d399)" }} />
                 </div>
@@ -699,8 +716,8 @@ export default function AccountingDashboardPage() {
               <div className="col-md-4">
                 <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-4">
-                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Verified</p>
-                    <h2 className="mb-3 fw-bold" style={{ fontSize: 36, color: "#3b82f6", lineHeight: 1 }}>₱{totalAmount.toLocaleString()}</h2>
+                    <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Amount</p>
+                    <h2 className="mb-3 fw-bold" style={{ fontSize: 36, color: "#3b82f6", lineHeight: 1 }}>₱{Number(paymentStats.total_verified_amount).toLocaleString()}</h2>
                     <p className="text-muted mb-0" style={{ fontSize: 14 }}>Cumulative revenue</p>
                   </div>
                   <div style={{ height:3, background:"linear-gradient(135deg,#3b82f6,#60a5fa)" }} />
@@ -718,7 +735,7 @@ export default function AccountingDashboardPage() {
                           <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path>
                         </svg>
                       </div>
-                      <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Payment Status Distribution</h3>
+                      <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Payment Status Overview</h3>
                     </div>
 
                     <div className="d-flex align-items-center justify-content-center py-4" style={{ minHeight: 250 }}>
@@ -732,7 +749,7 @@ export default function AccountingDashboardPage() {
                             fill="none" 
                             stroke="#10b981" 
                             strokeWidth="20"
-                            strokeDasharray={`${(verifiedCount / (verifiedCount + pendingCount)) * 251.2} 251.2`}
+                            strokeDasharray={`${(paymentStats.verified_count / (paymentStats.verified_count + paymentStats.students_with_balance || 1)) * 251.2} 251.2`}
                             strokeLinecap="round"
                             transform="rotate(-90 50 50)"
                           />
@@ -743,14 +760,14 @@ export default function AccountingDashboardPage() {
                             fill="none" 
                             stroke="#f59e0b" 
                             strokeWidth="20"
-                            strokeDasharray={`${(pendingCount / (verifiedCount + pendingCount)) * 251.2} 251.2`}
-                            strokeDashoffset={`-${(verifiedCount / (verifiedCount + pendingCount)) * 251.2}`}
+                            strokeDasharray={`${(paymentStats.students_with_balance / (paymentStats.verified_count + paymentStats.students_with_balance || 1)) * 251.2} 251.2`}
+                            strokeDashoffset={`-${(paymentStats.verified_count / (paymentStats.verified_count + paymentStats.students_with_balance || 1)) * 251.2}`}
                             strokeLinecap="round"
                             transform="rotate(-90 50 50)"
                           />
                         </svg>
                         <div className="position-absolute top-50 start-50 translate-middle text-center">
-                          <div className="fw-bold" style={{ fontSize: "1.5rem", color: "#1e293b" }}>{payments.length}</div>
+                          <div className="fw-bold" style={{ fontSize: "1.5rem", color: "#1e293b" }}>{paymentStats.verified_count + paymentStats.students_with_balance}</div>
                           <div className="text-muted small">Total</div>
                         </div>
                       </div>
@@ -760,19 +777,19 @@ export default function AccountingDashboardPage() {
                       <div className="d-flex align-items-center justify-content-between p-2 rounded" style={{ background: "#f0fdf4" }}>
                         <div className="d-flex align-items-center gap-2">
                           <div className="rounded" style={{ width: 12, height: 12, background: "#10b981" }} />
-                          <span className="small fw-semibold">Verified Payments</span>
+                          <span className="small fw-semibold">Payments Recorded</span>
                         </div>
                         <span className="badge px-2 py-1" style={{ background: "#10b981", color: "white", fontSize: "0.75rem" }}>
-                          {verifiedCount} ({payments.length > 0 ? Math.round((verifiedCount / payments.length) * 100) : 0}%)
+                          {paymentStats.verified_count} ({(paymentStats.verified_count + paymentStats.students_with_balance) > 0 ? Math.round((paymentStats.verified_count / (paymentStats.verified_count + paymentStats.students_with_balance)) * 100) : 0}%)
                         </span>
                       </div>
                       <div className="d-flex align-items-center justify-content-between p-2 rounded" style={{ background: "#fffbeb" }}>
                         <div className="d-flex align-items-center gap-2">
                           <div className="rounded" style={{ width: 12, height: 12, background: "#f59e0b" }} />
-                          <span className="small fw-semibold">Pending Payments</span>
+                          <span className="small fw-semibold">Students with Balance</span>
                         </div>
                         <span className="badge px-2 py-1" style={{ background: "#f59e0b", color: "white", fontSize: "0.75rem" }}>
-                          {pendingCount} ({payments.length > 0 ? Math.round((pendingCount / payments.length) * 100) : 0}%)
+                          {paymentStats.students_with_balance} ({(paymentStats.verified_count + paymentStats.students_with_balance) > 0 ? Math.round((paymentStats.students_with_balance / (paymentStats.verified_count + paymentStats.students_with_balance)) * 100) : 0}%)
                         </span>
                       </div>
                     </div>

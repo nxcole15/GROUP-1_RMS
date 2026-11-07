@@ -14,8 +14,6 @@ const {
   getPendingEnrollments,
   approveEnrollment,
   rejectEnrollment,
-  getPendingPayments,
-  verifyPayment,
   getPendingDocuments,
   approveDocument,
   rejectDocument,
@@ -132,9 +130,8 @@ router.get("/enrollments",               getPendingEnrollments);
 router.patch("/enrollments/:id/approve", approveEnrollment);
 router.patch("/enrollments/:id/reject",  rejectEnrollment);
 
-// Payments
-router.get("/payments",              getPendingPayments);
-router.patch("/payments/:id/verify", verifyPayment);
+// Payments - now handled by /api/accounting routes
+// Old pending payment verification removed
 
 // Documents
 router.get("/documents",               getPendingDocuments);

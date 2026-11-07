@@ -197,7 +197,7 @@ export function DocumentWorkflowPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #6b7280  0%, #6b7280  100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -271,7 +271,12 @@ export function DocumentWorkflowPanel() {
             <div className="d-flex gap-2 flex-wrap">
               <button
                 onClick={() => setActiveFilter("all")}
-                className={`btn ${activeFilter === "all" ? "btn-primary" : "btn-outline-primary"} d-flex align-items-center gap-2`}
+                className="btn d-flex align-items-center gap-2"
+                style={{
+                  background: activeFilter === "all" ? "#374151" : "transparent",
+                  color: activeFilter === "all" ? "#fff" : "#374151",
+                  border: `1px solid ${activeFilter === "all" ? "#374151" : "#d1d5db"}`
+                }}
               >
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4z"/>
@@ -381,7 +386,8 @@ export function DocumentWorkflowPanel() {
                     {isRegistrar && doc.status === "teacher_approved" && (
                       <button 
                         onClick={() => handleRegistrarForward(doc.id)}
-                        className="btn btn-primary w-100"
+                        className="btn w-100"
+                        style={{ background: "#374151", color: "#fff", border: "none" }}
                       >
                         Forward to Principal →
                       </button>

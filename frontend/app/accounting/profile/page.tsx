@@ -42,7 +42,7 @@ export default function AccountingProfilePage() {
     {
       label: "Email",
       value: email,
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
         <polyline points="22,6 12,13 2,6"/>
       </svg>,
@@ -113,7 +113,7 @@ export default function AccountingProfilePage() {
             </svg>
             <span>Tuition Payments</span>
           </button>
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#dc2626" }}>
+          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#374151" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
@@ -125,7 +125,7 @@ export default function AccountingProfilePage() {
           <button onClick={() => {
             localStorage.clear();
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", fontSize: "1rem" }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -136,7 +136,7 @@ export default function AccountingProfilePage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "32px 0", position: "relative", overflow: "hidden" }}>
+          <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "32px 0", position: "relative", overflow: "hidden" }}>
             <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
             <div style={{ position:"absolute", bottom:-60, right:160, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
             
@@ -154,7 +154,7 @@ export default function AccountingProfilePage() {
                 <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-0">
                     {/* gradient header */}
-                    <div className="p-4 text-center" style={{ background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                    <div className="p-4 text-center" style={{ background:"linear-gradient(135deg,#374151,#4b5563)" }}>
                       <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
                         style={{ width:100, height:100, background:"rgba(255,255,255,0.25)", border:"3px solid rgba(255,255,255,0.4)", fontSize:"2.2rem", fontWeight:"bold", color:"white" }}>
                         {initials}
@@ -176,7 +176,7 @@ export default function AccountingProfilePage() {
                       <div className="row g-2 mb-3">
                         <div className="col-6">
                           <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
-                            <div className="fw-bold" style={{ fontSize:"1.15rem", color:"#dc2626" }}>Full Access</div>
+                            <div className="fw-bold" style={{ fontSize:"1.15rem", color:"#374151" }}>Full Access</div>
                             <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access Level</div>
                           </div>
                         </div>
@@ -218,7 +218,7 @@ export default function AccountingProfilePage() {
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div className="d-flex align-items-center gap-3">
                         <div className="d-flex align-items-center justify-content-center rounded-3"
-                          style={{ width:44, height:44, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                          style={{ width:44, height:44, background:"linear-gradient(135deg,#374151,#4b5563)" }}>
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
                           </svg>
@@ -228,7 +228,7 @@ export default function AccountingProfilePage() {
                           <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
                         </div>
                       </div>
-                      <span className="badge px-3 py-2 rounded-pill" style={{ background:"#fee2e2", color:"#dc2626", border:"1px solid #fecaca", fontSize:"0.75rem" }}>
+                      <span className="badge px-3 py-2 rounded-pill" style={{ background:"#e5e7eb", color:"#374151", border:"1px solid #d1d5db", fontSize:"0.75rem" }}>
                         Read-Only
                       </span>
                     </div>
@@ -236,7 +236,7 @@ export default function AccountingProfilePage() {
                     {/* Personal section */}
                     <div className="mb-4">
                       <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
+                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                         <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
                       </div>
                       <div className="row g-3">
@@ -254,7 +254,7 @@ export default function AccountingProfilePage() {
                     {/* Contact section */}
                     <div className="mb-4">
                       <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
+                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                         <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                       </div>
                       <div className="row g-3">
@@ -268,7 +268,7 @@ export default function AccountingProfilePage() {
                     {/* Access section */}
                     <div className="mb-4">
                       <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
+                        <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                         <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Access Details</span>
                       </div>
                       <div className="row g-3">
@@ -286,16 +286,16 @@ export default function AccountingProfilePage() {
                     {/* Info alert */}
                     <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#fee2e2", border:"1px solid #fecaca" }}>
                       <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
-                        style={{ width:32, height:32, background:"#fecaca" }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        style={{ width:32, height:32, background:"#d1d5db" }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                         </svg>
                       </div>
                       <div>
-                        <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#991b1b" }}>Need to update your information?</div>
-                        <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
+                        <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#374151" }}>Need to update your information?</div>
+                        <div style={{ fontSize:"0.82rem", color:"#4b5563" }}>
                           Please contact the system administrator or email{" "}
-                          <a href="mailto:admin@cfei.edu.ph" style={{ color:"#991b1b", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
+                          <a href="mailto:admin@cfei.edu.ph" style={{ color:"#374151", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
                           with your updated details.
                         </div>
                       </div>
@@ -312,7 +312,7 @@ export default function AccountingProfilePage() {
 
       <div className="d-lg-none">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", padding: "24px 0", position: "relative" }}>
+          <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "24px 0", position: "relative" }}>
             <button className="btn position-absolute top-0 start-0 m-3" onClick={() => setShowSidebar(true)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "white" }}>
               <Icon name="menu" size={20} />
             </button>
@@ -326,7 +326,7 @@ export default function AccountingProfilePage() {
             {/* Profile Card */}
             <div className="card border-0 shadow-sm rounded-4 mb-3">
               <div className="card-body p-0">
-                <div className="p-3 text-center" style={{ background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                <div className="p-3 text-center" style={{ background:"linear-gradient(135deg,#374151,#4b5563)" }}>
                   <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-2"
                     style={{ width:70, height:70, background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.4)", fontSize:"1.5rem", fontWeight:"bold", color:"white" }}>
                     {initials}
@@ -366,14 +366,14 @@ export default function AccountingProfilePage() {
             <div className="card border-0 shadow-sm rounded-4">
               <div className="card-body p-3">
                 <div className="d-flex align-items-start gap-2 rounded-3 p-2" style={{ background:"#fee2e2" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" className="flex-shrink-0 mt-1">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" className="flex-shrink-0 mt-1">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.8rem", color:"#991b1b" }}>Need to update?</div>
-                    <div style={{ fontSize:"0.75rem", color:"#dc2626" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.8rem", color:"#374151" }}>Need to update?</div>
+                    <div style={{ fontSize:"0.75rem", color:"#4b5563" }}>
                       Contact{" "}
-                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#991b1b", fontWeight:600 }}>admin@cfei.edu.ph</a>
+                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#374151", fontWeight:600 }}>admin@cfei.edu.ph</a>
                     </div>
                   </div>
                 </div>

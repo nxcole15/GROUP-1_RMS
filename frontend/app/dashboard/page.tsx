@@ -1394,6 +1394,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 /* -- Tuition View -- */
 function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const [assessment, setAssessment] = useState<any>(null);
+  const [paymentSummary, setPaymentSummary] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
@@ -1424,6 +1425,7 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       .then(data => {
         if (data?.assessment) {
           setAssessment(data.assessment);
+          setPaymentSummary(data.payment_summary);
         }
       })
       .catch(() => setError(true))
@@ -1434,7 +1436,7 @@ function TuitionView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
   const total = assessment?.total_assessment || 0;
   const discount = assessment?.discount_amount || 0;
   const netTotal = assessment?.net_assessment || 0;
-  const paid = assessment ? (assessment.payment_summary?.total_paid || 0) : 0;
+  const paid = paymentSummary?.total_paid || 0;
   const balance = netTotal - paid;
   const lineItems = assessment?.line_items || [];
   
