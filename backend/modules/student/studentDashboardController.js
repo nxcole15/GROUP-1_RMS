@@ -197,8 +197,7 @@ async function getDashboardData(req, res, next) {
         balance_due: totalTuition - totalPaid,
         pending_docs: pendingDocs
       },
-      recent_grades: recentGradesRows,
-      adviser: adviser
+      recent_grades: recentGradesRows
     });
 
   } catch (err) {
@@ -237,11 +236,10 @@ async function getProfileData(req, res, next) {
       LIMIT 1
     `, [studentId]);
 
-    // Get current academic period and adviser
+    // Get current academic period
     let academicInfo = {
       school_year: null,
       current_term: null,
-      adviser_name: null,
       track: null,
       strand: null,
       grade_level: null
@@ -252,17 +250,11 @@ async function getProfileData(req, res, next) {
         SELECT 
           ec.school_year,
           ec.current_term,
-          t.full_name as adviser_name,
           s.track,
           s.strand,
           s.grade_level
         FROM enrollment_config ec
         CROSS JOIN students s
-        LEFT JOIN student_adviser_assignments saa 
-          ON saa.student_id = s.student_id 
-          AND saa.school_year_id = ec.id 
-          AND saa.status = 'active'
-        LEFT JOIN teachers t ON saa.teacher_id = t.id
         WHERE ec.status = 'active'
           AND s.student_id = ?
         LIMIT 1
@@ -272,7 +264,6 @@ async function getProfileData(req, res, next) {
         academicInfo = {
           school_year: academicRows[0].school_year,
           current_term: academicRows[0].current_term,
-          adviser_name: academicRows[0].adviser_name,
           track: academicRows[0].track,
           strand: academicRows[0].strand,
           grade_level: academicRows[0].grade_level

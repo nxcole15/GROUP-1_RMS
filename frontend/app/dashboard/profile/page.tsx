@@ -414,10 +414,6 @@ export default function ProfilePage() {
                       <input type="text" className="form-control" value={profile.school_year || academicConfig?.school_year || "—"} disabled style={{ background: "#f1f5f9" }} />
                     </div>
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold small text-uppercase text-muted">Adviser</label>
-                      <input type="text" className="form-control" value={profile.adviser_name || "Not yet assigned"} disabled style={{ background: "#f1f5f9" }} />
-                    </div>
-                    <div className="col-12 col-md-6">
                       <label className="form-label fw-semibold small text-uppercase text-muted">Current Term</label>
                       <input type="text" className="form-control" value={profile.current_term || academicConfig?.current_term || "—"} disabled style={{ background: "#f1f5f9" }} />
                     </div>

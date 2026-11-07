@@ -366,63 +366,8 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData, academicConf
           ))}
         </div>
 
-        {/* Recent Grades + My Adviser + Ask JOBERT */}
+        {/* Recent Grades */}
         <div className="row g-4">
-          {/* My Adviser Card */}
-          <div className="col-12 col-lg-6">
-            <div className="card border-0 shadow-sm rounded-4 h-100">
-              <div className="card-body p-4">
-                <div className="d-flex align-items-center gap-2 mb-4">
-                  <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#059669,#10b981)" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
-                  </div>
-                  <div className="flex-grow-1">
-                    <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>My Adviser</h3>
-                  </div>
-                </div>
-                {dashboardData?.adviser ? (
-                  <div className="d-flex flex-column gap-2">
-                    <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#f0fdf4", border:"1px solid #bbf7d0" }}>
-                      <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white fw-bold"
-                        style={{ width:48, height:48, background:"linear-gradient(135deg,#059669,#10b981)" }}>
-                        {dashboardData.adviser.name.split(" ").map((n: string) => n[0]).join("").slice(0,2).toUpperCase()}
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="fw-bold text-dark" style={{ fontSize:"0.95rem" }}>{dashboardData.adviser.name}</div>
-                        <div className="text-muted" style={{ fontSize:"0.85rem" }}>
-                          Grade {student?.grade_level ?? "11"} • {student?.pathway ?? "STEM"}
-                        </div>
-                        {dashboardData.adviser.email && (
-                          <div className="text-muted" style={{ fontSize:"0.78rem" }}>
-                            <Icon name="message" size={12} className="me-1" />
-                            {dashboardData.adviser.email}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="d-flex justify-content-between align-items-center px-2 pt-2" style={{ fontSize:"0.75rem", color:"#64748b" }}>
-                      <span>School Year: {dashboardData.adviser.school_year || academicConfig?.school_year}</span>
-                      <span>Term: {dashboardData.adviser.current_term || academicConfig?.current_term}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="d-flex flex-column align-items-center justify-content-center py-4 text-center">
-                    <div className="rounded-circle d-flex align-items-center justify-content-center mb-3"
-                      style={{ width:52, height:52, background:"#f1f5f9" }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                      </svg>
-                    </div>
-                    <p className="text-muted small mb-0">No adviser assigned yet</p>
-                    <p className="text-muted" style={{ fontSize:"0.70rem" }}>Please contact the Registrar&apos;s Office</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
           
           {/* Recent Grades */}
           <div className="col-12 col-lg-6">
@@ -1695,7 +1640,6 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
   async function submitRequest() {
     if (!selectedType) { setToast("⚠️ Please select a document type."); setTimeout(()=>setToast(null),3000); return; }
-    if (!selectedTeacher) { setToast("⚠️ Please select your adviser/teacher."); setTimeout(()=>setToast(null),3000); return; }
     if (!purpose || purpose.length < 10) { setToast("⚠️ Purpose must be at least 10 characters."); setTimeout(()=>setToast(null),3000); return; }
     
     setSubmitting(true);
@@ -1711,14 +1655,13 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
           body: JSON.stringify({ 
             document_type: selectedType, 
             purpose: purpose.trim(), 
-            copies,
-            teacher_id: selectedTeacher
+            copies
           }),
         });
         
         if (res.ok) {
           const data = await res.json();
-          setToast("✅ Document request submitted to your teacher!");
+          setToast("✅ Document request submitted to Registrar!");
           // Refresh the list
           setTimeout(() => window.location.reload(), 2000);
         } else {
@@ -1738,21 +1681,22 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
 
   function getStatusInfo(status: string) {
     const map: Record<string, {label: string; color: string; bg: string}> = {
-      student_requested: { label: "Pending Teacher Review", color: "#f59e0b", bg: "#fffbeb" },
-      teacher_approved: { label: "Teacher Approved", color: "#10b981", bg: "#f0fdf4" },
-      registrar_forwarded: { label: "Pending Principal Review", color: "#3b82f6", bg: "#eff6ff" },
-      principal_approved: { label: "Principal Approved", color: "#059669", bg: "#f0fdf4" },
-      principal_rejected: { label: "Rejected", color: "#dc2626", bg: "#fef2f2" },
-      pending_payment: { label: "Pending Payment", color: "#f59e0b", bg: "#fffbeb" },
-      payment_verified: { label: "Ready for Pickup", color: "#10b981", bg: "#f0fdf4" },
+      pending_registrar_review: { label: "Pending Registrar Review", color: "#f59e0b", bg: "#fffbeb" },
+      pending_principal_approval: { label: "Pending Principal Review", color: "#3b82f6", bg: "#eff6ff" },
+      approved: { label: "Approved", color: "#059669", bg: "#f0fdf4" },
+      rejected: { label: "Rejected", color: "#dc2626", bg: "#fef2f2" },
+      pickup_scheduled: { label: "Pickup Scheduled", color: "#f59e0b", bg: "#fffbeb" },
+      pending_payment_verification: { label: "Pending Payment", color: "#f59e0b", bg: "#fffbeb" },
+      ready_for_release: { label: "Ready for Pickup", color: "#10b981", bg: "#f0fdf4" },
       released: { label: "Picked Up", color: "#64748b", bg: "#f8fafc" },
     };
     return map[status] || { label: status, color: "#64748b", bg: "#f8fafc" };
   }
 
-  const pending  = requests.filter(r => ['student_requested', 'teacher_approved', 'registrar_forwarded', 'principal_approved'].includes(r.status));
-  const pendingPayment = requests.filter(r => r.status === 'pending_payment');
-  const paymentVerified = requests.filter(r => r.status === 'payment_verified');
+  const pending  = requests.filter(r => ['pending_registrar_review', 'pending_principal_approval', 'approved'].includes(r.status));
+  const pickupScheduled = requests.filter(r => r.status === 'pickup_scheduled');
+  const pendingPayment = requests.filter(r => r.status === 'pending_payment_verification');
+  const paymentVerified = requests.filter(r => r.status === 'ready_for_release');
   const completed = requests.filter(r => r.status === 'released');
   const rejected = requests.filter(r => r.status === 'principal_rejected');
 
@@ -1807,7 +1751,7 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
         {docsError && <div className="rounded-3 p-3 small" style={{ background:"#fffbeb", border:"1px solid #fef08a", color:"#92400e" }}>Could not load latest data. Showing cached results.</div>}
 
         {/* My Requests */}
-        {(pending.length > 0 || pendingPayment.length > 0 || paymentVerified.length > 0 || completed.length > 0 || rejected.length > 0) && (
+        {(pending.length > 0 || pickupScheduled.length > 0 || pendingPayment.length > 0 || paymentVerified.length > 0 || completed.length > 0 || rejected.length > 0) && (
           <div>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="d-flex align-items-center justify-content-center rounded-3"
@@ -1821,6 +1765,39 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                 {requests.length} total
               </span>
             </div>
+            
+            {/* Pickup Scheduled Section - Shows requirements/instructions */}
+            {pickupScheduled.length > 0 && (
+              <div className="card border-0 shadow-sm rounded-4 mb-3" style={{ borderLeft: "4px solid #f59e0b" }}>
+                <div className="card-header" style={{ background:"#fffbeb", borderBottom:"1px solid #fef08a", padding:"12px 20px" }}>
+                  <div className="fw-semibold" style={{ color:"#92400e", fontSize:"0.85rem" }}>📅 Pickup Scheduled</div>
+                </div>
+                <div className="card-body p-3">
+                  {pickupScheduled.map(r => (
+                    <div key={r.id} className="d-flex align-items-start gap-3 p-3 rounded-3 mb-2" style={{ background:"#fef3c7" }}>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-dark mb-1">{r.type}</div>
+                        <div className="small text-muted mb-2">
+                          📍 Pickup at: {r.pickup_location}<br/>
+                          📅 Scheduled for: {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
+                        </div>
+                        {r.pickup_instructions && (
+                          <div className="alert alert-info mb-2 py-2 px-3 small" style={{ background:"#dbeafe", border:"1px solid #93c5fd", color:"#1e40af" }}>
+                            <strong>📋 Requirements:</strong> {r.pickup_instructions}
+                          </div>
+                        )}
+                        <div className="alert alert-warning mb-0 py-2 px-3 small">
+                          <strong>⏰ Note:</strong> Your document will be ready for pickup on the scheduled date and time above.
+                        </div>
+                      </div>
+                      <span className="badge px-3 py-2" style={{ background: "#fef08a", color: "#92400e", fontSize:"0.72rem" }}>
+                        Scheduled
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Payment Required Section */}
             {pendingPayment.length > 0 && (
@@ -1840,6 +1817,11 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                           📍 Pickup at: {r.pickup_location}<br/>
                           📅 Pickup schedule: {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
                         </div>
+                        {r.pickup_instructions && (
+                          <div className="alert alert-info mb-2 py-2 px-3 small" style={{ background:"#dbeafe", border:"1px solid #93c5fd", color:"#1e40af" }}>
+                            <strong>📋 Requirements:</strong> {r.pickup_instructions}
+                          </div>
+                        )}
                         <div className="alert alert-warning mb-0 py-2 px-3 small">
                           <strong>⚠️ Action Required:</strong> Please pay at the Accounting office first before you can pick up this document.
                         </div>
@@ -1868,8 +1850,13 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                           📍 {r.pickup_location}<br/>
                           📅 {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)}
                         </div>
+                        {r.pickup_instructions && (
+                          <div className="alert alert-info mb-2 py-2 px-3 small" style={{ background:"#dbeafe", border:"1px solid #93c5fd", color:"#1e40af" }}>
+                            <strong>📋 Requirements:</strong> {r.pickup_instructions}
+                          </div>
+                        )}
                         <div className="alert alert-success mb-0 py-2 px-3 small">
-                          <strong>✅ Payment Verified!</strong> You can now pick up your document at the Registrar's Office.
+                          <strong>✅ {r.payment_amount && parseFloat(r.payment_amount) > 0 ? 'Payment Verified!' : 'Ready!'}</strong> You can now pick up your document at the Registrar's Office.
                         </div>
                       </div>
                       <span className="badge px-3 py-2" style={{ background: "#bbf7d0", color: "#065f46", fontSize:"0.72rem" }}>
@@ -1901,6 +1888,11 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                             <div className="fw-semibold text-dark" style={{ fontSize:"0.85rem" }}>{r.type}</div>
                             {r.teacher_name && (
                               <div className="text-muted" style={{ fontSize:"0.72rem" }}>Teacher: {r.teacher_name}</div>
+                            )}
+                            {r.status === 'pickup_scheduled' && r.pickup_date && (
+                              <div className="text-muted mt-1" style={{ fontSize:"0.72rem" }}>
+                                📅 Scheduled: {new Date(r.pickup_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} at {formatTime(r.pickup_time)} • {r.pickup_location}
+                              </div>
                             )}
                             {r.rejection_reason && (
                               <div className="text-danger mt-1" style={{ fontSize:"0.72rem" }}>Reason: {r.rejection_reason}</div>
@@ -2035,25 +2027,6 @@ function DocumentsView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Purpose */}
-                <div className="mb-4">
-                  <label className="form-label fw-semibold" style={{ fontSize:"0.8rem", color:"#475569", textTransform:"uppercase", letterSpacing:"0.06em" }}>
-                    Select Your Adviser/Teacher <span className="text-danger">*</span>
-                  </label>
-                  <select 
-                    className="form-select" 
-                    value={selectedTeacher} 
-                    onChange={e => setSelectedTeacher(e.target.value)}
-                    style={{ borderRadius:10, border:"1.5px solid #e2e8f0", fontSize:"0.9rem" }}
-                  >
-                    <option value="">-- Select your teacher --</option>
-                    {teachers.map(t => (
-                      <option key={t.id} value={t.id}>{t.full_name} ({t.teacher_id})</option>
-                    ))}
-                  </select>
-                  <div className="form-text" style={{ fontSize:"0.72rem" }}>Your teacher will review and approve this request</div>
                 </div>
 
                 {/* Purpose */}
@@ -2470,10 +2443,6 @@ function ProfilePanel({ student }: { student?: {
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>School Year</label>
                       <input type="text" className="form-control rounded-3" value={profileData?.school_year || "—"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Adviser</label>
-                      <input type="text" className="form-control rounded-3" value={profileData?.adviser_name || "Not yet assigned"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Current Term</label>

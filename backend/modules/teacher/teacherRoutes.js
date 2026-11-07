@@ -8,7 +8,6 @@ const { getSubjectStudentsWithGrades, getStudentsWithGradesForClass, saveDraftGr
 const { getTeacherSchedules, getScheduleStudents }                             = require("./teacherScheduleController");
 const { authenticateTeacher }                                                  = require("./teacherMiddleware");
 const { getMyDocumentRequests, approveDocumentRequest }                        = require("./teacherDocumentController");
-const { getMyAdvisees }                                                        = require("./teacherAdviserController");
 
 // Public routes (no token needed)
 router.post("/login",  login);
@@ -49,9 +48,6 @@ router.get("/schedules/:schedule_id/students", getScheduleStudents);
 // Document Requests
 router.get("/documents",                     getMyDocumentRequests);
 router.post("/documents/:id/approve",        approveDocumentRequest);
-
-// Advisees
-router.get("/advisees",                      getMyAdvisees);
 
 
 module.exports = router;

@@ -69,6 +69,7 @@ const {
   getAllRegistrarDocuments,
   registrarForwardToPrincipal,
   registrarSetPickup,
+  registrarMarkScheduledAsReady,
   registrarMarkAsReleased,
   registrarConfirmPickedUp,
   getPrincipalDocuments,
@@ -80,14 +81,11 @@ const {
   accountingVerifyPayment
 } = require("./adminDocumentController");
 const {
-  getStudents,
-  getTeachers: getAdviserTeachers,
-  getTeacherAdvisees,
-  assignAdviser,
-  removeAdviser,
-  getStats: getAdviserStats,
-  getFilterOptions
-} = require("./adviserController");
+  getAllDocumentTypes,
+  createDocumentType,
+  updateDocumentType,
+  deleteDocumentType
+} = require("./adminDocumentTypeController");
 const { authenticateAdmin } = require("./adminMiddleware");
 
 // ── Public admin auth ──────────────────────────────────────────────────────
@@ -178,6 +176,7 @@ router.get("/documents/registrar", getRegistrarDocuments);
 router.get("/documents/registrar/all", getAllRegistrarDocuments);
 router.post("/documents/:id/registrar-forward", registrarForwardToPrincipal);
 router.post("/documents/:id/set-pickup", registrarSetPickup);
+router.post("/documents/:id/mark-ready", registrarMarkScheduledAsReady);
 router.post("/documents/:id/mark-released", registrarMarkAsReleased);
 router.post("/documents/:id/confirm-picked-up", registrarConfirmPickedUp);
 
@@ -190,6 +189,12 @@ router.get("/documents/accounting", getAccountingDocuments);
 router.get("/documents/accounting/all", getAllAccountingDocuments);
 router.post("/documents/:id/accounting-verify-payment", accountingVerifyPayment);
 
+// Document Type Management (Registrar Only)
+router.get("/document-types", getAllDocumentTypes);
+router.post("/document-types", createDocumentType);
+router.put("/document-types/:id", updateDocumentType);
+router.delete("/document-types/:id", deleteDocumentType);
+
 // ── System Settings (Principal Only) ──────────────────────────────────────
 router.get("/settings/academic-config", getAcademicConfig);
 router.get("/settings/school-years", getSchoolYears);
@@ -198,14 +203,5 @@ router.put("/settings/school-years/:id", updateSchoolYear);
 router.delete("/settings/school-years/:id", deleteSchoolYear);
 router.post("/settings/complete-term", completeTerm);
 router.put("/settings/enrollment-config", updateEnrollmentConfig);
-
-// ── Adviser Assignment (Registrar) ────────────────────────────────────────
-router.get("/advisers/students", getStudents);
-router.get("/advisers/teachers", getAdviserTeachers);
-router.get("/advisers/teacher/:teacherId/advisees", getTeacherAdvisees);
-router.post("/advisers/assign", assignAdviser);
-router.delete("/advisers/:assignmentId", removeAdviser);
-router.get("/advisers/stats", getAdviserStats);
-router.get("/advisers/filters", getFilterOptions);
 
 module.exports = router;

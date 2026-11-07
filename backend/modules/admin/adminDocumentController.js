@@ -39,11 +39,23 @@ async function registrarForwardToPrincipal(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'teacher_approved') {
-      return res.status(400).json({ error: "Document must be teacher-approved first." });
+    if (doc.status !== 'pending_registrar_review') {
+      return res.status(400).json({ error: "Only pending requests can be forwarded to Principal." });
     }
 
     await DocumentModel.registrarForward(id, registrar_id);
+    
+    // Notify principal
+    const NotificationService = require("../notifications/notificationService");
+    await NotificationService.notifyStaff({
+      recipient: 'principal',
+      role: 'principal',
+      message: `Document Request Forwarded: ${doc.student_name} - ${doc.document_type}`,
+      type: 'document_request',
+      reference_id: id,
+      reference_type: 'document'
+    });
+    
     res.json({ 
       message: "Document request forwarded to Principal for approval.",
       document: await DocumentModel.findById(id)
@@ -56,7 +68,7 @@ async function registrarForwardToPrincipal(req, res, next) {
 async function registrarSetPickup(req, res, next) {
   try {
     const { id } = req.params;
-    const { pickup_date, pickup_time, pickup_location } = req.body;
+    const { pickup_date, pickup_time, pickup_location, pickup_instructions } = req.body;
     const registrar_id = req.admin.admin_id;
     
     const doc = await DocumentModel.findById(id);
@@ -64,7 +76,7 @@ async function registrarSetPickup(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'principal_approved') {
+    if (doc.status !== 'approved') {
       return res.status(400).json({ error: "Document must be principal-approved first." });
     }
 
@@ -72,9 +84,75 @@ async function registrarSetPickup(req, res, next) {
       return res.status(400).json({ error: "pickup_date, pickup_time, and pickup_location are required." });
     }
 
-    await DocumentModel.setPendingPayment(id, registrar_id, pickup_date, pickup_time, pickup_location);
+    await DocumentModel.schedulePickup(id, registrar_id, pickup_date, pickup_time, pickup_location, pickup_instructions);
+    
+    const updatedDoc = await DocumentModel.findById(id);
+    
+    // Notify student about pickup schedule
+    const NotificationService = require("../notifications/notificationService");
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT student_id FROM documents WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    
+    if (studentRow && studentRow[0]) {
+      const pickupMsg = `Your ${doc.document_type} is scheduled for pickup on ${pickup_date} at ${pickup_time}. Location: ${pickup_location}.` + 
+        (pickup_instructions ? ` Instructions: ${pickup_instructions}` : '');
+      
+      await NotificationService.notifyStudent({
+        student_id: studentRow[0].student_id,
+        message: pickupMsg,
+        type: 'document'
+      });
+    }
+    
     res.json({ 
-      message: "Pickup details set. Student needs to pay at Accounting before pickup.",
+      message: updatedDoc.requires_payment 
+        ? "Pickup scheduled. Student needs to complete payment before release."
+        : "Pickup scheduled. Document is ready for release.",
+      document: updatedDoc
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function registrarMarkScheduledAsReady(req, res, next) {
+  try {
+    const { id } = req.params;
+    const registrar_id = req.admin.admin_id;
+    
+    const doc = await DocumentModel.findById(id);
+    if (!doc) {
+      return res.status(404).json({ error: "Document request not found." });
+    }
+
+    if (doc.status !== 'pickup_scheduled') {
+      return res.status(400).json({ error: "Only scheduled documents can be manually marked as ready." });
+    }
+
+    // Manually mark as ready (bypass time check)
+    await DocumentModel.setReadyForPickup(id, registrar_id);
+    
+    // Notify student
+    const NotificationService = require("../notifications/notificationService");
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT student_id FROM documents WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    
+    if (studentRow && studentRow[0]) {
+      await NotificationService.notifyStudent({
+        student_id: studentRow[0].student_id,
+        message: `Good news! Your ${doc.document_type} is now ready for pickup at ${doc.pickup_location}.`,
+        type: 'document'
+      });
+    }
+    
+    res.json({ 
+      message: "Document marked as ready for pickup.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -92,22 +170,31 @@ async function registrarMarkAsReleased(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'payment_verified') {
-      return res.status(400).json({ error: "Payment must be verified by Accounting first." });
+    if (doc.status !== 'ready_for_release') {
+      return res.status(400).json({ error: "Document must be ready for release. Ensure approval and payment (if required) are complete." });
     }
 
-    // Mark as ready for pickup first
-    await DocumentModel.setReadyForPickup(id, released_by);
+    // Mark as released
+    await DocumentModel.markAsReleased(id, released_by);
     
-    // Notify student that document is ready
-    await NotificationService.notifyDocumentReady({
-      student_id: doc.student_id,
-      document_type: doc.document_type,
-      document_id: id
-    });
+    // Notify student
+    const NotificationService = require("../notifications/notificationService");
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT student_id FROM documents WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    
+    if (studentRow && studentRow[0]) {
+      await NotificationService.notifyStudent({
+        student_id: studentRow[0].student_id,
+        message: `Your ${doc.document_type} has been released. You may now pick it up.`,
+        type: 'document'
+      });
+    }
     
     res.json({ 
-      message: "Document is ready for pickup.",
+      message: "Document marked as released.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -125,12 +212,29 @@ async function registrarConfirmPickedUp(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'payment_verified') {
-      return res.status(400).json({ error: "Payment must be verified by Accounting first." });
+    if (doc.status !== 'ready_for_release') {
+      return res.status(400).json({ error: "Document must be ready for release." });
     }
 
     // Mark as picked up (released)
     await DocumentModel.markAsReleased(id, released_by);
+    
+    // Notify student
+    const NotificationService = require("../notifications/notificationService");
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT student_id FROM documents WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    
+    if (studentRow && studentRow[0]) {
+      await NotificationService.notifyStudent({
+        student_id: studentRow[0].student_id,
+        message: `Your ${doc.document_type} has been released. Thank you!`,
+        type: 'document'
+      });
+    }
+    
     res.json({ 
       message: "Document marked as picked up by student.",
       document: await DocumentModel.findById(id)
@@ -199,8 +303,8 @@ async function accountingVerifyPayment(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'pending_payment') {
-      return res.status(400).json({ error: "Document must be pending payment." });
+    if (doc.status !== 'pending_payment_verification') {
+      return res.status(400).json({ error: "Document must be pending payment verification." });
     }
 
     if (!payment_reference || payment_reference.trim().length < 3) {
@@ -208,8 +312,20 @@ async function accountingVerifyPayment(req, res, next) {
     }
 
     await DocumentModel.accountingVerifyPayment(id, accounting_id, payment_reference.trim());
+    
+    // Notify registrar that payment is verified
+    const NotificationService = require("../notifications/notificationService");
+    await NotificationService.notifyStaff({
+      recipient: 'registrar',
+      role: 'registrar',
+      message: `Payment Verified: ${doc.student_name} - ${doc.document_type} (Ready for release)`,
+      type: 'payment_verified',
+      reference_id: id,
+      reference_type: 'document'
+    });
+    
     res.json({ 
-      message: "Payment verified. Registrar can now prepare the document for pickup.",
+      message: "Payment verified. Document is now ready for release.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -229,13 +345,25 @@ async function principalApprove(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'registrar_forwarded') {
+    if (doc.status !== 'pending_principal_approval') {
       return res.status(400).json({ error: "Document must be forwarded by Registrar first." });
     }
 
     await DocumentModel.principalApprove(id, principal_id);
+    
+    // Notify registrar to proceed with scheduling
+    const NotificationService = require("../notifications/notificationService");
+    await NotificationService.notifyStaff({
+      recipient: 'registrar',
+      role: 'registrar',
+      message: `Document Approved: ${doc.student_name} - ${doc.document_type} (Ready for pickup scheduling)`,
+      type: 'document_approved',
+      reference_id: id,
+      reference_type: 'document'
+    });
+    
     res.json({ 
-      message: "Document request approved. Registrar can now process it.",
+      message: "Document request approved. Registrar can now schedule pickup.",
       document: await DocumentModel.findById(id)
     });
   } catch (err) {
@@ -254,7 +382,7 @@ async function principalReject(req, res, next) {
       return res.status(404).json({ error: "Document request not found." });
     }
 
-    if (doc.status !== 'registrar_forwarded') {
+    if (doc.status !== 'pending_principal_approval') {
       return res.status(400).json({ error: "Document must be forwarded by Registrar first." });
     }
 
@@ -263,6 +391,32 @@ async function principalReject(req, res, next) {
     }
 
     await DocumentModel.principalReject(id, principal_id, rejection_reason.trim());
+    
+    // Notify student and registrar
+    const NotificationService = require("../notifications/notificationService");
+    const db = require("../../config/db");
+    const [studentRow] = await db.query(
+      `SELECT student_id FROM documents WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    
+    if (studentRow && studentRow[0]) {
+      await NotificationService.notifyStudent({
+        student_id: studentRow[0].student_id,
+        message: `Your ${doc.document_type} request was rejected. Reason: ${rejection_reason.trim()}`,
+        type: 'document'
+      });
+    }
+    
+    await NotificationService.notifyStaff({
+      recipient: 'registrar',
+      role: 'registrar',
+      message: `Document Rejected: ${doc.student_name} - ${doc.document_type}`,
+      type: 'document_rejected',
+      reference_id: id,
+      reference_type: 'document'
+    });
+    
     res.json({ 
       message: "Document request rejected.",
       document: await DocumentModel.findById(id)
@@ -278,6 +432,7 @@ module.exports = {
   getAllRegistrarDocuments,
   registrarForwardToPrincipal,
   registrarSetPickup,
+  registrarMarkScheduledAsReady,
   registrarMarkAsReleased,
   registrarConfirmPickedUp,
   
