@@ -138,7 +138,7 @@ const navItems = [
   { id:"overview",      label:"Overview"          },
   { id:"students",      label:"Students"          },
   { id:"teachers",      label:"Teachers"          },
-  { id:"grades",        label:"Grades"            },
+  { id:"grades",        label:"Grades Management"            },
   { id:"requests",      label:"Grade Requests"    },
   { id:"documents",     label:"Documents"         },
   { id:"enrollment",    label:"Enrollment"        },
@@ -214,7 +214,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         {/* Logo */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={180} height={180} />
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
               <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>{config.title}</div><div style={{ color:"#6b7280", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
@@ -227,14 +227,14 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
               className="btn text-start d-flex align-items-center px-3 py-2 rounded-3 border-0"
               style={{
                 color: active === item.id ? "#fff" : "#6b7280",
-                background: active === item.id ? "linear-gradient(135deg,#dc2626,#ef4444)" : "transparent",
+                background: active === item.id ? "linear-gradient(135deg,#374151,#1f2937)" : "transparent",
                 fontWeight: active === item.id ? 600 : 500,
                 fontSize: 13.5,
                 justifyContent: "flex-start",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s",
-                boxShadow: active === item.id ? "0 2px 12px rgba(220,38,38,0.4)" : "none",
-                borderLeft: active === item.id ? "3px solid #dc2626" : "3px solid transparent",
+                boxShadow: active === item.id ? "0 2px 12px rgba(55,65,81,0.4)" : "none",
+                borderLeft: active === item.id ? "3px solid #374151" : "3px solid transparent",
               }}
               title={item.label}>
               <span>{item.label}</span>
@@ -244,10 +244,10 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         
         {/* Logout button - More visible at bottom */}
         <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f1f5f9" }}>
-          <div className="rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
+          <div className="rounded-3 p-3" style={{ background:"#f3f4f6", border:"1px solid #e5e7eb" }}>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 2px 8px rgba(220,38,38,0.4)" }}>
+                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#4b5563,#374151)", boxShadow:"0 2px 8px rgba(75, 85, 99, 0.3)" }}>
                 {config.initials}
               </div>
               <div className="flex-grow-1 overflow-hidden">
@@ -260,9 +260,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
             <button
               onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }}
               className="btn w-100 fw-semibold"
-              style={{ fontSize:12, borderRadius:8, background:"#dc2626", color:"#fff", border:"none" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#b91c1c"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#dc2626"; }}
+              style={{ fontSize:12, borderRadius:8, background:"#374151", color:"#fff", border:"none" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#1f2937"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#374151"; }}
             >
               Log Out
             </button>
@@ -366,15 +366,15 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {/* ── Banner ──────────────────────────────────────────────────── */}
       {!hideBanner && (
         <div style={{
-          background: "linear-gradient(135deg,#dc2626 0%,#ef4444 100%)",
+          background: "linear-gradient(135deg,#374151 0%,#1f2937 100%)",
           borderRadius: "16px 16px 0 0",
           padding: "32px 32px 80px",
           position: "relative",
           overflow: "hidden",
         }}>
-          <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
-          <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
-          <div style={{ position:"absolute", top:30, right:90, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+          <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+          <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.03)" }} />
+          <div style={{ position:"absolute", top:30, right:90, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }} />
           <div style={{ position:"relative", zIndex:1 }}>
             <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
               Welcome back, {adminName || adminInfo?.full_name || "..."}
@@ -383,11 +383,11 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
               {adminInfo?.role === "principal" ? "Principal" : adminInfo?.role ? "Administrator" : "..."} · Full Access · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || getCurrentSchoolYear()}
             </p>
             <div className="d-flex gap-2 flex-wrap">
-              <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+              <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.25)", fontSize:"0.78rem" }}>
                  System Online
               </span>
               {pendingStats && pendingStats.total > 0 && (
-                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(220,38,38,0.75)", color:"white", border:"1px solid rgba(220,38,38,0.5)", fontSize:"0.78rem" }}>
+                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(55,65,81,0.7)", color:"white", border:"1px solid rgba(75,85,99,0.5)", fontSize:"0.78rem" }}>
                    {pendingStats.total} Pending Action{pendingStats.total !== 1 ? "s" : ""}
                 </span>
               )}
@@ -403,13 +403,13 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {!hideBanner && (
         <div className="row g-3 mb-4">
           {[
-            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#dc2626,#ef4444)", shadow:"rgba(220,38,38,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
+            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#ef4444,#f87171)", shadow:"rgba(239,68,68,0.35)", bgLight:"#fef2f2", textColor:"#dc2626",
+            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#4b5563,#374151)", shadow:"rgba(55,65,81,0.2)", bgLight:"#f3f4f6", textColor:"#1f2937",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
-            { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#f59e0b,#fbbf24)", shadow:"rgba(245,158,11,0.35)", bgLight:"#fffbeb", textColor:"#d97706",
+            { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
-            { label:"Pending Payments",    value: pendingStats?.payments ?? "—",          gradient:"linear-gradient(135deg,#ef4444,#f87171)", shadow:"rgba(239,68,68,0.35)",   bgLight:"#fef2f2", textColor:"#dc2626",
+            { label:"Pending Payments",    value: pendingStats?.payments ?? "—",          gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)",   bgLight:"#f3f4f6", textColor:"#374151",
               icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
           ].map(s => (
             <div key={s.label} className="col-6 col-lg-3">
@@ -441,8 +441,8 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
             <div className="card-body p-4">
               <div className="d-flex align-items-center gap-2 mb-4">
                 <div className="d-flex align-items-center justify-content-center rounded-3"
-                  style={{ width:36, height:36, background:"#fef2f2", color:"#dc2626" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  style={{ width:36, height:36, background:"#f3f4f6" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 </div>
                 <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Recent Activity</h3>
               </div>
@@ -458,8 +458,8 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   recentActivity.map((a, i) => (
                     <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                       <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                        style={{ width:34, height:34, background:"#fef2f2", color:"#dc2626" }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        style={{ width:34, height:34, background:"#f3f4f6", color:"#374151" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       </div>
                       <div className="flex-grow-1 overflow-hidden">
                         <div className="small fw-semibold text-dark text-truncate">{a.action}</div>
@@ -526,7 +526,7 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
                   count: filteredData.filter(item => item.track === t.fullName).reduce((sum, item) => sum + item.count, 0),
                 }));
                 const maxCount = Math.max(1, ...countsByTrack.map(c => c.count));
-                const barColors = ["#dc2626","#ef4444","#f87171","#f97316","#fb923c"];
+                const barColors = ["#374151","#4b5563","#6b7280","#9ca3af","#d1d5db"];
                 return (
                   <div>
                     <div style={{ display:"flex", gap:8, alignItems:"flex-end", height:150 }}>
@@ -782,8 +782,8 @@ function StudentsPanel() {
                           />
                         ) : (
                           <div 
-                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
-                            style={{ width: 32, height: 32, fontSize: 11 }}
+                            className="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0 color" 
+                            style={{ width: 32, height: 32, fontSize: 11}}
                           >
                             {initials(s.name)}
                           </div>
@@ -811,7 +811,7 @@ function StudentsPanel() {
                             ? "bg-danger-subtle text-danger border border-danger-subtle"
                             : "bg-secondary-subtle text-secondary border border-secondary-subtle"
                       }`}>
-                        {s.status}
+                        {s.status === "active" ? "Active" : s.status === "suspended" ? "Inactive" : s.status}
                       </span>
                     </td>
                     <td>
@@ -922,7 +922,8 @@ function StudentsPanel() {
                 <p className="text-muted mb-3">{successMessage}</p>
                 <button 
                   type="button" 
-                  className="btn btn-primary"
+                  className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }}
                   onClick={() => setShowSuccessModal(false)}
                 >
                   OK
@@ -1212,32 +1213,94 @@ function GradesPanel({ role }: { role?: string } = {}) {
   if (!student) {
     return (
       <div className="d-flex flex-column gap-4">
-        {/* Header */}
-        <div>
-          <h2 className="fw-black fs-4 text-dark mb-0">Grade Submission Control</h2>
-          <p className="text-muted small mb-0">Manage when teachers can submit student grades</p>
-        </div>
         
         {/* Grade Submission Control - Principal Only */}
         {role === "principal" && (
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4">
+        <div className="card border-0 rounded-4" style={{ 
+          boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+          overflow: "hidden"
+        }}>
+          {/* Card Header */}
+          <div className="card-header border-0" style={{ 
+            background: "linear-gradient(135deg, #374151 0%, #1f2937 100%)",
+            padding: "1.5rem 2rem"
+          }}>
+            <div className="d-flex align-items-center gap-3">
+              <div className="d-flex align-items-center justify-content-center rounded-3" style={{ 
+                width: 48, 
+                height: 48, 
+                background: "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(10px)"
+              }}>
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="fw-bold mb-1 text-white" style={{ fontSize: "1.5rem", letterSpacing: "-0.01em" }}>
+                  Grade Submission Control
+                </h2>
+                <p className="mb-0 text-white" style={{ fontSize: "0.9rem", opacity: 0.9 }}>
+                  Manage when teachers can submit student grades
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-body p-4" style={{ background: "#fafbfc" }}>
             
             {loadingConfig ? (
-              <div className="text-center py-4 text-muted">Loading...</div>
+              <div className="text-center py-5">
+                <div className="spinner-border mb-3" role="status" style={{ width: 50, height: 50, color: "#374151" }}>
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="text-muted mb-0">Loading configuration...</p>
+              </div>
             ) : (
               <>
-                {/* Term Selector */}
+                {/* Term Selector - Enhanced Design */}
                 <div className="mb-4">
-                  <label className="form-label fw-semibold mb-2">Select Term to Manage:</label>
-                  <div className="d-flex gap-2">
+                  <label className="form-label fw-semibold mb-3 d-flex align-items-center gap-2" style={{ fontSize: "0.95rem", color: "#374151" }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Select Term to Manage
+                  </label>
+                  <div className="d-flex gap-3">
                     {["Term 1", "Term 2", "Term 3"].map((term) => {
+                      const isSelected = selectedTerm === term;
                       return (
                         <button
                           key={term}
                           onClick={() => setSelectedTerm(term as "Term 1" | "Term 2" | "Term 3")}
-                          className={`btn ${selectedTerm === term ? "btn-primary" : "btn-outline-secondary"}`}
+                          className="btn flex-fill py-3 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                          style={{
+                            background: isSelected ? "linear-gradient(135deg, #374151 0%, #1f2937 100%)" : "#ffffff",
+                            color: isSelected ? "#ffffff" : "#6b7280",
+                            border: isSelected ? "none" : "2px solid #e5e7eb",
+                            borderRadius: "12px",
+                            fontSize: "0.95rem",
+                            boxShadow: isSelected ? "0 4px 16px rgba(55, 65, 81, 0.3)" : "none",
+                            transition: "all 0.2s ease"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = "#374151";
+                              e.currentTarget.style.background = "#f3f4f6";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = "#e5e7eb";
+                              e.currentTarget.style.background = "#ffffff";
+                            }
+                          }}
                         >
+                          {isSelected && (
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                          )}
                           {term}
                         </button>
                       );
@@ -1246,145 +1309,336 @@ function GradesPanel({ role }: { role?: string } = {}) {
                 </div>
 
                 {selectedConfig && (
-                  <div className="border rounded-3 p-4">
-                    {/* Status Header */}
-                    <div className="d-flex align-items-center justify-content-between mb-4">
-                      <div>
-                        <h5 className="fw-bold mb-1">{selectedTerm}</h5>
-                        <div className="small text-muted">{selectedConfig.status_reason}</div>
-                      </div>
-                      <span className={`badge ${selectedConfig.is_open ? "bg-success" : "bg-danger"} px-3 py-2 fs-6`}>
-                        {selectedConfig.is_open ? "🟢 OPEN" : "🔴 CLOSED"}
-                      </span>
-                    </div>
-
-                    {/* Schedule Form */}
-                    <div className="row g-3 mb-3">
-                      <div className="col-12 col-md-6">
-                        <label className="form-label small fw-semibold">Start Date & Time</label>
-                        <div className="row g-2">
-                          <div className="col-7">
-                            <input 
-                              type="date" 
-                              className="form-control"
-                              value={selectedForm.startDate}
-                              onChange={(e) => setTermForms({
-                                ...termForms,
-                                [selectedTerm]: { ...selectedForm, startDate: e.target.value }
-                              })}
-                            />
+                  <div className="card border-0 rounded-4 shadow-sm" style={{ background: "#ffffff" }}>
+                    <div className="card-body p-4">
+                      {/* Status Header with Enhanced Design */}
+                      <div className="d-flex align-items-start justify-content-between mb-4 pb-4 border-bottom">
+                        <div className="flex-grow-1">
+                          <div className="d-flex align-items-center gap-3 mb-2">
+                            <h4 className="fw-bold mb-0" style={{ fontSize: "1.25rem", color: "#1f2937" }}>
+                              {selectedTerm}
+                            </h4>
+                            <span className={`badge px-3 py-2 d-inline-flex align-items-center gap-2`} style={{ 
+                              fontSize: "0.85rem",
+                              background: selectedConfig.is_open ? "linear-gradient(135deg, #059669 0%, #10b981 100%)" : "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+                              color: "#ffffff",
+                              borderRadius: "8px",
+                              boxShadow: selectedConfig.is_open ? "0 2px 8px rgba(5, 150, 105, 0.3)" : "0 2px 8px rgba(107, 114, 128, 0.3)"
+                            }}>
+                              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                {selectedConfig.is_open ? (
+                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                ) : (
+                                  <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                )}
+                              </svg>
+                              {selectedConfig.is_open ? "OPEN" : "CLOSED"}
+                            </span>
                           </div>
-                          <div className="col-5">
+                          <div className="d-flex align-items-center gap-2 text-muted" style={{ fontSize: "0.9rem" }}>
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            {selectedConfig.status_reason}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Schedule Form - Enhanced Layout */}
+                      <div className="mb-4">
+                        <h5 className="fw-semibold mb-3 d-flex align-items-center gap-2" style={{ fontSize: "1rem", color: "#374151" }}>
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          Schedule Configuration
+                        </h5>
+                        <div className="row g-3">
+                          <div className="col-12 col-lg-6">
+                            <label className="form-label fw-semibold mb-2 d-flex align-items-center gap-2" style={{ fontSize: "0.875rem", color: "#4b5563" }}>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                              </svg>
+                              Start Date & Time
+                            </label>
+                            <div className="row g-2">
+                              <div className="col-7">
+                                <input 
+                                  type="date" 
+                                  className="form-control py-2"
+                                  value={selectedForm.startDate}
+                                  onChange={(e) => setTermForms({
+                                    ...termForms,
+                                    [selectedTerm]: { ...selectedForm, startDate: e.target.value }
+                                  })}
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px"
+                                  }}
+                                />
+                              </div>
+                              <div className="col-5">
+                                <input 
+                                  type="time" 
+                                  className="form-control py-2"
+                                  value={selectedForm.startTime}
+                                  onChange={(e) => setTermForms({
+                                    ...termForms,
+                                    [selectedTerm]: { ...selectedForm, startTime: e.target.value }
+                                  })}
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px"
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-12 col-lg-6">
+                            <label className="form-label fw-semibold mb-2 d-flex align-items-center gap-2" style={{ fontSize: "0.875rem", color: "#4b5563" }}>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                              </svg>
+                              End Date & Time
+                            </label>
+                            <div className="row g-2">
+                              <div className="col-7">
+                                <input 
+                                  type="date" 
+                                  className="form-control py-2"
+                                  value={selectedForm.endDate}
+                                  onChange={(e) => setTermForms({
+                                    ...termForms,
+                                    [selectedTerm]: { ...selectedForm, endDate: e.target.value }
+                                  })}
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px"
+                                  }}
+                                />
+                              </div>
+                              <div className="col-5">
+                                <input 
+                                  type="time" 
+                                  className="form-control py-2"
+                                  value={selectedForm.endTime}
+                                  onChange={(e) => setTermForms({
+                                    ...termForms,
+                                    [selectedTerm]: { ...selectedForm, endTime: e.target.value }
+                                  })}
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "8px"
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-12">
+                            <label className="form-label fw-semibold mb-2 d-flex align-items-center gap-2" style={{ fontSize: "0.875rem", color: "#4b5563" }}>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                              </svg>
+                              Notes (Optional)
+                            </label>
                             <input 
-                              type="time" 
-                              className="form-control"
-                              value={selectedForm.startTime}
+                              type="text" 
+                              className="form-control py-2"
+                              placeholder="e.g., Extended deadline for additional submissions"
+                              value={selectedForm.notes}
                               onChange={(e) => setTermForms({
                                 ...termForms,
-                                [selectedTerm]: { ...selectedForm, startTime: e.target.value }
+                                [selectedTerm]: { ...selectedForm, notes: e.target.value }
                               })}
+                              style={{
+                                fontSize: "0.9rem",
+                                border: "1px solid #e5e7eb",
+                                borderRadius: "8px"
+                              }}
                             />
                           </div>
                         </div>
                       </div>
-                      <div className="col-12 col-md-6">
-                        <label className="form-label small fw-semibold">End Date & Time</label>
-                        <div className="row g-2">
-                          <div className="col-7">
-                            <input 
-                              type="date" 
-                              className="form-control"
-                              value={selectedForm.endDate}
-                              onChange={(e) => setTermForms({
-                                ...termForms,
-                                [selectedTerm]: { ...selectedForm, endDate: e.target.value }
-                              })}
-                            />
-                          </div>
-                          <div className="col-5">
-                            <input 
-                              type="time" 
-                              className="form-control"
-                              value={selectedForm.endTime}
-                              onChange={(e) => setTermForms({
-                                ...termForms,
-                                [selectedTerm]: { ...selectedForm, endTime: e.target.value }
-                              })}
-                            />
+
+                      {/* Current Schedule Info - Only show if scheduled and not passed */}
+                      {selectedConfig.start_date && selectedConfig.end_date && 
+                       selectedConfig.manual_override === 'none' && 
+                       selectedConfig.status_reason !== 'Deadline passed' && (
+                        <div className="alert border-0 rounded-3 mb-4" style={{ 
+                          background: "#eff6ff",
+                          color: "#1e40af",
+                          fontSize: "0.875rem"
+                        }}>
+                          <div className="d-flex gap-3">
+                            <svg width="20" height="20" className="flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                              <div className="fw-semibold mb-1">Current Schedule</div>
+                              <div className="mb-1">
+                                <strong>Opens:</strong> {formatDateTime(selectedConfig.start_date)}
+                              </div>
+                              <div>
+                                <strong>Closes:</strong> {formatDateTime(selectedConfig.end_date)}
+                              </div>
+                            </div>
                           </div>
                         </div>
+                      )}
+
+                      {/* Schedule Done Message */}
+                      {selectedConfig.status_reason === 'Deadline passed' && (
+                        <div className="alert border-0 rounded-3 mb-4" style={{ 
+                          background: "#f3f4f6",
+                          color: "#6b7280",
+                          fontSize: "0.875rem"
+                        }}>
+                          <div className="d-flex gap-3">
+                            <svg width="20" height="20" className="flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                              <div className="fw-semibold mb-1">Schedule Complete</div>
+                              <div>Submission period has ended and is now closed.</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons - Enhanced Design */}
+                      <div className="d-flex gap-2 flex-wrap pt-3 border-top">
+                        <button 
+                          onClick={() => setSchedule(selectedTerm)}
+                          className="btn px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                          disabled={processingTerm === selectedTerm}
+                          style={{
+                            background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.9rem",
+                            boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)"
+                          }}
+                        >
+                          {processingTerm === selectedTerm ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                              </div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                              </svg>
+                              Set Schedule
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => openNow(selectedTerm)}
+                          className="btn px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                          disabled={processingTerm === selectedTerm || selectedConfig.is_open}
+                          style={{
+                            background: selectedConfig.is_open ? "#e5e7eb" : "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                            color: selectedConfig.is_open ? "#9ca3af" : "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.9rem",
+                            boxShadow: selectedConfig.is_open ? "none" : "0 2px 8px rgba(5, 150, 105, 0.3)"
+                          }}
+                        >
+                          {processingTerm === selectedTerm ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                              </div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                              </svg>
+                              Open Now
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => closeNow(selectedTerm)}
+                          className="btn px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                          disabled={processingTerm === selectedTerm || !selectedConfig.is_open}
+                          style={{
+                            background: !selectedConfig.is_open ? "#e5e7eb" : "linear-gradient(135deg, #374151 0%, #1f2937 100%)",
+                            color: !selectedConfig.is_open ? "#9ca3af" : "#ffffff",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "0.9rem",
+                            boxShadow: !selectedConfig.is_open ? "none" : "0 2px 8px rgba(220, 38, 38, 0.3)"
+                          }}
+                        >
+                          {processingTerm === selectedTerm ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                              </div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                              </svg>
+                              Close Now
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => clearSchedule(selectedTerm)}
+                          className="btn px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                          disabled={processingTerm === selectedTerm}
+                          style={{
+                            background: "#ffffff",
+                            color: "#6b7280",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            fontSize: "0.9rem"
+                          }}
+                        >
+                          {processingTerm === selectedTerm ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                              </div>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                              </svg>
+                              Clear
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <div className="col-12">
-                        <label className="form-label small fw-semibold">Notes (Optional)</label>
-                        <input 
-                          type="text" 
-                          className="form-control"
-                          placeholder="e.g., Extended deadline"
-                          value={selectedForm.notes}
-                          onChange={(e) => setTermForms({
-                            ...termForms,
-                            [selectedTerm]: { ...selectedForm, notes: e.target.value }
-                          })}
-                        />
-                      </div>
+
+                      {/* Last Modified */}
+                      {selectedConfig.last_modified_by && selectedConfig.last_modified_at && (
+                        <div className="mt-4 pt-3 border-top">
+                          <div className="d-flex align-items-center gap-2 text-muted" style={{ fontSize: "0.8rem" }}>
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            Last modified by <strong>{selectedConfig.last_modified_by}</strong> on {formatDateTime(selectedConfig.last_modified_at)}
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Current Schedule Info - Only show if scheduled and not passed */}
-                    {selectedConfig.start_date && selectedConfig.end_date && 
-                     selectedConfig.manual_override === 'none' && 
-                     selectedConfig.status_reason !== 'Deadline passed' && (
-                      <div className="alert alert-info small mb-3">
-                        <strong>Current Schedule:</strong><br />
-                        Opens: {formatDateTime(selectedConfig.start_date)}<br />
-                        Closes: {formatDateTime(selectedConfig.end_date)}
-                      </div>
-                    )}
-
-                    {/* Schedule Done Message */}
-                    {selectedConfig.status_reason === 'Deadline passed' && (
-                      <div className="alert alert-secondary small mb-3">
-                        <strong>Schedule Complete:</strong> Submission period has ended and is now closed.
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="d-flex gap-2 flex-wrap">
-                      <button 
-                        onClick={() => setSchedule(selectedTerm)}
-                        className="btn btn-primary"
-                        disabled={processingTerm === selectedTerm}
-                      >
-                        {processingTerm === selectedTerm ? "Processing..." : "📅 Set Schedule"}
-                      </button>
-                      <button 
-                        onClick={() => openNow(selectedTerm)}
-                        className="btn btn-success"
-                        disabled={processingTerm === selectedTerm || selectedConfig.is_open}
-                      >
-                        {processingTerm === selectedTerm ? "Processing..." : "✅ Open Now"}
-                      </button>
-                      <button 
-                        onClick={() => closeNow(selectedTerm)}
-                        className="btn btn-danger"
-                        disabled={processingTerm === selectedTerm || !selectedConfig.is_open}
-                      >
-                        {processingTerm === selectedTerm ? "Processing..." : "🚫 Close Now"}
-                      </button>
-                      <button 
-                        onClick={() => clearSchedule(selectedTerm)}
-                        className="btn btn-outline-secondary"
-                        disabled={processingTerm === selectedTerm}
-                      >
-                        {processingTerm === selectedTerm ? "Processing..." : "🗑️ Clear"}
-                      </button>
-                    </div>
-
-                    {/* Last Modified */}
-                    {selectedConfig.last_modified_by && selectedConfig.last_modified_at && (
-                      <div className="text-muted small mt-3">
-                        Last modified by {selectedConfig.last_modified_by} on {formatDateTime(selectedConfig.last_modified_at)}
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -1409,7 +1663,7 @@ function GradesPanel({ role }: { role?: string } = {}) {
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
         <div><h2 className="fw-black fs-4 text-dark mb-0">Grades Management</h2><p className="text-muted small mb-0">View and manage student grades</p></div>
-        <button className="btn btn-primary btn-sm fw-bold shadow-sm">+ Submit Grades</button>
+        <button className="btn btn-sm fw-bold shadow-sm" style={{ background: "#374151", color: "#fff", border: "none" }}>+ Submit Grades</button>
       </div>
       <div className="d-flex flex-column flex-sm-row gap-3">
         <div style={{ width: 220 }}>
@@ -1910,9 +2164,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
             label: "Total Enrolled", 
             value: confirmed.length, 
             icon: "students" as IconName,
-            gradient: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
-            bgColor: "rgba(220, 38, 38, 0.1)",
-            textColor: "#dc2626"
+            gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+            bgColor: "rgba(107, 114, 128, 0.1)",
+            textColor: "#4b5563"
           },
           { 
             label: "Confirmed", 
@@ -1926,9 +2180,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
             label: "Pending Review", 
             value: pending.length, 
             icon: "clock" as IconName,
-            gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-            bgColor: "rgba(245, 158, 11, 0.1)",
-            textColor: "#d97706"
+            gradient: "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
+            bgColor: "rgba(156, 163, 175, 0.1)",
+            textColor: "#6b7280"
           },
         ].map(s => (
           <div key={s.label} className="col-12 col-md-4">
@@ -2034,7 +2288,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
                               style={{ objectFit:"cover", border:"2px solid #e2e8f0" }}
                             />
                           ) : (
-                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                            <div className="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
                               style={{ width:40, height:40, fontSize:12 }}>
                               {initials(e.name)}
                             </div>
@@ -2080,8 +2334,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                           {role === "principal" && e.status === "Principal Review" && (
                             <button
                               onClick={() => openReviewModal(e)}
-                              className="btn btn-primary btn-sm"
-                              style={{ fontSize: 11 }}
+                              className="btn btn-sm"
+                              style={{ background: "#374151", color: "#fff", border: "none", fontSize: 11 }}
                             >
                               Review Application
                             </button>
@@ -2176,7 +2430,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
               <div 
                 className="modal-header border-0 text-white position-relative" 
                 style={{ 
-                  background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+                  background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)",
                   padding: "2rem 2.5rem"
                 }}
               >
@@ -3073,7 +3327,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
           </h2>
         </div>
         {role === "principal" && (
-          <button onClick={() => setShowAddTeacher(true)} className="btn btn-primary btn-sm fw-semibold">
+          <button onClick={() => setShowAddTeacher(true)} className="btn btn-sm fw-semibold" style={{ background: "#374151", color: "#fff", border: "none" }}>
             + Add Teacher
           </button>
         )}
@@ -3241,7 +3495,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                       <td className="px-4 py-3">
                         <div className="d-flex align-items-center gap-3">
                           <div 
-                            className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                            className="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
                             style={{ width: 40, height: 40, fontSize: 13 }}
                           >
                             {initials}
@@ -3278,14 +3532,14 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                               className="btn btn-sm btn-outline-info"
                               title="View Advisees"
                             >
-                              👥 Advisees
+                              Advisees
                             </button>
                             <button 
                               onClick={() => openEditModal(teacher)}
                               className="btn btn-sm btn-outline-primary"
                               title="Edit teacher"
                             >
-                              ✏️
+                              Edit Teacher
                             </button>
                             {teacher.account_status === "active" ? (
                               <button 
@@ -3293,7 +3547,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                                 className="btn btn-sm btn-outline-danger"
                                 title="Deactivate teacher"
                               >
-                                🚫
+                                Deactivate 
                               </button>
                             ) : (
                               <button 
@@ -3301,7 +3555,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                                 className="btn btn-sm btn-outline-success"
                                 title="Activate teacher"
                               >
-                                ✅
+                                
                               </button>
                             )}
                           </div>
@@ -3844,7 +4098,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
           { label: "Other",                                                          value: other.length + rejected.length, cls: "bg-secondary-subtle border-secondary-subtle text-secondary" },
         ].map(s => (
           <div key={s.label} className="col-6 col-lg-3">
-            <div className={`card border rounded-3 ${s.cls}`}>
+            <div className={`card border rounded-3 shadow-sm ${s.cls}`}>
               <div className="card-body p-3 text-center">
                 <div className="small mb-1">{s.label}</div>
                 <div className="fw-black fs-3">{s.value}</div>
@@ -3863,7 +4117,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
           </h3>
           <div className="d-flex flex-column gap-3">
             {forReview.map((req: any) => (
-              <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
+              <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
                 <div className="card-body p-4">
                   <div className="row g-3 align-items-start mb-3">
                     <div className="col-12 col-sm-6">
@@ -3903,7 +4157,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
           <h3 className="fw-bold small text-dark mb-3 d-flex align-items-center gap-2"><Icon name="checkCircle" size={14} /> Principal Approved - Release to Teacher</h3>
           <div className="d-flex flex-column gap-2">
             {approved.map((req: any) => (
-              <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
+              <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
                 <div className="card-body p-4 d-flex align-items-center gap-3">
                   <div className="flex-grow-1">
                     <div className="fw-bold text-dark small">{req.student_name || req.student} - {req.subject_name || req.subject}</div>
@@ -4283,10 +4537,10 @@ function TimetableView({ filters, setFilters, showToast }: any) {
         const data = await response.json();
         setTimetableData(data);
       } else {
-        showToast("❌ Failed to load timetable");
+        showToast("Failed to load timetable");
       }
     } catch (err) {
-      showToast("❌ Failed to load timetable");
+      showToast("Failed to load timetable");
     } finally {
       setLoading(false);
     }
@@ -4317,12 +4571,12 @@ function TimetableView({ filters, setFilters, showToast }: any) {
       <div className="card-body p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h3 className="fw-bold fs-5 mb-1">📅 Weekly Timetable</h3>
+            <h3 className="fw-bold fs-5 mb-1">Weekly Timetable</h3>
             <p className="text-muted small mb-0">View all schedules in calendar format</p>
           </div>
           
           <button className="btn btn-sm btn-outline-primary" onClick={loadTimetable}>
-            🔄 Refresh
+            Refresh
           </button>
         </div>
 
@@ -4392,7 +4646,7 @@ function TimetableView({ filters, setFilters, showToast }: any) {
         {/* Conflicts Warning */}
         {timetableData?.conflicts && timetableData.conflicts.length > 0 && (
           <div className="alert alert-warning mb-4">
-            <strong>⚠️ {timetableData.conflicts.length} Room Conflict(s) Detected:</strong>
+            <strong>{timetableData.conflicts.length} Room Conflict(s) Detected:</strong>
             <ul className="mb-0 mt-2 small">
               {timetableData.conflicts.map((conflict: any, idx: number) => (
                 <li key={idx}>
@@ -4795,9 +5049,9 @@ function SubmittedGradesList() {
                               viewingSubmission.status === 'submitted' ? 'bg-primary' : 
                               viewingSubmission.status === 'returned' ? 'bg-warning' : 'bg-secondary'
                             }`}>
-                              {viewingSubmission.status === 'approved' ? '✅ Submitted' : 
-                               viewingSubmission.status === 'submitted' ? '📤 Pending' : 
-                               viewingSubmission.status === 'returned' ? '↩️ Returned' : viewingSubmission.status}
+                              {viewingSubmission.status === 'approved' ? 'Submitted' : 
+                               viewingSubmission.status === 'submitted' ? 'Pending' : 
+                               viewingSubmission.status === 'returned' ? 'Returned' : viewingSubmission.status}
                             </span>
                           </div>
                         </div>
@@ -4920,12 +5174,12 @@ function StatisticsDashboard({ filters, setFilters, showToast }: any) {
       <div className="card-body p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h3 className="fw-bold fs-5 mb-1">📊 Scheduling Statistics</h3>
+            <h3 className="fw-bold fs-5 mb-1"> Scheduling Statistics</h3>
             <p className="text-muted small mb-0">Overview and analytics</p>
           </div>
           
           <button className="btn btn-sm btn-outline-primary" onClick={loadStatistics}>
-            🔄 Refresh
+             Refresh
           </button>
         </div>
 
@@ -4968,7 +5222,7 @@ function StatisticsDashboard({ filters, setFilters, showToast }: any) {
           <div className="row g-4">
             {/* Overview Cards */}
             <div className="col-md-4">
-              <div className="card border-0 bg-primary bg-opacity-10">
+              <div className="card border-0 bg-secondary bg-opacity-10">
                 <div className="card-body text-center">
                   <div className="display-4 fw-bold text-primary">{statistics.total_schedules}</div>
                   <div className="text-muted">Total Schedules</div>
@@ -5042,7 +5296,7 @@ function StatisticsDashboard({ filters, setFilters, showToast }: any) {
                   </div>
                   {statistics.conflicts.room_conflicts > 0 && (
                     <div className="alert alert-warning mt-3 mb-0 small">
-                      ⚠️ Please review the timetable to resolve conflicts
+                       Please review the timetable to resolve conflicts
                     </div>
                   )}
                 </div>
@@ -5704,28 +5958,51 @@ function SchedulingPanel() {
       {/* Tab Selector */}
       <div className="btn-group" role="group">
         <button 
-          className={`btn ${activeTab === "teacher" ? "btn-primary" : "btn-outline-primary"}`}
+          className="btn"
+          style={{
+            background: activeTab === "teacher" ? "#374151" : "transparent",
+            color: activeTab === "teacher" ? "#fff" : "#374151",
+            border: `1px solid ${activeTab === "teacher" ? "#374151" : "#d1d5db"}`,
+            borderRight: "none"
+          }}
           onClick={() => setActiveTab("teacher")}
         >
-          📋 Teachers
+         Teachers
         </button>
         <button 
-          className={`btn ${activeTab === "student" ? "btn-primary" : "btn-outline-primary"}`}
+          className="btn"
+          style={{
+            background: activeTab === "student" ? "#374151" : "transparent",
+            color: activeTab === "student" ? "#fff" : "#374151",
+            border: `1px solid ${activeTab === "student" ? "#374151" : "#d1d5db"}`,
+            borderRight: "none"
+          }}
           onClick={() => setActiveTab("student")}
         >
-          👨‍🎓 Students
+           Students
         </button>
         <button 
-          className={`btn ${activeTab === "timetable" ? "btn-primary" : "btn-outline-primary"}`}
+          className="btn"
+          style={{
+            background: activeTab === "timetable" ? "#374151" : "transparent",
+            color: activeTab === "timetable" ? "#fff" : "#374151",
+            border: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
+            borderRight: "none"
+          }}
           onClick={() => setActiveTab("timetable")}
         >
-          📅 Timetable
+         Timetable
         </button>
         <button 
-          className={`btn ${activeTab === "statistics" ? "btn-primary" : "btn-outline-primary"}`}
+          className="btn"
+          style={{
+            background: activeTab === "statistics" ? "#374151" : "transparent",
+            color: activeTab === "statistics" ? "#fff" : "#374151",
+            border: `1px solid ${activeTab === "statistics" ? "#374151" : "#d1d5db"}`
+          }}
           onClick={() => setActiveTab("statistics")}
         >
-          📊 Statistics
+           Statistics
         </button>
       </div>
       
@@ -5755,19 +6032,36 @@ function SchedulingPanel() {
               <div className="col-md-6">
                 <div className="btn-group w-100" role="group">
                   <button 
-                    className={`btn ${teacherFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                    className="btn"
+                    style={{
+                      background: teacherFilter === "all" ? "#374151" : "transparent",
+                      color: teacherFilter === "all" ? "#fff" : "#374151",
+                      border: `1px solid ${teacherFilter === "all" ? "#374151" : "#d1d5db"}`,
+                      borderRight: "none"
+                    }}
                     onClick={() => setTeacherFilter("all")}
                   >
                     All Teachers
                   </button>
                   <button 
-                    className={`btn ${teacherFilter === "with" ? "btn-success" : "btn-outline-success"}`}
+                    className="btn"
+                    style={{
+                      background: teacherFilter === "with" ? "#10b981" : "transparent",
+                      color: teacherFilter === "with" ? "#fff" : "#10b981",
+                      border: `1px solid ${teacherFilter === "with" ? "#10b981" : "#d1d5db"}`,
+                      borderRight: "none"
+                    }}
                     onClick={() => setTeacherFilter("with")}
                   >
                     With Schedule
                   </button>
                   <button 
-                    className={`btn ${teacherFilter === "without" ? "btn-warning" : "btn-outline-warning"}`}
+                    className="btn"
+                    style={{
+                      background: teacherFilter === "without" ? "#f59e0b" : "transparent",
+                      color: teacherFilter === "without" ? "#fff" : "#f59e0b",
+                      border: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`
+                    }}
                     onClick={() => setTeacherFilter("without")}
                   >
                     Without Schedule
@@ -5805,7 +6099,7 @@ function SchedulingPanel() {
                       <tr key={teacher.id} className="border-bottom">
                         <td className="py-3">
                           <div className="d-flex align-items-center gap-2">
-                            <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
+                            <div className="rounded-circle bg-secondary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold flex-shrink-0" 
                               style={{ width: 32, height: 32, fontSize: 11 }}>
                               {teacher.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
                             </div>
@@ -5880,7 +6174,8 @@ function SchedulingPanel() {
             {/* Bulk Enroll Button */}
             <div className="d-flex justify-content-end mb-3">
               <button 
-                className="btn btn-primary btn-sm"
+                className="btn btn-sm"
+                style={{ background: "#374151", color: "#fff", border: "none" }}
                 onClick={() => {
                   setShowBulkEnroll(true);
                   setSelectedStudentIds([]);
@@ -5888,7 +6183,7 @@ function SchedulingPanel() {
                   loadAvailableSchedules({ track: "", strand: "", term: "Term 1" });
                 }}
               >
-                ➕ Bulk Enroll Students
+                  Bulk Enroll Students
               </button>
             </div>
 
@@ -5913,7 +6208,12 @@ function SchedulingPanel() {
               <div className="col-md-6">
                 <div className="btn-group w-100" role="group">
                   <button 
-                    className={`btn ${studentFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                    className="btn"
+                    style={{
+                      background: studentFilter === "all" ? "#374151" : "transparent",
+                      color: studentFilter === "all" ? "#fff" : "#374151",
+                      border: `1px solid ${studentFilter === "all" ? "#374151" : "#d1d5db"}`
+                    }}
                     onClick={() => setStudentFilter("all")}
                   >
                     All Students
@@ -6174,7 +6474,8 @@ function SchedulingPanel() {
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary" 
+                    className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }} 
                     onClick={handleAddTeacherSchedule}
                     disabled={saving}
                   >
@@ -6234,7 +6535,8 @@ function SchedulingPanel() {
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary" 
+                    className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }} 
                     onClick={handleEnrollStudent}
                     disabled={saving || !selectedScheduleId}
                   >
@@ -6755,7 +7057,8 @@ function SchedulingPanel() {
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary" 
+                    className="btn"
+                  style={{ background: "#374151", color: "#fff", border: "none" }} 
                     onClick={handleBulkEnrollStudents}
                     disabled={saving || !bulkEnrollScheduleId || selectedStudentIds.length === 0}
                   >
@@ -6799,7 +7102,7 @@ function LibraryPanel() {
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
         <div><h2 className="fw-black fs-4 text-dark mb-0">Library Management</h2><p className="text-muted small mb-0">{libBooks.length} titles � {totalCopies} total copies</p></div>
-        <button className="btn btn-primary btn-sm fw-bold shadow-sm">+ Add Book</button>
+        <button className="btn btn-sm fw-bold shadow-sm" style={{ background: "#374151", color: "#fff", border: "none" }}>+ Add Book</button>
       </div>
       <div className="row g-3">
         {[
@@ -6929,12 +7232,12 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
 
   const infoItems = [
     {
-      label: "Email", value: email, bg: "#fef2f2",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+      label: "Email", value: email, bg: "#f3f4f6",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
     },
     {
-      label: "Role", value: roleLabel, bg: "#fef2f2",
-      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+      label: "Role", value: roleLabel, bg: "#f3f4f6",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     },
     {
       label: "Access Level", value: "Full Access", bg: "#dcfce7",
@@ -6945,7 +7248,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
   return (
     <div className="d-flex flex-column gap-0">
       {/* Banner */}
-      <div style={{ background:"linear-gradient(135deg,#dc2626 0%,#ef4444 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+      <div style={{ background:"linear-gradient(135deg,#374151 0%,#4b5563 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
         <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
         <div style={{ position:"relative", zIndex:1 }}>
@@ -6963,19 +7266,19 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
             <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#ef4444)", boxShadow:"0 6px 20px rgba(220,38,38,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#374151,#4b5563)", boxShadow:"0 6px 20px rgba(55,65,81,0.4)", border:"4px solid white" }}>
                   {initials2}
                 </div>
                 <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{name}</h4>
                 <p className="text-muted small mb-3">{email}</p>
                 <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(220,38,38,0.1)", color:"#dc2626", border:"1px solid rgba(220,38,38,0.25)", fontWeight:600 }}>{roleLabel}</span>
+                  <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(107,114,128,0.1)", color:"#374151", border:"1px solid rgba(107,114,128,0.25)", fontWeight:600 }}>{roleLabel}</span>
                   <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>Active</span>
                 </div>
                 <div className="w-100 row g-2 mb-3">
                   <div className="col-6">
                     <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
-                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#dc2626" }}>Full</div>
+                      <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#374151" }}>Full</div>
                       <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access</div>
                     </div>
                   </div>
@@ -7012,7 +7315,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
               <div className="card-body p-4 p-md-5">
                 <div className="d-flex align-items-center justify-content-between mb-4">
                   <div className="d-flex align-items-center gap-3">
-                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                    <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#374151,#4b5563)" }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
@@ -7022,13 +7325,13 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                       <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
                     </div>
                   </div>
-                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fee2e2", fontSize:"0.75rem" }}>Read-Only</span>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"#f3f4f6", color:"#374151", border:"1px solid #e5e7eb", fontSize:"0.75rem" }}>Read-Only</span>
                 </div>
 
                 {/* Personal */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
                   </div>
                   <div className="row g-3">
@@ -7046,7 +7349,7 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 {/* Contact */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#f97316)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -7076,17 +7379,17 @@ function PrincipalProfilePanel({ adminName, role }: { adminName?: string | null;
                 </div>
 
                 {/* Info alert */}
-                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#fef2f2", border:"1px solid #fee2e2" }}>
-                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#fecaca" }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="d-flex align-items-start gap-3 rounded-3 p-3" style={{ background:"#f3f4f6", border:"1px solid #e5e7eb" }}>
+                  <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1" style={{ width:32, height:32, background:"#d1d5db" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#dc2626" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#374151" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#4b5563" }}>
                       Please contact the system administrator or email{" "}
-                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#dc2626", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
+                      <a href="mailto:admin@cfei.edu.ph" style={{ color:"#374151", fontWeight:600 }}>admin@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>

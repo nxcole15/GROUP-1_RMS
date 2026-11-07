@@ -103,7 +103,7 @@ export function SettingsPanel() {
   
   return (
     <div className="container-fluid p-4">
-      <h2 className="fw-bold mb-4">⚙️ System Settings</h2>
+      <h2 className="fw-bold mb-4">System Settings</h2>
       
       {/* Current Academic Year Card */}
       <div className="card border-0 shadow-sm rounded-4 mb-4">
@@ -137,7 +137,7 @@ export function SettingsPanel() {
                 <div className="p-3 rounded-3" style={{ background: "#f8fafc" }}>
                   <small className="text-muted d-block mb-1">Status</small>
                   <span className="badge bg-success px-3 py-2">
-                    🟢 {activeConfig.status === "active" ? "Active" : "Completed"}
+                     {activeConfig.status === "active" ? "Active" : "Completed"}
                   </span>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export function SettingsPanel() {
               className="btn btn-outline-primary"
               onClick={() => setShowEnrollModal(true)}
             >
-              📝 Configure
+               Configure
             </button>
           </div>
           
@@ -186,7 +186,7 @@ export function SettingsPanel() {
               <div className="col-md-4">
                 <small className="text-muted d-block mb-1">Status</small>
                 <span className={`badge px-3 py-2 ${activeConfig.enrollment_is_open ? "bg-success" : "bg-secondary"}`}>
-                  {activeConfig.enrollment_is_open ? "🟢 Open" : "🔴 Closed"}
+                  {activeConfig.enrollment_is_open ? "Open" : "Closed"}
                 </span>
               </div>
               <div className="col-md-4">
@@ -206,7 +206,7 @@ export function SettingsPanel() {
       <div className="card border-0 shadow-sm rounded-4">
         <div className="card-body p-4">
           <div className="d-flex align-items-center justify-content-between mb-4">
-            <h5 className="mb-0 fw-bold">📊 School Year History</h5>
+            <h5 className="mb-0 fw-bold">School Year History</h5>
             <button 
               className="btn btn-primary d-flex align-items-center gap-2"
               onClick={() => setShowAddModal(true)}

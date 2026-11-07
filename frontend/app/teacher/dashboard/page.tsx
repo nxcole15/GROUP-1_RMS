@@ -160,7 +160,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color: active === item.id ? "#fff" : "#4b5563", background: active === item.id ? "#dc2626" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
+              style={{ color: active === item.id ? "#fff" : "#4b5563", background: active === item.id ? "#374151" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
               title={item.label}>
               <Icon name={item.icon as IconName} size={20} />
               {expanded && <span>{item.label}</span>}
@@ -170,9 +170,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
 
         {/* Logout button - More visible at bottom */}
         <div className="px-3 py-3 border-top" style={{ borderColor: "#f1f5f9" }}>
-          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#b91c1c"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#dc2626"; }}
+          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#1f2937"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#374151"; }}
             onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
             <Icon name="unlock" size={18} />
             <span>Log Out</span>
@@ -290,32 +290,32 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
       label: "My Students",
       value: loading ? "..." : totalStudents,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
-      textColor: "#d97706",
+      gradient: "linear-gradient(135deg,#6b7280,#9ca3af)",
+      textColor: "#6b7280",
       bgLight: "#eef2ff",
     },
     {
       label: "Class Avg. Grade",
       value: loading ? "..." : `${avgGrade}%`,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
-      textColor: "#d97706",
+      gradient: "linear-gradient(135deg,#6b7280,#9ca3af)",
+      textColor: "#6b7280",
       bgLight: "#fffbeb",
     },
     {
       label: "Pending Requests",
       value: loading ? "..." : pendingRequests,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/><path d="M14.05 2a9 9 0 018 7.94"/><path d="M14.05 6A5 5 0 0120 11.94"/></svg>,
-      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
-      textColor: "#d97706",
-      bgLight: "#fef2f2",
+      gradient: "linear-gradient(135deg,#6b7280,#9ca3af)",
+      textColor: "#6b7280",
+      bgLight: "#f3f4f6",
     },
     {
       label: "Active Term",
       value: loading ? "..." : displayActiveTerm,
       icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-      gradient: "linear-gradient(135deg,#dc2626,#d97706)",
-      textColor: "#d97706",
+      gradient: "linear-gradient(135deg,#6b7280,#9ca3af)",
+      textColor: "#6b7280",
       bgLight: "#f0fdf4",
     },
   ];
@@ -325,7 +325,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
 
       {/* ── Banner ──────────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
+        background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 80px",
         position: "relative",
@@ -364,8 +364,8 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
         {/* Lock banner */}
         {isGradeLocked && (
           <div className="d-flex align-items-start gap-3 rounded-3 p-3 mb-4"
-            style={{ background:"#fef2f2", border:"1px solid #fecaca" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop:2, flexShrink:0 }}>
+            style={{ background:"#f3f4f6", border:"1px solid #d1d5db" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop:2, flexShrink:0 }}>
               <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
               <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
@@ -408,7 +408,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
               <div className="card-body p-4">
                 <div className="d-flex align-items-center gap-2 mb-4">
                   <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                    style={{ width:36, height:36, background:"linear-gradient(135deg,#6b7280,#9ca3af)" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                     </svg>
@@ -420,7 +420,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {recentActivity.map((a, i) => (
                       <div key={i} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#ef4444)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#6b7280,#9ca3af)" }}>
                           <Icon name={a.icon as IconName} size={16} className="text-white" />
                         </div>
                         <div className="flex-grow-1 overflow-hidden">
@@ -463,7 +463,7 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
                     {apiSubjects.map(s => (
                       <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3" style={{ background:"#f8fafc" }}>
                         <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width:36, height:36, background:"linear-gradient(135deg,#dc2626,#d97706)" }}>
+                          style={{ width:36, height:36, background:"linear-gradient(135deg,#6b7280,#9ca3af)" }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
                           </svg>
@@ -590,7 +590,7 @@ function SchedulePanel() {
       ) : schedules.length === 0 ? (
         <div className="card border-0 shadow-sm rounded-3">
           <div className="card-body p-4 text-center text-muted">
-            <div className="mb-2">📅</div>
+            <div className="mb-2"></div>
             <div className="fw-semibold">No classes scheduled</div>
             <div className="small">Your registrar hasn't assigned any schedules yet.</div>
           </div>
@@ -758,7 +758,7 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced - Fixed white box */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1460,7 +1460,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -1602,7 +1602,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
       {/* Progress Card */}
       {selectedSubject && (
         <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div className="text-white">
                 <h3 className="fw-bold mb-1 fs-5">{selectedSubject.split("|")[0]}</h3>
@@ -2360,7 +2360,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       )}
 
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -2406,7 +2406,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
           <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto pb-2">
             {[
               { label: "Student Requested",    count: newRequests.length,     gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "bell" },
-              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "chart" },
+              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", icon: "chart" },
               { label: "Principal Review",     count: pendingAdmin.length,    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: "user" },
               { label: "Principal Verified",   count: verifiedByAdmin.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
               { label: "Released to Student",  count: released.length,        gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)", icon: "check" },
@@ -2524,7 +2524,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     </div>
                   )}
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
+                    ? <div className="rounded-3 p-2 text-center small" style={{ background: "#f3f4f6", border: "1px dashed #d1d5db", color: "#4b5563" }}>Locked - visit Registrar's Office</div>
                     : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">Submit to Principal for Verification</button>
                   }
                 </div>
@@ -2572,7 +2572,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
                   </div>
                   {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small text-danger" style={{ background: "#fef2f2", border: "1px dashed #fca5a5" }}>Locked - visit Registrar's Office</div>
+                    ? <div className="rounded-3 p-2 text-center small" style={{ background: "#f3f4f6", border: "1px dashed #d1d5db", color: "#4b5563" }}>Locked - visit Registrar's Office</div>
                     : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">Release Grade to Student</button>
                   }
                 </div>
@@ -2732,7 +2732,7 @@ function DocumentApprovalsPanel() {
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
         <div className="card-body p-4">
           <div className="d-flex align-items-center gap-3">
             <div className="bg-white bg-opacity-25 rounded-3 p-3">
@@ -2758,7 +2758,7 @@ function DocumentApprovalsPanel() {
         {[
           { label: "Pending Requests", value: pending.length, gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "clock" },
           { label: "Approved", value: approved.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
-          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)", icon: "documents" },
+          { label: "Total Requests", value: docs.length, gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", icon: "documents" },
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
             <div className="card border-0 shadow-sm rounded-3 h-100">
@@ -3148,7 +3148,7 @@ function TimeLogPanel() {
       <div><h2 className="fw-black fs-4 text-dark mb-1">My Time Log</h2><p className="text-muted small mb-0">{today}</p></div>
 
       {/* Current status card */}
-      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#dc2626,#ef4444)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
+      <div className="card border-0 rounded-3" style={{ background: currentSession ? "linear-gradient(135deg,#059669,#10b981)" : "linear-gradient(135deg,#6b7280,#9ca3af)", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}>
         <div className="card-body p-4 text-white">
           <div className="d-flex align-items-center gap-3 mb-3">
             <Icon name={currentSession ? "checkCircle" : "clock"} size={40} className="text-white" />
@@ -3160,7 +3160,7 @@ function TimeLogPanel() {
           <button
             onClick={currentSession ? handleTimeOut : handleTimeIn}
             className="btn btn-light fw-black w-100 rounded-3"
-            style={{ fontSize: 15, color: currentSession ? "#059669" : "#dc2626" }}
+            style={{ fontSize: 15, color: currentSession ? "#059669" : "#374151" }}
           >
             {currentSession ? "Time Out" : "Time In"}
           </button>
@@ -3331,7 +3331,7 @@ function AdviseesPanel() {
 
       {/* Academic Period */}
       {academicConfig && (
-        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #dc2626 0%, #dc2626 100%)" }}>
+        <div className="card border-0 shadow-sm rounded-4 mb-4" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
           <div className="card-body p-4">
             <div className="row g-3">
               <div className="col-md-4">
@@ -3560,7 +3560,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
 
       {/* ── Banner header ─────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#dc2626 0%,#dc2626 100%)",
+        background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 72px",
         position: "relative",
@@ -3586,7 +3586,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
               {/* avatar */}
               <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
                 <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
-                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#dc2626,#d97706)", boxShadow:"0 6px 20px rgba(102,126,234,0.4)", border:"4px solid white" }}>
+                  style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#6b7280,#9ca3af)", boxShadow:"0 6px 20px rgba(107,114,128,0.4)", border:"4px solid white" }}>
                   {initials}
                 </div>
 
@@ -3684,7 +3684,7 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                 {/* Contact section */}
                 <div className="mb-4">
                   <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
-                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#dc2626,#ef4444)", borderRadius:4 }} />
+                    <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
                     <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
                   </div>
                   <div className="row g-3">
@@ -3722,10 +3722,10 @@ function ProfilePanel({ teacher }: { teacher?: { teacher_id: string; full_name: 
                     </svg>
                   </div>
                   <div>
-                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#991b1b" }}>Need to update your information?</div>
-                    <div style={{ fontSize:"0.82rem", color:"#dc2626" }}>
+                    <div className="fw-semibold mb-1" style={{ fontSize:"0.85rem", color:"#374151" }}>Need to update your information?</div>
+                    <div style={{ fontSize:"0.82rem", color:"#4b5563" }}>
                       Please visit the Registrar&apos;s Office or email{" "}
-                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#b91c1c", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
+                      <a href="mailto:registrar@cfei.edu.ph" style={{ color:"#374151", fontWeight:600 }}>registrar@cfei.edu.ph</a>{" "}
                       with your updated details.
                     </div>
                   </div>
@@ -3892,9 +3892,9 @@ export default function TeacherDashboardPage() {
           
           {/* Left side - Logo */}
           <div className="d-flex align-items-center gap-3">
-            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 36, height: 36, objectFit: "cover", border: "2px solid #dc2626" }} />
+            <img src="/cfei-logo.jpg" alt="CFEI Logo" className="rounded-circle" style={{ width: 36, height: 36, objectFit: "cover", border: "2px solid #374151" }} />
             <div className="d-none d-sm-block">
-              <div className="fw-bold" style={{ color: "#dc2626", fontSize: 14 }}>CFEI Portal</div>
+              <div className="fw-bold" style={{ color: "#374151", fontSize: 14 }}>CFEI Portal</div>
               <div className="text-muted" style={{ fontSize: 11 }}>Teacher Dashboard</div>
             </div>
           </div>
