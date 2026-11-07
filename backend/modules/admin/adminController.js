@@ -250,7 +250,7 @@ async function getDashboard(req, res, next) {
        ORDER BY track, grade_level, gender`
     );
 
-    // Recent activity - enrollments and payments
+    // Recent activity - enrollments only (payments removed - accounting only)
     const [recentEnrollments] = await db.query(
       `SELECT 
         ea.id,
@@ -261,44 +261,16 @@ async function getDashboard(req, res, next) {
        FROM enrollment_applications ea
        WHERE ea.status IN ('pending', 'approved', 'rejected')
        ORDER BY ea.created_at DESC
-       LIMIT 5`
+       LIMIT 10`
     );
 
-    const [recentPayments] = await db.query(
-      `SELECT 
-        p.id,
-        p.student_id,
-        s.full_name,
-        p.amount,
-        p.fee_item,
-        p.status,
-        p.paid_at as created_at
-       FROM payments p
-       JOIN students s ON p.student_id = s.student_id
-       ORDER BY p.paid_at DESC
-       LIMIT 5`
-    );
-
-    // Combine and format recent activity
-    const recentActivity = [
-      ...recentEnrollments.map(e => ({
-        type: 'enrollment',
-        action: `Enrollment ${e.status}`,
-        name: e.full_name,
-        time: new Date(e.created_at).toLocaleDateString('en-PH'),
-        created_at: e.created_at
-      })),
-      ...recentPayments.map(p => ({
-        type: 'payment',
-        action: `Payment ${p.status} - ₱${Number(p.amount).toLocaleString()}`,
-        name: p.full_name,
-        time: new Date(p.created_at).toLocaleDateString('en-PH'),
-        created_at: p.created_at
-      }))
-    ]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10)
-    .map(({ created_at, ...rest }) => rest); // Remove created_at from response
+    // Format recent activity (enrollments only)
+    const recentActivity = recentEnrollments.map(e => ({
+      type: 'enrollment',
+      action: `Enrollment ${e.status}`,
+      name: e.full_name,
+      time: new Date(e.created_at).toLocaleDateString('en-PH')
+    }));
 
     res.json({ 
       pending,

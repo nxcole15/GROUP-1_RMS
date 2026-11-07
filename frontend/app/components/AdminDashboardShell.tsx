@@ -5962,7 +5962,9 @@ function SchedulingPanel() {
           style={{
             background: activeTab === "teacher" ? "#374151" : "transparent",
             color: activeTab === "teacher" ? "#fff" : "#374151",
-            border: `1px solid ${activeTab === "teacher" ? "#374151" : "#d1d5db"}`,
+            borderTop: `1px solid ${activeTab === "teacher" ? "#374151" : "#d1d5db"}`,
+            borderBottom: `1px solid ${activeTab === "teacher" ? "#374151" : "#d1d5db"}`,
+            borderLeft: `1px solid ${activeTab === "teacher" ? "#374151" : "#d1d5db"}`,
             borderRight: "none"
           }}
           onClick={() => setActiveTab("teacher")}
@@ -5974,7 +5976,9 @@ function SchedulingPanel() {
           style={{
             background: activeTab === "student" ? "#374151" : "transparent",
             color: activeTab === "student" ? "#fff" : "#374151",
-            border: `1px solid ${activeTab === "student" ? "#374151" : "#d1d5db"}`,
+            borderTop: `1px solid ${activeTab === "student" ? "#374151" : "#d1d5db"}`,
+            borderBottom: `1px solid ${activeTab === "student" ? "#374151" : "#d1d5db"}`,
+            borderLeft: `1px solid ${activeTab === "student" ? "#374151" : "#d1d5db"}`,
             borderRight: "none"
           }}
           onClick={() => setActiveTab("student")}
@@ -5986,7 +5990,9 @@ function SchedulingPanel() {
           style={{
             background: activeTab === "timetable" ? "#374151" : "transparent",
             color: activeTab === "timetable" ? "#fff" : "#374151",
-            border: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
+            borderTop: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
+            borderBottom: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
+            borderLeft: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
             borderRight: "none"
           }}
           onClick={() => setActiveTab("timetable")}
