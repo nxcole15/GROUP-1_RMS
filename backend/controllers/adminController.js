@@ -15,10 +15,10 @@ async function getDashboard(req, res, next) {
   try {
     const pending = {
       enrollments: (await EnrollmentModel.findAllPending()).length,
-      payments:    (await PaymentModel.findAllPending()).length,
+      // payments removed - now handled by accounting module
       documents:   (await DocumentModel.findAllPending()).length,
     };
-    pending.total = pending.enrollments + pending.payments + pending.documents;
+    pending.total = pending.enrollments + pending.documents;
     res.json({ pending });
   } catch (err) { next(err); }
 }
@@ -103,32 +103,9 @@ async function rejectEnrollment(req, res, next) {
 }
 
 /* ── Payments ──────────────────────────────────────────────── */
-async function getPendingPayments(req, res, next) {
-  try {
-    const pending = await PaymentModel.findAllPending();
-    const result  = await Promise.all(
-      pending.map(async (p) => {
-        const [rows] = await db.query("SELECT full_name FROM students WHERE student_id = ? LIMIT 1", [p.student_id]);
-        return { ...p, student_name: rows[0]?.full_name || "Unknown" };
-      })
-    );
-    res.json({ payments: result });
-  } catch (err) { next(err); }
-}
-
-async function verifyPayment(req, res, next) {
-  try {
-    const id      = parseInt(req.params.id, 10);
-    const payment = await PaymentModel.findById(id);
-    if (!payment)                  return res.status(404).json({ error: "Payment not found." });
-    if (payment.status !== "pending") return res.status(409).json({ error: "This request has already been processed." });
-
-    const updated = await PaymentModel.verify(id, req.admin.admin_id);
-    sendNotification({ student_id: updated.student_id, message: `Your payment of ₱${Number(updated.amount).toLocaleString()} (${updated.fee_item}) has been verified.`, type: "payment" });
-    await AuditModel.log({ admin_id: req.admin.admin_id, action: "VERIFY_PAYMENT", target_request_id: id });
-    res.json({ message: "Payment verified.", payment: updated });
-  } catch (err) { next(err); }
-}
+// Old pending payment verification removed
+// Payments are now handled by /api/accounting/payments (accountingPaymentController)
+// All payments are verified immediately upon recording by accounting staff
 
 /* ── Documents ─────────────────────────────────────────────── */
 async function getPendingDocuments(req, res, next) {
@@ -183,6 +160,5 @@ async function rejectDocument(req, res, next) {
 module.exports = {
   getDashboard, searchStudents,
   getPendingEnrollments, approveEnrollment, rejectEnrollment,
-  getPendingPayments, verifyPayment,
   getPendingDocuments, approveDocument, rejectDocument,
 };
