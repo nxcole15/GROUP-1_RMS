@@ -1,77 +1,41 @@
 /**
  * utils/mailer.js
- * Dual email provider system: Resend (primary) + Gmail SMTP (fallback)
+ * Email service using Resend
  * 
  * CONFIGURATION:
- *   Set EMAIL_PROVIDER in .env to choose provider:
- *   - EMAIL_PROVIDER=resend (after domain verification)
- *   - EMAIL_PROVIDER=gmail (temporary/immediate use)
+ *   RESEND_API_KEY=re_xxxxxxxxxxxxx
+ *   EMAIL_FROM="CFEI INFORM" <noreply@yourdomain.com>
  *
- * RESEND Configuration:
- *   RESEND_API_KEY=your_api_key
- *   EMAIL_FROM="CFEI INFORM" <noreply@your-domain.com>
- *
- * GMAIL SMTP Configuration:
- *   GMAIL_USER=your-email@gmail.com
- *   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx (16-char app password)
- *   
- * To generate Gmail App Password:
- *   1. Go to https://myaccount.google.com/security
- *   2. Enable 2-Step Verification
- *   3. Security → App passwords → Generate new
+ * Setup Instructions:
+ *   1. Buy domain on Cloudflare
+ *   2. Sign up at resend.com
+ *   3. Add and verify your domain in Resend
+ *   4. Get API key from Resend dashboard
+ *   5. Update .env file with your domain and API key
  */
 require("dotenv").config();
 const { Resend } = require("resend");
-const nodemailer = require("nodemailer");
 
-// Resend setup
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
-
-// Gmail SMTP setup
-const gmailTransporter = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    })
-  : null;
-
-// Determine which provider to use
-const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend';
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * Send email using configured provider
+ * Send email using Resend
  */
 async function deliverEmail(message) {
-  if (EMAIL_PROVIDER === 'gmail' && gmailTransporter) {
-    // Use Gmail SMTP
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.GMAIL_USER,
-      to: message.to,
-      subject: message.subject,
-      html: message.html,
-      text: message.text,
-    };
-    
-    const info = await gmailTransporter.sendMail(mailOptions);
-    console.log(`✅ Email sent via Gmail to ${message.to}`);
-    return info;
-    
-  } else if (EMAIL_PROVIDER === 'resend' && resend) {
-    // Use Resend
+  try {
     const { data, error } = await resend.emails.send(message);
+    
     if (error) {
+      console.error(`❌ Resend error:`, error);
       throw new Error(error.message);
     }
-    console.log(`✅ Email sent via Resend to ${message.to}`);
-    return data;
     
-  } else {
-    throw new Error(`Email provider ${EMAIL_PROVIDER} is not configured properly. Check .env file.`);
+    console.log(`✅ Email sent successfully to ${message.to}`);
+    return data;
+  } catch (error) {
+    console.error(`❌ Failed to send email:`, error);
+    throw error;
   }
 }
 
@@ -84,7 +48,7 @@ async function deliverEmail(message) {
  * @param {string} opts.tempPass   - Temporary password
  */
 async function sendCredentials({ to, fullName, studentId, tempPass }) {
-  const from = process.env.EMAIL_FROM || process.env.GMAIL_USER || "onboarding@resend.dev";
+  const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
   
   const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
   const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
@@ -94,7 +58,7 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
     await deliverEmail({
       from,
       to,
-      subject: "CFEI Enrollment Application Received — Login Credentials",
+      subject: "🎓 CFEI Enrollment Approved — Your Login Credentials",
       html: `
 <!DOCTYPE html>
 <html>
@@ -102,66 +66,67 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1e40af,#dc2626);padding:32px 24px;text-align:center;">
-      <h1 style="color:#fff;margin:0;font-size:22px;"> 🎓 Enrollment Application Received</h1>
-      <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Cebu Far East Institute — INFORM Student Portal</p>
+      <!-- School Logo -->
+      <img src="https://group-1-rms.vercel.app/cfei-logo.jpg" alt="CFEI Logo" style="width:80px;height:80px;margin-bottom:16px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);object-fit:cover;">
+      <h1 style="color:#fff;margin:0;font-size:22px;">🎓 Enrollment Approved!</h1>
+      <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Welcome to Cebu Far East Institute</p>
     </div>
     <!-- Body -->
     <div style="padding:32px 24px;">
       <p style="color:#334155;font-size:15px;margin:0 0 16px;">Dear <strong>${fullName}</strong>,</p>
       <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;">
-        Thank you for submitting your enrollment application to <strong>Cebu Far East Institute</strong>.
-        Below are your login credentials for the INFORM Student Portal. Your account will become active after Principal approval.
+        Congratulations! Your enrollment application has been <strong>approved by the Principal</strong>. 
+        Your student account has been created. Below are your login credentials for the INFORM Student Portal.
       </p>
 
       <!-- Credentials box -->
-      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
+      <div style="background:#f8fafc;border:2px solid #1e40af;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
         <div style="margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;margin-bottom:4px;">Student ID</div>
-          <div style="font-size:22px;font-weight:900;color:#1e40af;letter-spacing:0.04em;">${studentId}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px;">Student ID</div>
+          <div style="font-size:24px;font-weight:900;color:#1e40af;letter-spacing:0.04em;">${studentId}</div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;margin-bottom:4px;">Temporary Password</div>
-          <div style="font-size:22px;font-weight:900;color:#dc2626;letter-spacing:0.04em;">${tempPass}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px;">Password</div>
+          <div style="font-size:24px;font-weight:900;color:#dc2626;letter-spacing:0.04em;font-family:monospace;">${tempPass}</div>
         </div>
       </div>
 
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#92400e;">
-        ⚠️ <strong>Important:</strong> Your account is not active yet. You may log in after Principal approval.
-        Please change your password after your first login and do not share your credentials.
+      <div style="background:#fef3c7;border:2px solid #fbbf24;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#78350f;">
+        <strong>⚠️ Important Security Notice:</strong>
+        <ul style="margin:8px 0 0;padding-left:20px;">
+          <li>Keep these credentials private and secure</li>
+          <li>Do not share with anyone</li>
+        </ul>
       </div>
 
       <div style="text-align:center;margin-bottom:24px;">
-        <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#dc2626);color:#fff;font-weight:700;font-size:14px;padding:12px 32px;border-radius:8px;text-decoration:none;">
-          Go to INFORM Portal →
+        <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#1e40af,#dc2626);color:#fff;font-weight:700;font-size:15px;padding:14px 40px;border-radius:8px;text-decoration:none;box-shadow:0 4px 12px rgba(30,64,175,0.3);">
+          Login to INFORM Portal →
         </a>
       </div>
 
+      <div style="background:#f1f5f9;border-left:4px solid #3b82f6;padding:12px 16px;margin-bottom:20px;border-radius:4px;">
+        <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">
+          <strong>Next Steps:</strong><br/>
+          1. Log in using your credentials above<br/>
+          2. Complete your student profile<br/>
+          3. Check your class schedule
+        </p>
+      </div>
+
       <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.6;">
-        If you have any concerns, please contact the Registrar's Office at
-        <a href="mailto:registrar@cfei.edu" style="color:#1e40af;">registrar@cfei.edu</a>
-        or visit Room 101, Admin Building (Mon–Fri, 8AM–5PM).
+        Need help? Contact the Registrar's Office:<br/>
+        📧 <a href="mailto:registrar@cfei.edu" style="color:#1e40af;text-decoration:none;">registrar@cfei.edu</a><br/>
+        🏢 Room 101, Admin Building (Mon–Fri, 8AM–5PM)
       </p>
     </div>
     <!-- Footer -->
-    <div style="background:#f1f5f9;padding:16px 24px;text-align:center;">
-      <p style="color:#94a3b8;font-size:11px;margin:0;">© ${new Date().getFullYear()} Cebu Far East Institute · INFORM System</p>
+    <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="color:#94a3b8;font-size:11px;margin:0;">© ${new Date().getFullYear()} Cebu Far East Institute · INFORM Student Portal</p>
     </div>
   </div>
 </body>
 </html>`,
-    text: `Dear ${fullName},
-
-    Your enrollment application has been received.
-
-    Student ID: ${studentId}
-    Temporary Password: ${tempPass}
-
-    Your account will become active after Principal approval.
-    Login at: ${loginUrl}
-
-    Please change your password after Principal approval.
-
-    CFEI INFORM System`,
     });
     
     console.log(`✅ Credentials email sent successfully to ${to}`);
@@ -172,71 +137,87 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
 }
 
 async function sendRequirementsEmail({ to, fullName, dueDate }) {
-  const from = process.env.EMAIL_FROM || process.env.GMAIL_USER || "onboarding@resend.dev";
+  const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
   
   const requirements = [
     "School Form 9 / Report Card",
-    "Birth Certificate",
+    "Birth Certificate (PSA Copy)",
     "Certificate of Good Moral Character",
-    "2x2 Colored ID Pictures",
+    "2x2 Colored ID Pictures (3 copies)",
     "Certificate of Completion / Diploma",
-    "School Form 10",
+    "School Form 10 (if applicable)",
   ];
 
   try {
     await deliverEmail({
       from,
       to,
-      subject: "CFEI Enrollment Application Received - Requirements Needed",
+      subject: "📋 CFEI Enrollment Application Received — Requirements Needed",
       html: `
-      <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#334155;">
-        <h2 style="color:#1e40af;">Enrollment Application Received</h2>
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f0f4ff;margin:0;padding:0;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1e40af,#dc2626);padding:32px 24px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:22px;">📋 Application Received</h1>
+      <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Cebu Far East Institute</p>
+    </div>
+    <!-- Body -->
+    <div style="padding:32px 24px;">
+      <p style="color:#334155;font-size:15px;margin:0 0 16px;">Dear <strong>${fullName}</strong>,</p>
+      <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;">
+        Thank you for submitting your enrollment application to <strong>Cebu Far East Institute</strong>. 
+        We have received your application and it is now under review.
+      </p>
 
-        <p>Dear <strong>${fullName}</strong>,</p>
-
-        <p>
-          We received your enrollment application for Cebu Far East Institute.
-          Please submit the following requirements before the deadline:
-        </p>
-
-        <ul>
-          ${requirements.map(item => `<li>${item}</li>`).join("")}
-        </ul>
-
-        <p>
-          <strong>Requirements deadline:</strong> ${dueDate}
-        </p>
-
-        <p>
-          Your application will be reviewed by the Registrar and then forwarded
-          to the Principal for final approval.
-        </p>
-
-        <p>
-          Your student account and login credentials will be sent only after
-          Principal approval.
-        </p>
-
-        <p>
-          Regards,<br />
-          CFEI INFORM System
+      <div style="background:#fef3c7;border:2px solid #fbbf24;border-radius:8px;padding:14px 18px;margin-bottom:24px;">
+        <p style="margin:0;font-size:14px;color:#78350f;font-weight:600;">
+          ⏰ Requirements Deadline: <span style="font-size:16px;">${dueDate}</span>
         </p>
       </div>
-    `,
-    text: `Dear ${fullName},
 
-We received your enrollment application for Cebu Far East Institute.
+      <h3 style="color:#1e40af;font-size:16px;margin:0 0 16px;">📑 Required Documents</h3>
+      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+        <ol style="margin:0;padding-left:20px;color:#475569;">
+          ${requirements.map(item => `<li style="margin-bottom:8px;font-size:14px;">${item}</li>`).join("")}
+        </ol>
+      </div>
 
-Please submit these requirements:
-${requirements.map(item => `- ${item}`).join("\n")}
+      <div style="background:#dbeafe;border-left:4px solid #3b82f6;padding:14px 18px;margin-bottom:24px;border-radius:4px;">
+        <p style="margin:0;font-size:13px;color:#1e40af;line-height:1.6;">
+          <strong>📍 Where to Submit:</strong><br/>
+          Registrar's Office, Room 101, Admin Building<br/>
+          Monday to Friday, 8:00 AM – 5:00 PM
+        </p>
+      </div>
 
-Requirements deadline: ${dueDate}
+      <h3 style="color:#1e40af;font-size:16px;margin:0 0 12px;">🔄 What Happens Next?</h3>
+      <ol style="color:#475569;font-size:14px;line-height:1.8;margin:0 0 24px;padding-left:20px;">
+        <li>Submit your requirements before the deadline</li>
+        <li>Our Registrar will verify all documents</li>
+        <li>Application forwarded to Principal for approval</li>
+        <li>You'll receive your login credentials via email</li>
+      </ol>
 
-Your application will be reviewed by the Registrar and then forwarded to the Principal.
+      <div style="text-align:center;margin-bottom:24px;">
+        <p style="color:#64748b;font-size:13px;margin:0 0 12px;">Questions about your application?</p>
+        <a href="mailto:registrar@cfei.edu" style="display:inline-block;background:#1e40af;color:#fff;font-weight:600;font-size:14px;padding:12px 32px;border-radius:8px;text-decoration:none;">
+          Contact Registrar's Office
+        </a>
+      </div>
 
-Your student account and login credentials will be sent only after Principal approval.
-
-CFEI INFORM System`,
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.6;text-align:center;">
+        This is an automated message. Please do not reply to this email.
+      </p>
+    </div>
+    <!-- Footer -->
+    <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="color:#94a3b8;font-size:11px;margin:0;">© ${new Date().getFullYear()} Cebu Far East Institute · INFORM System</p>
+    </div>
+  </div>
+</body>
+</html>`,
     });
     
     console.log(`✅ Requirements email sent successfully to ${to}`);

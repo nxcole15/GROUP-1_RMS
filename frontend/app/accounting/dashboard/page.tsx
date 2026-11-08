@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getAcademicConfig, type AcademicConfig } from "../../lib/auth";
+import { GuidePanel } from "../../components/GuidePanel";
 
 type PaymentRecord = {
   id: number;
@@ -91,9 +92,10 @@ export default function AccountingDashboardPage() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<DocumentPaymentRecord | null>(null);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [activeView, setActiveView] = useState<"overview" | "documents" | "fee-items" | "fee-management">("overview");
+  const [activeView, setActiveView] = useState<"overview" | "documents" | "fee-items" | "fee-management" | "dashboard-guide" | "user-guide" | "tuition-payments" | "my-profile">("overview");
   const [academicConfig, setAcademicConfig] = useState<AcademicConfig | null>(null);
   const [accountingName, setAccountingName] = useState<string>("");
+  const [guideOpen, setGuideOpen] = useState(false);
   
   // Fee Items Management
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
@@ -591,7 +593,9 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("overview")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "overview" ? "#fff" : "#4b5563", background: activeView === "overview" ? "#374151" : "transparent" }}
+            style={{ color: activeView === "overview" ? "#78350f" : "#1f2937", background: activeView === "overview" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "overview") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "overview") e.currentTarget.style.background = "transparent"; }}
           >
             <Icon name="activity" size={20} />
             <span>Overview</span>
@@ -599,7 +603,9 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("documents")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "documents" ? "#fff" : "#4b5563", background: activeView === "documents" ? "#374151" : "transparent" }}
+            style={{ color: activeView === "documents" ? "#78350f" : "#1f2937", background: activeView === "documents" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "documents") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "documents") e.currentTarget.style.background = "transparent"; }}
           >
             <Icon name="file" size={20} />
             <span>Document Payments</span>
@@ -614,7 +620,9 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-items")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-items" ? "#fff" : "#4b5563", background: activeView === "fee-items" ? "#374151" : "transparent" }}
+            style={{ color: activeView === "fee-items" ? "#78350f" : "#1f2937", background: activeView === "fee-items" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "fee-items") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "fee-items") e.currentTarget.style.background = "transparent"; }}
           >
             <Icon name="settings" size={20} />
             <span>Fee Settings</span>
@@ -622,7 +630,9 @@ export default function AccountingDashboardPage() {
           <button 
             onClick={() => setActiveView("fee-management")}
             className={`btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0`}
-            style={{ color: activeView === "fee-management" ? "#fff" : "#4b5563", background: activeView === "fee-management" ? "#374151" : "transparent" }}
+            style={{ color: activeView === "fee-management" ? "#78350f" : "#1f2937", background: activeView === "fee-management" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "fee-management") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "fee-management") e.currentTarget.style.background = "transparent"; }}
           >
             <Icon name="users" size={20} />
             <span>Fee Management</span>
@@ -634,25 +644,87 @@ export default function AccountingDashboardPage() {
           {/* Divider */}
           <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
           
-          <button onClick={() => router.push("/accounting/payments")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
+          <button 
+            onClick={() => setActiveView("tuition-payments")} 
+            className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
+            style={{ color: activeView === "tuition-payments" ? "#78350f" : "#1f2937", background: activeView === "tuition-payments" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "tuition-payments") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "tuition-payments") e.currentTarget.style.background = "transparent"; }}
+          >
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
             <span>Tuition Payments</span>
           </button>
-          <button onClick={() => router.push("/accounting/profile")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#4b5563", background: "transparent" }}>
+          
+          <button 
+            onClick={() => setActiveView("my-profile")} 
+            className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
+            style={{ color: activeView === "my-profile" ? "#78350f" : "#1f2937", background: activeView === "my-profile" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { if (activeView !== "my-profile") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activeView !== "my-profile") e.currentTarget.style.background = "transparent"; }}
+          >
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
             <span>My Profile</span>
           </button>
+          
+          {/* Guide Dropdown */}
+          <div className="mt-2">
+            <button 
+              onClick={() => setGuideOpen(!guideOpen)}
+              className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 w-100 guide-dropdown-toggle"
+              style={{ color:"#1f2937", background:"transparent", justifyContent:"space-between", whiteSpace:"nowrap", transition: "all 0.2s ease" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              <div className="d-flex align-items-center gap-3">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                </svg>
+                <span>Guide</span>
+              </div>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: guideOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            
+            {guideOpen && (
+              <div className="guide-dropdown-menu mt-1">
+                <button
+                  onClick={() => { setActiveView("dashboard-guide"); setShowSidebar(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: activeView === "dashboard-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = activeView === "dashboard-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "0.75rem"; }}>
+                  Accounting Dashboard Guide
+                </button>
+                <button
+                  onClick={() => { setActiveView("user-guide"); setShowSidebar(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: activeView === "user-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = activeView === "user-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "0.75rem"; }}>
+                  Accounting Guide
+                </button>
+              </div>
+            )}
+          </div>
+          
         </nav>
 
         <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
-          <button onClick={() => {
-            localStorage.clear();
-            router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", fontSize: "1rem" }}>
+          <button 
+            onClick={() => {
+              localStorage.clear();
+              router.push("/login");
+            }} 
+            className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2 rounded-3" 
+            style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}
+          >
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -663,34 +735,36 @@ export default function AccountingDashboardPage() {
 
       <div style={{ marginLeft: 256 }} className="d-none d-lg-block">
         <div className="min-vh-100" style={{ background: "#f5f5f5" }}>
-          <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
-            {/* Decorative circles */}
-            <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
-            <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
-            <div style={{ position:"absolute", top:30, right:90, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
-            
-            <div className="container-fluid px-4" style={{ position: "relative", zIndex: 1 }}>
-              <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
-                Welcome back, {accountingName || "Accounting User"}
-              </h1>
-              <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
-                Accounting · Full Access · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || "2026-2027"}
-              </p>
-              <div className="d-flex gap-2 flex-wrap">
-                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
-                  System Online
-                </span>
-                <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
-                  Payment Management
-                </span>
+          {activeView === "overview" && (
+            <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "32px 0 80px", position: "relative", overflow: "hidden" }}>
+              {/* Decorative circles */}
+              <div style={{ position:"absolute", top:-50, right:-50, width:230, height:230, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+              <div style={{ position:"absolute", bottom:-60, right:180, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+              <div style={{ position:"absolute", top:30, right:90, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+              
+              <div className="container-fluid px-4" style={{ position: "relative", zIndex: 1 }}>
+                <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>
+                  Welcome back, {accountingName || "Accounting User"}
+                </h1>
+                <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
+                  Accounting · Full Access · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || "2026-2027"}
+                </p>
+                <div className="d-flex gap-2 flex-wrap">
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+                    System Online
+                  </span>
+                  <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
+                    Payment Management
+                  </span>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
 
-          <main className="container-fluid px-4" style={{ marginTop: "-52px", paddingBottom: 32 }}>
+          <main className="container-fluid px-4" style={{ marginTop: activeView === "overview" ? "-52px" : "32px", paddingBottom: 32 }}>
             {activeView === "overview" && (
               <>
-                <div className="row g-3 mb-4">
+                {/* Stats Cards */}                <div className="row g-3 mb-4">
               <div className="col-md-4">
                 <div className="card border-0 shadow-sm rounded-4 h-100" style={{ overflow:"hidden" }}>
                   <div className="card-body p-4">
@@ -802,6 +876,13 @@ export default function AccountingDashboardPage() {
 
             {activeView === "documents" && (
               <>
+                <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "24px 0", marginLeft: "-2rem", marginRight: "-2rem", marginTop: "-2rem", marginBottom: "2rem", borderRadius: "0 0 16px 16px" }}>
+                  <div className="container-fluid px-4">
+                    <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Document Payments</h1>
+                    <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Verify and manage student document payment requests</p>
+                  </div>
+                </header>
+
                 {/* Stats Cards */}
                 <div className="row g-3 mb-4">
                   <div className="col-md-3">
@@ -989,6 +1070,13 @@ export default function AccountingDashboardPage() {
             {/* Fee Items (Settings) View */}
             {activeView === "fee-items" && (
               <>
+                <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "24px 0", marginLeft: "-2rem", marginRight: "-2rem", marginTop: "-2rem", marginBottom: "2rem", borderRadius: "0 0 16px 16px" }}>
+                  <div className="container-fluid px-4">
+                    <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Fee Settings</h1>
+                    <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Manage fee items that can be assigned to students</p>
+                  </div>
+                </header>
+
                 <div className="card border-0 shadow-sm rounded-4 mb-4">
                   <div className="card-body p-4">
                     <div className="d-flex justify-content-between align-items-center mb-4">
@@ -1084,6 +1172,13 @@ export default function AccountingDashboardPage() {
             {/* Fee Management (Student Assessments) View */}
             {activeView === "fee-management" && (
               <>
+                <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "24px 0", marginLeft: "-2rem", marginRight: "-2rem", marginTop: "-2rem", marginBottom: "2rem", borderRadius: "0 0 16px 16px" }}>
+                  <div className="container-fluid px-4">
+                    <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Fee Management</h1>
+                    <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Assign and manage student fee assessments</p>
+                  </div>
+                </header>
+
                 {/* Stats */}
                 <div className="row g-3 mb-4">
                   <div className="col-md-4">
@@ -1199,6 +1294,301 @@ export default function AccountingDashboardPage() {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Dashboard Guide View */}
+            {activeView === "dashboard-guide" && (
+              <GuidePanel role="accounting" type="dashboard" />
+            )}
+
+            {/* User Guide View */}
+            {activeView === "user-guide" && (
+              <GuidePanel role="accounting" type="user" />
+            )}
+
+            {/* Tuition Payments View */}
+            {activeView === "tuition-payments" && (
+              <>
+                <header style={{ background: "linear-gradient(135deg,#374151 0%,#4b5563 100%)", padding: "24px 0", marginLeft: "-2rem", marginRight: "-2rem", marginTop: "-2rem", marginBottom: "2rem" }}>
+                  <div className="container-fluid px-4">
+                    <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.8rem" }}>Tuition Payment Records</h1>
+                    <p className="mb-0 text-white-50" style={{ fontSize: 15 }}>Manage and record student tuition payments</p>
+                  </div>
+                </header>
+
+                {/* Summary Statistics */}
+                <div className="row g-3 mb-4">
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100">
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Students with Balance</p>
+                        <h2 className="mb-0 fw-bold" style={{ fontSize: 36, color: "#f59e0b" }}>{paymentStats.students_with_balance || 0}</h2>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100">
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Payments</p>
+                        <h2 className="mb-0 fw-bold" style={{ fontSize: 36, color: "#3b82f6" }}>{paymentStats.verified_count}</h2>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100">
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Paid Students</p>
+                        <h2 className="mb-0 fw-bold" style={{ fontSize: 36, color: "#10b981" }}>
+                          {(students || []).filter((s: Student) => s.balance <= 0).length}
+                        </h2>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card border-0 shadow-sm rounded-4 h-100">
+                      <div className="card-body p-4">
+                        <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Total Collected</p>
+                        <h2 className="mb-0 fw-bold" style={{ fontSize: 32, color: "#059669" }}>
+                          ₱{Number(paymentStats.total_verified_amount || 0).toLocaleString()}
+                        </h2>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Records Table */}
+                <div className="card border-0 shadow-sm rounded-4">
+                  <div className="card-body p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                      <h5 className="fw-bold mb-0">Recent Payment History</h5>
+                      <div className="d-flex gap-2">
+                        <select className="form-select" value={filter} onChange={(e) => setFilter(e.target.value as any)} style={{ width: 150 }}>
+                          <option value="all">All Payments</option>
+                          <option value="pending">Pending</option>
+                          <option value="verified">Verified</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Date</th>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Fee Item</th>
+                            <th className="text-end">Amount</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredPayments.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-5">
+                                <div className="text-muted">
+                                  <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-3" style={{ opacity: 0.5 }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                  </svg>
+                                  <div className="fw-semibold">No payment records found</div>
+                                  <div className="small">Payment history will appear here</div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredPayments.slice(0, 20).map((payment) => (
+                              <tr key={payment.id}>
+                                <td>{new Date(payment.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                                <td className="fw-semibold">{payment.student_id}</td>
+                                <td>{payment.student_name}</td>
+                                <td className="text-muted small">{payment.fee_item}</td>
+                                <td className="text-end fw-semibold">₱{Number(payment.amount).toLocaleString()}</td>
+                                <td>
+                                  {payment.status === "verified" ? (
+                                    <span className="badge rounded-pill px-3 py-1" style={{ background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+                                      Verified
+                                    </span>
+                                  ) : (
+                                    <span className="badge rounded-pill px-3 py-1" style={{ background: "#fef3c7", color: "#f59e0b", border: "1px solid #fde68a" }}>
+                                      Pending
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {filteredPayments.length > 20 && (
+                      <div className="text-center mt-3">
+                        <span className="text-muted small">Showing 20 of {filteredPayments.length} payments</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* My Profile View */}
+            {activeView === "my-profile" && (
+              <div className="d-flex flex-column gap-0">
+                {/* Banner */}
+                <div style={{ background:"linear-gradient(135deg,#374151 0%,#4b5563 100%)", borderRadius:"16px 16px 0 0", padding:"32px 32px 80px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
+                  <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+                  <div style={{ position:"relative", zIndex:1 }}>
+                    <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.6rem" }}>My Profile</h1>
+                    <p className="mb-0" style={{ color:"rgba(255,255,255,0.7)" }}>Your personal &amp; professional information</p>
+                  </div>
+                </div>
+
+                {/* Cards pulled up over banner */}
+                <div className="container-fluid px-3 px-md-4" style={{ marginTop:"-52px", paddingBottom:32 }}>
+                  <div className="row g-4">
+                    {/* Left: Profile Card */}
+                    <div className="col-12 col-lg-4">
+                      <div className="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
+                        <div className="d-flex flex-column align-items-center pt-4 pb-4 px-4 text-center">
+                          <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mb-3"
+                            style={{ width:100, height:100, fontSize:32, background:"linear-gradient(135deg,#374151,#4b5563)", boxShadow:"0 6px 20px rgba(55,65,81,0.4)", border:"4px solid white" }}>
+                            {accountingName ? accountingName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() : "AC"}
+                          </div>
+                          <h4 className="fw-bold mb-1" style={{ color:"#1e293b" }}>{accountingName || "Accounting User"}</h4>
+                          <p className="text-muted small mb-3">accounting@cfei.edu.ph</p>
+                          <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                            <span className="badge rounded-pill px-3 py-2" style={{ background:"rgba(107,114,128,0.1)", color:"#374151", border:"1px solid rgba(107,114,128,0.25)", fontWeight:600 }}>Accounting Officer</span>
+                            <span className="badge rounded-pill px-3 py-2" style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>Active</span>
+                          </div>
+                          <div className="w-100 row g-2 mb-3">
+                            <div className="col-6">
+                              <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                                <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#374151" }}>Full</div>
+                                <div className="text-muted" style={{ fontSize:"0.7rem" }}>Access</div>
+                              </div>
+                            </div>
+                            <div className="col-6">
+                              <div className="rounded-3 p-3 text-center" style={{ background:"#f8fafc", border:"1px solid #e2e8f0" }}>
+                                <div className="fw-bold" style={{ fontSize:"1.1rem", color:"#16a34a" }}>Active</div>
+                                <div className="text-muted" style={{ fontSize:"0.7rem" }}>Status</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="px-4 pb-4">
+                          <hr style={{ borderColor:"#e2e8f0" }} />
+                          <div className="d-flex flex-column gap-3">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width:34, height:34, background:"#f3f4f6" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                              </div>
+                              <div style={{ overflow:"hidden" }}>
+                                <div className="text-muted" style={{ fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>Email</div>
+                                <div className="fw-semibold text-truncate" style={{ fontSize:"0.84rem", color:"#1e293b" }}>accounting@cfei.edu.ph</div>
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width:34, height:34, background:"#f3f4f6" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                              </div>
+                              <div style={{ overflow:"hidden" }}>
+                                <div className="text-muted" style={{ fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>Role</div>
+                                <div className="fw-semibold text-truncate" style={{ fontSize:"0.84rem", color:"#1e293b" }}>Accounting Officer</div>
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width:34, height:34, background:"#dcfce7" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                              </div>
+                              <div style={{ overflow:"hidden" }}>
+                                <div className="text-muted" style={{ fontSize:"0.7rem", textTransform:"uppercase", letterSpacing:"0.05em" }}>Access Level</div>
+                                <div className="fw-semibold text-truncate" style={{ fontSize:"0.84rem", color:"#1e293b" }}>Full Access</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Details Card */}
+                    <div className="col-12 col-lg-8">
+                      <div className="card border-0 shadow-lg rounded-4 h-100">
+                        <div className="card-body p-4 p-md-5">
+                          <div className="d-flex align-items-center justify-content-between mb-4">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width:44, height:44, background:"linear-gradient(135deg,#374151,#4b5563)" }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                </svg>
+                              </div>
+                              <div>
+                                <h5 className="fw-bold mb-0" style={{ color:"#1e293b" }}>Profile Information</h5>
+                                <p className="text-muted mb-0" style={{ fontSize:"0.82rem" }}>Your account and role details</p>
+                              </div>
+                            </div>
+                            <span className="badge px-3 py-2 rounded-pill" style={{ background:"#f3f4f6", color:"#374151", border:"1px solid #e5e7eb", fontSize:"0.75rem" }}>Read-Only</span>
+                          </div>
+
+                          {/* Personal */}
+                          <div className="mb-4">
+                            <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                              <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
+                              <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Personal Details</span>
+                            </div>
+                            <div className="row g-3">
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Full Name</label>
+                                <input type="text" className="form-control rounded-3" value={accountingName || "Accounting User"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                              </div>
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Role</label>
+                                <input type="text" className="form-control rounded-3" value="Accounting Officer" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Contact */}
+                          <div className="mb-4">
+                            <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                              <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
+                              <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>Contact Information</span>
+                            </div>
+                            <div className="row g-3">
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Email</label>
+                                <input type="email" className="form-control rounded-3" value="accounting@cfei.edu.ph" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                              </div>
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Department</label>
+                                <input type="text" className="form-control rounded-3" value="Finance & Accounting" disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* System Access */}
+                          <div className="mb-0">
+                            <div className="d-flex align-items-center gap-2 mb-3 pb-2" style={{ borderBottom:"2px solid #f1f5f9" }}>
+                              <div style={{ width:4, height:16, background:"linear-gradient(135deg,#6b7280,#9ca3af)", borderRadius:4 }} />
+                              <span className="fw-semibold text-uppercase" style={{ fontSize:"0.72rem", letterSpacing:"0.08em", color:"#64748b" }}>System Access</span>
+                            </div>
+                            <div className="row g-3">
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Access Level</label>
+                                <input type="text" className="form-control rounded-3" value="Full Access" disabled style={{ border:"1.5px solid #dcfce7", background:"#f0fdf4", color:"#16a34a", fontWeight:600 }} />
+                              </div>
+                              <div className="col-md-6">
+                                <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Account Status</label>
+                                <input type="text" className="form-control rounded-3" value="Active" disabled style={{ border:"1.5px solid #dcfce7", background:"#f0fdf4", color:"#16a34a", fontWeight:600 }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </main>
         </div>

@@ -20,6 +20,7 @@ const {
   forwardToPrincipal,
   listForPrincipal,
   approveApplication,
+  confirmStudentId,
   rejectApplication,
 } = require("./applicationController");
 const { authenticateAdmin } = require("../admin/adminMiddleware");
@@ -36,6 +37,7 @@ router.get("/principal",                listForPrincipal);
 router.get("/:id",                      getApplicationDetail);
 router.patch("/:id/forward",            forwardToPrincipal);
 router.patch("/:id/approve",            approveApplication);
+router.patch("/:id/confirm-student-id", confirmStudentId);
 router.patch("/:id/reject",             rejectApplication);
 
 module.exports = router;

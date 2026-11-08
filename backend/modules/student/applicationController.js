@@ -1,11 +1,17 @@
 /**
  * modules/student/applicationController.js
  *
- * Enrollment application flow:
- *    1. Student submits form → application saved as submitted
+ * Enhanced Enrollment Application Workflow:
+ *   1. Student submits form → status: pending_requirements
  *   2. Requirements email sent with deadline
- *   3. Registrar reviews and forwards to Principal
- *   4. Principal approves → account created and credentials emailed
+ *   3. Student submits requirements → status: requirements_submitted
+ *   4. Registrar reviews → status: under_registrar_review
+ *   5. Registrar forwards to Principal → status: pending_principal_approval
+ *   6. Principal approves → status: approved
+ *   7. Registrar confirms official Student ID → status: pending_student_id_confirmation
+ *   8. System creates account & sends credentials → status: enrolled
+ *   
+ * Rejection can happen at any review stage.
  */
 
 const bcrypt          = require("bcryptjs");
@@ -13,6 +19,7 @@ const db              = require("../../config/db");
 const ApplicationModel = require("./applicationModel");
 const { sendRequirementsEmail, sendCredentials, } = require("../../utils/mailer");
 const { cloudinary } = require("../../config/cloudinary");
+const NotificationService = require("../notifications/notificationService");
 
 /* ── helpers ── */
 function generateStudentId() {
@@ -146,6 +153,15 @@ async function submitApplication(req, res, next) {
         console.error("Requirements email failed:", err.message);
       });
 
+    // Notify Registrar of new application
+    await NotificationService.notifyRole({
+      role: 'registrar',
+      message: `New Enrollment Application: ${fullName} (${req.body.email}) - Grade ${req.body.grade_level} ${req.body.pathway}`,
+      type: 'enrollment',
+      reference_id: app.id,
+      reference_type: 'application',
+    }).catch(err => console.error('Notification error:', err));
+
     res.status(201).json({
       message: "Application submitted successfully. Please submit your requirements before the deadline. Your application will be reviewed by the Registrar and Principal.",
       application_id: app.id,
@@ -206,8 +222,19 @@ async function forwardToPrincipal(req, res, next) {
     const updated = await ApplicationModel.updateStatus(id, "principal_review", {
       reviewed_by_registrar: req.admin.admin_id,
       registrar_reviewed_at: new Date(),
+      forwarded_to_principal_at: new Date(),
       registrar_note: JSON.stringify(notePayload),
     });
+
+    // Notify Principal
+    const fullName = [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" ");
+    await NotificationService.notifyRole({
+      role: 'principal',
+      message: `New Enrollment Application: ${fullName} (${app.email}) - Grade ${app.grade_level} ${app.pathway}. Please review and approve.`,
+      type: 'enrollment_review',
+      reference_id: app.id,
+      reference_type: 'application',
+    }).catch(err => console.error('Notification error:', err));
 
     res.json({ message: "Application forwarded to the Principal.", application: updated });
   } catch (err) { next(err); }
@@ -225,7 +252,7 @@ async function listForPrincipal(req, res, next) {
 }
 
 /* ─────────────────────────────────────────────────────────────
- * PRINCIPAL — Approve application → activate existing student account
+ * PRINCIPAL — Approve application (NO account creation yet)
  * PATCH /api/applications/:id/approve
  * ───────────────────────────────────────────────────────────── */
 async function approveApplication(req, res, next) {
@@ -237,75 +264,117 @@ async function approveApplication(req, res, next) {
       return res.status(409).json({ error: "Application is not pending principal review." });
     }
 
-    // Generate the account only after Principal approval
-    let studentId;
+    // Mark application approved - NO account creation yet
+    const updated = await ApplicationModel.updateStatus(id, "approved", {
+      reviewed_by_principal: req.admin.admin_id,
+      principal_reviewed_at: new Date(),
+      principal_note:        req.body.principal_note?.trim() || null,
+    });
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const candidate = generateStudentId();
-      const [rows] = await db.query(
-        "SELECT id FROM students WHERE student_id = ? LIMIT 1",
-        [candidate]
-      );
+    // Notify Registrar to confirm Student ID
+    await NotificationService.notifyRole({
+      role: 'registrar',
+      message: `Enrollment Approved: ${app.first_name} ${app.last_name} (${app.email}). Please confirm the official Student ID to create the account.`,
+      type: 'enrollment_approved',
+      reference_id: app.id,
+      reference_type: 'application',
+    }).catch(err => console.error('Notification error:', err));
 
-      if (!rows[0]) {
-        studentId = candidate;
-        break;
-      }
+    res.json({
+      message: `Application approved. Registrar will confirm the official Student ID and create the account.`,
+      application: updated,
+    });
+  } catch (err) { next(err); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * REGISTRAR — Confirm official Student ID and create account
+ * PATCH /api/applications/:id/confirm-student-id
+ * ───────────────────────────────────────────────────────────── */
+async function confirmStudentId(req, res, next) {
+  try {
+    const id  = parseInt(req.params.id, 10);
+    const { official_student_id } = req.body;
+
+    if (!official_student_id?.trim()) {
+      return res.status(400).json({ error: "Official Student ID is required." });
     }
 
-    if (!studentId) {
-      return res.status(500).json({
-        error: "Could not generate a unique student ID. Please try again.",
+    const app = await ApplicationModel.findById(id);
+    if (!app) return res.status(404).json({ error: "Application not found." });
+    if (app.status !== "approved") {
+      return res.status(409).json({ error: "Application must be approved by Principal first." });
+    }
+
+    const studentId = official_student_id.trim();
+
+    // Check if Student ID already exists
+    const [existingRows] = await db.query(
+      "SELECT id FROM students WHERE student_id = ? LIMIT 1",
+      [studentId]
+    );
+
+    if (existingRows[0]) {
+      return res.status(409).json({
+        error: `Student ID ${studentId} already exists. Please use a different ID.`,
       });
     }
 
+    // Generate temporary password
     const tempPass = generateTempPassword();
     const hashedPass = await bcrypt.hash(tempPass, 10);
 
+    // Get current term
     const [configRows] = await db.query(
       "SELECT current_term FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
     );
-
     const term = configRows[0]?.current_term || "Term 1";
 
+    // Create student account
     await db.query(
       `INSERT INTO students
-      (student_id, password, full_name, pathway, track, strand, grade_level, term, email, account_status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
+      (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW())`,
       [
         studentId,
         hashedPass,
-        `${app.first_name} ${app.last_name}`,
+        [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" "),
         app.pathway,
-        app.track || null,
-        app.strand || null,
         app.grade_level,
         term,
         app.email,
       ]
     );
 
-    // Mark application approved and save generated credentials
+    // Mark application as enrolled with confirmed Student ID
     const updated = await ApplicationModel.updateStatus(id, "approved", {
-      reviewed_by_principal: req.admin.admin_id,
-      principal_reviewed_at: new Date(),
-      principal_note:        req.body.principal_note?.trim() || null,
-      generated_student_id:  studentId,
-      temp_password:         tempPass,
-      credentials_sent_at:   new Date(),
+      official_student_id:      studentId,
+      student_id_confirmed_by:  req.admin.admin_id,
+      student_id_confirmed_at:  new Date(),
+      generated_student_id:     studentId, // Keep for backwards compatibility
+      temp_password:            tempPass,  // Store for reference (hashed version in students table)
+      credentials_sent_at:      new Date(),
     });
 
+    // Send credentials email
     sendCredentials({
       to: app.email,
-      fullName: `${app.first_name} ${app.last_name}`,
+      fullName: [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" "),
       studentId,
       tempPass,
-      }).catch(err => {
-        console.error("Credentials email failed:", err.message);
+    }).catch(err => {
+      console.error("Credentials email failed:", err.message);
     });
 
+    // Notify student
+    await NotificationService.notifyStudent({
+      student_id: studentId,
+      message: `Welcome to CFEI! Your enrollment is complete. Check your email for login credentials.`,
+      type: 'enrollment',
+    }).catch(err => console.error('Notification error:', err));
+
     res.json({
-      message: `Application approved. Student account ${studentId} was created and credentials were emailed.`,
+      message: `Student ID confirmed. Account ${studentId} created and credentials sent to ${app.email}.`,
       student_id: studentId,
       application: updated,
     });
@@ -354,5 +423,6 @@ module.exports = {
   forwardToPrincipal,
   listForPrincipal,
   approveApplication,
+  confirmStudentId,
   rejectApplication,
 };

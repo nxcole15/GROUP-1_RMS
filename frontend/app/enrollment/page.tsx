@@ -151,7 +151,7 @@ export default function EnrollmentPage() {
     // School year is automatically set from Principal's settings - no validation needed
     
     if (formData.studentStatus === "old" && !formData.studentId.trim()) return "Student ID is required for returning students.";
-    if (!formData.idPhoto) return "Please upload a 2×2 ID photo.";
+    // Photo is now optional - students can submit without photo
     return null;
   }
 
@@ -628,12 +628,12 @@ export default function EnrollmentPage() {
                 </div>
 
                 {/* Photo */}
-                <div className="col-12"><hr className="my-1" /><div className="fw-bold small text-dark">ID Photo</div></div>
+                <div className="col-12"><hr className="my-1" /><div className="fw-bold small text-dark">ID Photo (Optional)</div></div>
 
                 <div className="col-12">
-                  <label className="form-label fw-semibold text-muted small">2×2 ID Photo *</label>
-                  <input type="file" name="idPhoto" onChange={handleChange} accept="image/*" className="form-control rounded-2" required />
-                  <small className="form-text text-muted">Upload a 2×2 inch ID photo (JPG or PNG). Max 5 MB.</small>
+                  <label className="form-label fw-semibold text-muted small">2×2 ID Photo (Optional)</label>
+                  <input type="file" name="idPhoto" onChange={handleChange} accept="image/*" className="form-control rounded-2" />
+                  <small className="form-text text-muted">Upload a 2×2 inch ID photo (JPG or PNG). Max 5 MB. You can submit this later if not available now.</small>
                   {formData.idPhoto && (
                     <div className="mt-2">
                       <div className="text-success small mb-1">✓ {formData.idPhoto.name}</div>
