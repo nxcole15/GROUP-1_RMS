@@ -1753,6 +1753,13 @@ function EnrollmentPanel({ role }: { role?: string }) {
   const [reviewNote, setReviewNote] = useState("");
   const [reviewChecklist, setReviewChecklist] = useState<Record<string, boolean>>({});
 
+  // Student ID confirmation modal state
+  const [studentIdModalOpen, setStudentIdModalOpen] = useState(false);
+  const [selectedAppForId, setSelectedAppForId] = useState<any | null>(null);
+  const [studentIdInput, setStudentIdInput] = useState("");
+  const [studentIdError, setStudentIdError] = useState("");
+  const [confirmingStudentId, setConfirmingStudentId] = useState(false);
+
   const admissionRequirements = [
     { id: "form9", label: "School Form 9/Report Card" },
     { id: "birthcert", label: "Birth Certificate" },
@@ -2014,6 +2021,62 @@ function EnrollmentPanel({ role }: { role?: string }) {
   const updateEnrollmentStatus = (appId?: number, nextStatus?: string) => {
     if (!appId || !nextStatus) return;
     setEnrollments(prev => prev.map(e => e.appId === appId ? { ...e, status: nextStatus } : e));
+  };
+
+  const handleConfirmStudentId = async () => {
+    if (!studentIdInput.trim()) {
+      setStudentIdError("Student ID is required");
+      return;
+    }
+
+    const token = localStorage.getItem("inform_token");
+    if (!token || !selectedAppForId?.appId) return;
+
+    setConfirmingStudentId(true);
+    setStudentIdError("");
+
+    try {
+      const response = await fetch(`${API_BASE}/api/applications/${selectedAppForId.appId}/confirm-student-id`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          official_student_id: studentIdInput.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setStudentIdError(data.error || "Failed to confirm Student ID");
+        return;
+      }
+
+      // Success! Update the enrollment list
+      setEnrollments(prev =>
+        prev.map(e =>
+          e.appId === selectedAppForId.appId
+            ? { ...e, status: "Confirmed", generatedStudentId: studentIdInput.trim() }
+            : e
+        )
+      );
+
+      // Close modal and reset
+      setStudentIdModalOpen(false);
+      setSelectedAppForId(null);
+      setStudentIdInput("");
+      setStudentIdError("");
+
+      alert(`✅ Success!\n\nStudent ID ${studentIdInput.trim()} confirmed.\nAccount created and credentials sent to ${selectedAppForId.id}`);
+    } catch (error) {
+      console.error("Student ID confirmation error:", error);
+      setStudentIdError("Network error. Please try again.");
+    } finally {
+      setConfirmingStudentId(false);
+    }
   };
 
   const normalizeApplicationStatus = (status?: string) => {
@@ -2304,19 +2367,43 @@ function EnrollmentPanel({ role }: { role?: string }) {
                       <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
                       <td>
                         <span className={`badge ${
-                          e.status === "Confirmed"
+                          e.status === "Confirmed" && e.generatedStudentId
                             ? "bg-success-subtle text-success border border-success-subtle"
-                            : e.status === "Rejected"
-                              ? "bg-danger-subtle text-danger border border-danger-subtle"
-                              : e.status === "Principal Review"
-                                ? "bg-info-subtle text-info border border-info-subtle"
-                              : "bg-warning-subtle text-warning border border-warning-subtle"
+                            : e.status === "Confirmed" && !e.generatedStudentId
+                              ? "bg-warning-subtle text-warning border border-warning-subtle"
+                              : e.status === "Rejected"
+                                ? "bg-danger-subtle text-danger border border-danger-subtle"
+                                : e.status === "Principal Review"
+                                  ? "bg-info-subtle text-info border border-info-subtle"
+                                : "bg-warning-subtle text-warning border border-warning-subtle"
                         }`}>
-                          {e.status}
+                          {e.status === "Confirmed" && !e.generatedStudentId ? "ID Confirmation Needed" : e.status}
                         </span>
                       </td>
                       <td className="text-end pe-4">
                         <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
+                          {/* Registrar: Show "Confirm Student ID" for approved applications without student_id */}
+                          {role === "registrar" && e.status === "Confirmed" && !e.generatedStudentId && (
+                            <button
+                              onClick={() => {
+                                setSelectedAppForId(e);
+                                setStudentIdInput("");
+                                setStudentIdError("");
+                                setStudentIdModalOpen(true);
+                              }}
+                              className="btn btn-sm"
+                              style={{
+                                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                color: "#fff",
+                                border: "none",
+                                fontSize: 11,
+                                fontWeight: 600,
+                              }}
+                            >
+                              Confirm Student ID
+                            </button>
+                          )}
+
                           {/* Registrar: Can edit applications in Pending or Principal Review */}
                           {role === "registrar" && (e.status === "Pending" || e.status === "Principal Review") && (
                             <button
@@ -2821,6 +2908,139 @@ function EnrollmentPanel({ role }: { role?: string }) {
                       </button>
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student ID Confirmation Modal */}
+      {studentIdModalOpen && selectedAppForId && (
+        <div
+          className="modal fade show d-block"
+          style={{
+            background: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(4px)",
+          }}
+          onClick={() => {
+            if (!confirmingStudentId) {
+              setStudentIdModalOpen(false);
+              setSelectedAppForId(null);
+              setStudentIdInput("");
+              setStudentIdError("");
+            }
+          }}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={{ maxWidth: 500 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow-lg rounded-4">
+              <div
+                className="p-4 text-white rounded-top-4"
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                }}
+              >
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <h5 className="fw-bold mb-1">Confirm Official Student ID</h5>
+                    <small className="opacity-90">
+                      {selectedAppForId.name} • {selectedAppForId.id}
+                    </small>
+                  </div>
+                  {!confirmingStudentId && (
+                    <button
+                      onClick={() => {
+                        setStudentIdModalOpen(false);
+                        setSelectedAppForId(null);
+                        setStudentIdInput("");
+                        setStudentIdError("");
+                      }}
+                      className="btn btn-link text-white p-0"
+                      style={{ fontSize: 24, lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="alert alert-info mb-4">
+                  <div className="d-flex gap-2">
+                    <div style={{ fontSize: 20 }}>ℹ️</div>
+                    <div className="small">
+                      <strong>Important:</strong> Enter the official Student ID assigned by the school.
+                      The system will create the student account and send login credentials via email.
+                    </div>
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">
+                    Official Student ID <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control form-control-lg ${studentIdError ? "is-invalid" : ""}`}
+                    placeholder="e.g., 2025123456"
+                    value={studentIdInput}
+                    onChange={(e) => {
+                      setStudentIdInput(e.target.value);
+                      setStudentIdError("");
+                    }}
+                    disabled={confirmingStudentId}
+                    autoFocus
+                  />
+                  {studentIdError && (
+                    <div className="invalid-feedback d-block">{studentIdError}</div>
+                  )}
+                </div>
+                <div className="bg-light rounded-3 p-3 mb-4">
+                  <h6 className="fw-semibold mb-2 small">What happens next:</h6>
+                  <ol className="mb-0 ps-3" style={{ fontSize: 13 }}>
+                    <li>Student account created with this ID</li>
+                    <li>Temporary password generated</li>
+                    <li>Credentials emailed to {selectedAppForId.id}</li>
+                    <li>Student can log in immediately</li>
+                  </ol>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    onClick={() => {
+                      setStudentIdModalOpen(false);
+                      setSelectedAppForId(null);
+                      setStudentIdInput("");
+                      setStudentIdError("");
+                    }}
+                    className="btn btn-outline-secondary flex-grow-1"
+                    disabled={confirmingStudentId}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmStudentId}
+                    className="btn flex-grow-1"
+                    style={{
+                      background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                      color: "#fff",
+                      border: "none",
+                    }}
+                    disabled={confirmingStudentId || !studentIdInput.trim()}
+                  >
+                    {confirmingStudentId ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        />
+                        Creating Account...
+                      </>
+                    ) : (
+                      "Confirm & Create Account"
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

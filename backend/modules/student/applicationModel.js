@@ -70,8 +70,9 @@ const ApplicationModel = {
     const allowed = [
       "registrar_note","principal_note","rejection_reason",
       "reviewed_by_registrar","reviewed_by_principal",
-      "registrar_reviewed_at","principal_reviewed_at",
+      "registrar_reviewed_at","principal_reviewed_at","forwarded_to_principal_at",
       "generated_student_id","temp_password","credentials_sent_at",
+      "official_student_id","student_id_confirmed_by","student_id_confirmed_at",
     ];
     const fields = ["status = ?", "updated_at = NOW()"];
     const values = [status];
