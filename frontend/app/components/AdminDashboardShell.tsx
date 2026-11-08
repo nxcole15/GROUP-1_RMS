@@ -5,6 +5,7 @@ import Image from "next/image";
 import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
 import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
 import { SettingsPanel } from "../principal-dashboard/SettingsPanel";
+import { GuidePanel } from "./GuidePanel";
 
 type StudentRecord = {
   id: string;
@@ -153,6 +154,7 @@ function initials(name: string) {
 /*  Sidebar  */
 function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequests, role, adminName }: { active:string; setActive:(s:string)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?: (expanded: boolean) => void; hideRequests?: boolean; role?: string; adminName?: string | null }) {
   const expanded = true; // Always expanded
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     onExpandChange?.(true);
@@ -222,30 +224,70 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
           {filteredNavItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
-              className="btn text-start d-flex align-items-center px-3 py-2 rounded-3 border-0"
+              className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 border-0"
               style={{
-                color: active === item.id ? "#fff" : "#6b7280",
-                background: active === item.id ? "linear-gradient(135deg,#374151,#1f2937)" : "transparent",
+                color: active === item.id ? "#78350f" : "#1f2937",
+                background: active === item.id ? "#fbbf24" : "transparent",
                 fontWeight: active === item.id ? 600 : 500,
                 fontSize: 13.5,
                 justifyContent: "flex-start",
                 whiteSpace: "nowrap",
-                transition: "all 0.15s",
-                boxShadow: active === item.id ? "0 2px 12px rgba(55,65,81,0.4)" : "none",
-                borderLeft: active === item.id ? "3px solid #374151" : "3px solid transparent",
+                transition: "all 0.2s ease",
               }}
+              onMouseEnter={e => { if (active !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; }}
+              onMouseLeave={e => { if (active !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
               title={item.label}>
+              <NavIcon id={item.id} />
               <span>{item.label}</span>
             </button>
           ))}
+          
+          {/* Guide Dropdown */}
+          <div className="mt-2">
+            <button 
+              onClick={() => setGuideOpen(!guideOpen)}
+              className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 border-0 w-100 guide-dropdown-toggle"
+              style={{ color:"#1f2937", background:"transparent", justifyContent:"space-between", whiteSpace:"nowrap", transition: "all 0.2s ease", fontSize: 13.5 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
+              <div className="d-flex align-items-center gap-3">
+                <Icon name="book" size={18} />
+                <span>Guide</span>
+              </div>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: guideOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            
+            {guideOpen && (
+              <div className="guide-dropdown-menu mt-1">
+                <button
+                  onClick={() => { setActive("dashboard-guide"); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "dashboard-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active === "dashboard-guide" ? "#fef3c7" : "transparent"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1rem"; }}>
+                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} Dashboard Guide
+                </button>
+                <button
+                  onClick={() => { setActive("user-guide"); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "user-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active === "user-guide" ? "#fef3c7" : "transparent"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1rem"; }}>
+                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} Guide
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f1f5f9" }}>
-          <div className="rounded-3 p-3" style={{ background:"#f3f4f6", border:"1px solid #e5e7eb" }}>
+        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f3f4f6" }}>
+          <div className="rounded-3 p-3" style={{ background:"#f9fafb", border:"1px solid #e5e7eb" }}>
             <div className="d-flex align-items-center gap-2 mb-3">
-              <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
-                style={{ width:34, height:34, fontSize:12, background:"linear-gradient(135deg,#4b5563,#374151)", boxShadow:"0 2px 8px rgba(75, 85, 99, 0.3)" }}>
+              <div className="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                style={{ width:34, height:34, fontSize:12, background:"#fbbf24", color:"#78350f" }}>
                 {config.initials}
               </div>
               <div className="flex-grow-1 overflow-hidden">
@@ -258,9 +300,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
             <button
               onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }}
               className="btn w-100 fw-semibold"
-              style={{ fontSize:12, borderRadius:8, background:"#374151", color:"#fff", border:"none" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#1f2937"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#374151"; }}
+              style={{ fontSize:12, borderRadius:8, background:"#dc2626", color:"#fff", border:"none" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background="#b91c1c"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background="#dc2626"; }}
             >
               Log Out
             </button>
@@ -7666,6 +7708,8 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "reports":       return <ReportsPanel />;
       case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
       case "settings":      return <SettingsPanel />;
+      case "dashboard-guide": return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="dashboard" />;
+      case "user-guide":    return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="user" />;
       default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} academicConfig={academicConfig} />;
     }
   }

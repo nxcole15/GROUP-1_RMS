@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { API_BASE, getAcademicConfig, type AcademicConfig } from "../../lib/auth";
+import { GuidePanel } from "../../components/GuidePanel";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
 
@@ -115,7 +116,7 @@ function isDeadlinePassed() {
   return new Date() > TEACHER_TERM_DEADLINES[getActiveTerm()];
 }
 
-type Panel = "overview"|"schedule"|"students"|"grades"|"requests"|"notifications"|"timelog"|"profile";
+type Panel = "overview"|"schedule"|"students"|"grades"|"requests"|"notifications"|"timelog"|"profile"|"dashboard-guide"|"user-guide";
 
 const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
   { id: "overview",       label: "Overview",          icon: "overview" },
@@ -129,15 +130,18 @@ const navItems: { id: Panel|"overview"; label: string; icon: string }[] = [
 /* -- Sidebar -- */
 function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active: string; setActive: (s: Panel) => void; show: boolean; setShow: (b: boolean) => void; onExpandChange?: (expanded: boolean) => void }) {
   const expanded = true;
+  const [guideOpen, setGuideOpen] = useState(false);
+  
   useEffect(() => {
     onExpandChange?.(true);
   }, [onExpandChange]);
+  
   return (
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "" : "d-none d-lg-flex"}`}
-        style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", overflowX: "hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}
+        style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", overflowX: "hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.05)", borderRight: "1px solid #f3f4f6" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
@@ -157,19 +161,60 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange }: { active:
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id as Panel); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color: active === item.id ? "#fff" : "#4b5563", background: active === item.id ? "#374151" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap" }}
+              style={{ color: active === item.id ? "#78350f" : "#1f2937", background: active === item.id ? "#fbbf24" : "transparent", justifyContent: expanded ? "flex-start" : "center", whiteSpace: "nowrap", transition: "all 0.2s ease" }}
+              onMouseEnter={(e) => { if (active !== item.id) e.currentTarget.style.background = "#fef3c7"; }}
+              onMouseLeave={(e) => { if (active !== item.id) e.currentTarget.style.background = "transparent"; }}
               title={item.label}>
               <Icon name={item.icon as IconName} size={20} />
               {expanded && <span>{item.label}</span>}
             </button>
           ))}
+          
+          {/* Guide Dropdown */}
+          <div className="mt-2">
+            <button 
+              onClick={() => setGuideOpen(!guideOpen)}
+              className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 w-100 guide-dropdown-toggle"
+              style={{ color:"#1f2937", background:"transparent", justifyContent:"space-between", whiteSpace:"nowrap", transition: "all 0.2s ease" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              <div className="d-flex align-items-center gap-3">
+                <Icon name="book" size={20} />
+                {expanded && <span>Guide</span>}
+              </div>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: guideOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            
+            {guideOpen && (
+              <div className="guide-dropdown-menu mt-1">
+                <button
+                  onClick={() => { setActive("dashboard-guide" as Panel); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "dashboard-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = active === "dashboard-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "1rem"; }}>
+                  Teacher Dashboard Guide
+                </button>
+                <button
+                  onClick={() => { setActive("user-guide" as Panel); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "user-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = active === "user-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "1rem"; }}>
+                  Teacher Guide
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 py-3 border-top" style={{ borderColor: "#f1f5f9" }}>
-          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#374151", color: "#fff", border: "none", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#1f2937"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#374151"; }}
+        <div className="px-3 py-3 border-top" style={{ borderColor: "#f3f4f6" }}>
+          <Link href="/login" className="btn w-100 fw-semibold py-2 d-flex align-items-center justify-content-center gap-2" style={{ background: "#dc2626", color: "#fff", border: "none", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#b91c1c"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#dc2626"; }}
             onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); }}>
             <Icon name="unlock" size={18} />
             <span>Log Out</span>
@@ -3513,6 +3558,8 @@ export default function TeacherDashboardPage() {
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "notifications": return <NotificationsPanel notifs={notifs} setNotifs={setNotifs} />;
       case "profile":       return <ProfilePanel teacher={apiTeacher} />;
+      case "dashboard-guide": return <GuidePanel role="teacher" type="dashboard" />;
+      case "user-guide":    return <GuidePanel role="teacher" type="user" />;
       default:          return <Overview setActive={setPanel} isGradeLocked={isGradeLocked} activeTerm={activeTerm} teacher={apiTeacher} apiActivity={apiActivity} apiSubjects={apiSubjects} academicConfig={academicConfig} />;
     }
   }

@@ -5,8 +5,9 @@ import React from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
+import { GuidePanel } from "../components/GuidePanel";
 
-type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile";
+type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile"|"dashboard-guide"|"user-guide";
 type JMsg  = { role:"ai"|"user"; text:string; feedback?:"up"|"down"|null };
 
 type IconName =
@@ -178,6 +179,7 @@ const navItems: { id: Panel; label: string; icon: ReactNode }[] = [
 /* -- Sidebar -- */
 function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: { active:string; setActive:(s:Panel)=>void; show:boolean; setShow:(b:boolean)=>void; onExpandChange?:(v:boolean)=>void; student?: { student_id:string; full_name:string; pathway:string; grade_level:number; photo_url?:string } | null }) {
   const expanded = true; // Always expanded
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     onExpandChange?.(true);
@@ -188,26 +190,26 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex:1040 }} onClick={() => setShow(false)} />}
       <div
         className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show?"":"d-none d-lg-flex"}`}
-        style={{ width: 256, zIndex:1045, background:"linear-gradient(180deg,#1e1b4b 0%,#312e81 100%)", overflowY:"auto", overflowX:"hidden" }}
+        style={{ width: 256, zIndex:1045, background:"#ffffff", overflowY:"auto", overflowX:"hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.05)", borderRight: "1px solid #f3f4f6" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%" }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f3f4f6", paddingBottom: "1rem" }}>
             <img src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" />
             <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
-              <div className="sidebar-brand-title">Student Portal</div>
-              <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${(student as any).course ?? ""} ${(student as any).year_level ? `Year ${(student as any).year_level}` : ""}`.trim() : ""}</div>
+              <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>Student Portal</div>
+              <div style={{ color:"#6b7280", fontSize:11 }}>{student ? `${(student as any).course ?? ""} ${(student as any).year_level ? `Year ${(student as any).year_level}` : ""}`.trim() : ""}</div>
             </div>
           </div>
-          <button className="btn-close btn-close-white sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
+          <button className="btn-close sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
 
         {/* Student badge */}
-        <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"rgba(99,102,241,0.2)", border:"1px solid rgba(99,102,241,0.35)" }}>
-          <span className="text-white-50"><Icon name="graduation" size={16} /></span>
+        <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-3 d-flex align-items-center gap-2" style={{ background:"#fef3c7", border:"1px solid #fbbf24" }}>
+          <span style={{color:"#78350f"}}><Icon name="graduation" size={16} /></span>
           <div>
-            <div style={{ color:"#a5b4fc", fontSize:12, fontWeight:700 }}>Student</div>
-            <div style={{ color:"rgba(165,180,252,0.6)", fontSize:11 }}>{student ? `${student.pathway} Grade ${student.grade_level}` : ""}</div>
+            <div style={{ color:"#78350f", fontSize:12, fontWeight:700 }}>Student</div>
+            <div style={{ color:"#92400e", fontSize:11 }}>{student ? `${student.pathway} Grade ${student.grade_level}` : ""}</div>
           </div>
         </div>
 
@@ -216,17 +218,61 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
           {navItems.map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0"
-              style={{ color:active===item.id?"#fff":"rgba(255,255,255,0.5)", background:active===item.id?"#4f46e5":"transparent", justifyContent:"flex-start", whiteSpace:"nowrap" }}
+              style={{ color:active===item.id?"#78350f":"#1f2937", background:active===item.id?"#fbbf24":"transparent", justifyContent:"flex-start", whiteSpace:"nowrap", transition: "all 0.2s ease" }}
+              onMouseEnter={(e) => { if (active !== item.id) e.currentTarget.style.background = "#fef3c7"; }}
+              onMouseLeave={(e) => { if (active !== item.id) e.currentTarget.style.background = "transparent"; }}
               title={item.label}>
               {item.icon}
               <span>{item.label}</span>
             </button>
           ))}
+          
+          {/* Guide Dropdown */}
+          <div className="mt-2">
+            <button 
+              onClick={() => setGuideOpen(!guideOpen)}
+              className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0 w-100 guide-dropdown-toggle"
+              style={{ color:"#1f2937", background:"transparent", justifyContent:"space-between", whiteSpace:"nowrap", transition: "all 0.2s ease" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              <div className="d-flex align-items-center gap-3">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                </svg>
+                <span>Guide</span>
+              </div>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: guideOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            
+            {guideOpen && (
+              <div className="guide-dropdown-menu mt-1">
+                <button
+                  onClick={() => { setActive("dashboard-guide" as Panel); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "dashboard-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = active === "dashboard-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "1rem"; }}>
+                  Student Dashboard Guide
+                </button>
+                <button
+                  onClick={() => { setActive("user-guide" as Panel); setShow(false); }}
+                  className="btn text-start w-100 border-0 guide-dropdown-item"
+                  style={{ color:"#6b7280", background: active === "user-guide" ? "#fef3c7" : "transparent" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1.25rem"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = active === "user-guide" ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "1rem"; }}>
+                  Student Guide
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* User / logout */}
-        <div className="px-3 py-4 border-top border-white border-opacity-10">
-          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f3f4f6 !important" }}>
+          <div className="d-flex flex-column gap-2 rounded-3 px-3 py-3" style={{ background:"#f9fafb", border:"1px solid #e5e7eb" }}>
             <div className="d-flex align-items-center gap-3">
               {student?.photo_url ? (
                 <img 
@@ -236,16 +282,18 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
                   style={{ width:32, height:32, objectFit:"cover" }}
                 />
               ) : (
-                <div className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)" }}>
+                <div className="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style={{ width:32, height:32, fontSize:12, background:"#fbbf24", color:"#78350f" }}>
                   {student ? student.full_name.split(" ").map((n:string) => n[0]).join("").slice(0,2): "?"}
                 </div>
               )}
               <div className="flex-grow-1 overflow-hidden">
-                <div className="text-white small fw-semibold text-truncate">{student?.full_name ?? "Loading..."}</div>
-                <div className="text-truncate" style={{ color:"rgba(255,255,255,0.3)", fontSize:11 }}>{student?.student_id}</div>
+                <div className="small fw-semibold text-truncate" style={{color:"#1f2937"}}>{student?.full_name ?? "Loading..."}</div>
+                <div className="text-truncate" style={{ color:"#6b7280", fontSize:11 }}>{student?.student_id}</div>
               </div>
             </div>
-            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm btn-danger w-100 fw-semibold" style={{ fontSize:12, borderRadius:8 }}>
+            <button onClick={() => { localStorage.removeItem("inform_token"); localStorage.removeItem("inform_role"); localStorage.removeItem("inform_user"); window.location.href = "/login"; }} className="btn btn-sm w-100 fw-semibold" style={{ fontSize:12, borderRadius:8, background:"#dc2626", color:"white", border:"none" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}>
               Logout
             </button>
           </div>
@@ -2630,6 +2678,8 @@ export default function DashboardPage() {
       case "schedule":      return <ScheduleView     onAskJobert={askJobert} />;
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
+      case "dashboard-guide": return <GuidePanel role="student" type="dashboard" />;
+      case "user-guide":    return <GuidePanel role="student" type="user" />;
       case "notifications": return <NotificationsView notifs={notifList} setNotifs={setNotifList} />;
       default:              return <HomePanel setPanel={setPanel} onAskJobert={askJobert} student={student} dashboardData={dashboardData} academicConfig={academicConfig} />;
     }

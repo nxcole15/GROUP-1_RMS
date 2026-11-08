@@ -36,6 +36,15 @@
   /* Bootstrap Primary Override */
   --bs-primary: #374151;
   --bs-primary-rgb: 55, 65, 81;
+  
+  /* Sidebar Colors */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #1f2937;
+  --sidebar-text-muted: #6b7280;
+  --sidebar-hover: #fef3c7;
+  --sidebar-active: #fbbf24;
+  --sidebar-active-text: #78350f;
+  --sidebar-border: #f3f4f6;
 }
 
 /* Dark Mode — landing page scoped to data-landing="dark" */
@@ -4301,4 +4310,177 @@ html:not([data-theme="dark"]) .landing-premium .landing-headline-accent {
 
 .progress-bar.bg-primary {
   background-color: #dc2626 !important;
+}
+
+
+/* ── Sidebar Styling ── */
+.dashboard-sidebar {
+  background: var(--sidebar-bg) !important;
+  color: var(--sidebar-text) !important;
+  border-right: 1px solid var(--sidebar-border) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.dashboard-sidebar .sidebar-brand-title {
+  color: var(--sidebar-text) !important;
+}
+
+.dashboard-sidebar nav button {
+  color: var(--sidebar-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+.dashboard-sidebar nav button:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.dashboard-sidebar nav button[style*="background:#4f46e5"],
+.dashboard-sidebar nav button[style*="background: linear-gradient"] {
+  background: var(--sidebar-active) !important;
+  color: var(--sidebar-active-text) !important;
+  font-weight: 600 !important;
+}
+
+/* Guide dropdown button styling */
+.guide-dropdown-toggle {
+  background: transparent !important;
+  border: none !important;
+  color: var(--sidebar-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+.guide-dropdown-toggle:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.guide-dropdown-toggle.active {
+  background: var(--sidebar-active) !important;
+  color: var(--sidebar-active-text) !important;
+}
+
+.guide-dropdown-menu {
+  background: transparent !important;
+  border: none !important;
+  margin-left: 0 !important;
+  padding-left: 0.5rem !important;
+}
+
+.guide-dropdown-item {
+  color: var(--sidebar-text-muted) !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: all 0.15s ease !important;
+  font-size: 0.875rem !important;
+  border-radius: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.guide-dropdown-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+  padding-left: 1rem !important;
+}
+
+.guide-dropdown-item.active {
+  background: #fef3c7 !important;
+  color: #78350f !important;
+  font-weight: 500 !important;
+}
+
+
+/* ── Guide Document Styling ── */
+.guide-document-container {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.guide-document-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-document-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.guide-document-body {
+  line-height: 1.7;
+}
+
+.guide-section {
+  scroll-margin-top: 2rem;
+}
+
+.guide-toc a {
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-toc a::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  background: #6366f1;
+  transition: height 0.2s ease;
+}
+
+.guide-toc a:hover::before {
+  height: 80%;
+}
+
+.content-item {
+  transition: all 0.2s ease;
+}
+
+.content-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Print styles for documentation */
+@media print {
+  .guide-document-container {
+    max-width: 100%;
+    box-shadow: none !important;
+  }
+  
+  .guide-document-header {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .content-item {
+    page-break-inside: avoid;
+  }
+  
+  .guide-section {
+    page-break-inside: avoid;
+  }
 }
