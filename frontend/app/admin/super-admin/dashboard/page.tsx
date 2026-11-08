@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { GuidePanel, FeaturesPanel, QuickReferencePanel, TroubleshootingPanel } from "../../../components/GuidePanel";
 
 type AdminRecord = {
   id: number;
@@ -43,8 +44,32 @@ export default function SuperAdminDashboardPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [activePanel, setActivePanel] = useState<"overview" | "accounts" | "documentation">("overview");
+  const [docSection, setDocSection] = useState<"getting-started" | "dashboards" | "features" | "quick-reference" | "troubleshooting">("getting-started");
+  const [gettingStartedOpen, setGettingStartedOpen] = useState(true);
+  const [dashboardsOpen, setDashboardsOpen] = useState(false);
+  const [docGuide, setDocGuide] = useState<string | null>("superadmin");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+  // Load active panel from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isInitialized) {
+      const saved = localStorage.getItem("superadmin_active_panel");
+      if (saved && (saved === "overview" || saved === "accounts" || saved === "documentation")) {
+        setActivePanel(saved as "overview" | "accounts" | "documentation");
+      }
+      setIsInitialized(true);
+    }
+  }, [isInitialized]);
+
+  // Save active panel to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && isInitialized) {
+      localStorage.setItem("superadmin_active_panel", activePanel);
+    }
+  }, [activePanel, isInitialized]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -87,6 +112,122 @@ export default function SuperAdminDashboardPage() {
     { role: "Registrar", count: registrarCount, color: "#6b7280", percentage: activeAdmins > 0 ? (registrarCount / activeAdmins * 100) : 0 },
     { role: "Accounting", count: accountingCount, color: "#9ca3af", percentage: activeAdmins > 0 ? (accountingCount / activeAdmins * 100) : 0 },
   ];
+
+  function renderDocumentation() {
+    return (
+      <div className="row g-4">
+        <div className="col-12 col-lg-3">
+          <div className="card border-0 shadow-sm rounded-4" style={{ position: "sticky", top: 20 }}>
+            <div className="card-body p-3">
+              <h3 className="fw-bold mb-3" style={{ fontSize: "1rem", color: "#1e293b" }}>Documentation</h3>
+              
+              <div className="d-flex flex-column gap-1">
+                {/* Getting Started */}
+                <button
+                  onClick={() => { setGettingStartedOpen(!gettingStartedOpen); setDashboardsOpen(false); setDocSection("getting-started"); }}
+                  className="btn text-start d-flex align-items-center justify-content-between px-3 py-2 rounded-3 border-0 w-100"
+                  style={{ color: docSection === "getting-started" ? "#78350f" : "#1f2937", background: docSection === "getting-started" ? "#fef3c7" : "transparent", fontSize: "0.9rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (docSection !== "getting-started") e.currentTarget.style.background = "#fef3c7"; }}
+                  onMouseLeave={(e) => { if (docSection !== "getting-started") e.currentTarget.style.background = "transparent"; }}>
+                  <span>Getting Started</span>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: gettingStartedOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
+                
+                {gettingStartedOpen && (
+                  <div className="ps-3">
+                    {["superadmin", "teacher", "principal", "student", "accounting", "registrar"].map((guide) => (
+                      <button
+                        key={guide}
+                        onClick={() => { setDocSection("getting-started"); setDocGuide(guide); }}
+                        className="btn text-start w-100 border-0 px-3 py-2"
+                        style={{ color: docGuide === guide ? "#78350f" : "#6b7280", background: docGuide === guide ? "#fef3c7" : "transparent", fontSize: "0.85rem", transition: "all 0.15s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1rem"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = docGuide === guide ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "0.75rem"; }}>
+                        {guide === "superadmin" ? "Super Admin" : guide.charAt(0).toUpperCase() + guide.slice(1)} Guide
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Dashboards */}
+                <button
+                  onClick={() => { setDashboardsOpen(!dashboardsOpen); setGettingStartedOpen(false); setDocSection("dashboards"); setDocGuide("superadmin-dashboard"); }}
+                  className="btn text-start d-flex align-items-center justify-content-between px-3 py-2 rounded-3 border-0 w-100"
+                  style={{ color: docSection === "dashboards" ? "#78350f" : "#1f2937", background: docSection === "dashboards" ? "#fef3c7" : "transparent", fontSize: "0.9rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (docSection !== "dashboards") e.currentTarget.style.background = "#fef3c7"; }}
+                  onMouseLeave={(e) => { if (docSection !== "dashboards") e.currentTarget.style.background = "transparent"; }}>
+                  <span>Dashboards</span>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ transform: dashboardsOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
+                
+                {dashboardsOpen && (
+                  <div className="ps-3">
+                    {["superadmin-dashboard", "student-dashboard", "teacher-dashboard", "principal-dashboard", "registrar-dashboard", "accounting-dashboard"].map((dashboard) => (
+                      <button
+                        key={dashboard}
+                        onClick={() => { setDocSection("dashboards"); setDocGuide(dashboard); }}
+                        className="btn text-start w-100 border-0 px-3 py-2"
+                        style={{ color: docGuide === dashboard ? "#78350f" : "#6b7280", background: docGuide === dashboard ? "#fef3c7" : "transparent", fontSize: "0.85rem", transition: "all 0.15s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.paddingLeft = "1rem"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = docGuide === dashboard ? "#fef3c7" : "transparent"; e.currentTarget.style.paddingLeft = "0.75rem"; }}>
+                        {dashboard.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Features */}
+                <button
+                  onClick={() => { setDocSection("features"); setGettingStartedOpen(false); setDashboardsOpen(false); setDocGuide(null); }}
+                  className="btn text-start px-3 py-2 rounded-3 border-0 w-100"
+                  style={{ color: docSection === "features" ? "#78350f" : "#1f2937", background: docSection === "features" ? "#fef3c7" : "transparent", fontSize: "0.9rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (docSection !== "features") e.currentTarget.style.background = "#fef3c7"; }}
+                  onMouseLeave={(e) => { if (docSection !== "features") e.currentTarget.style.background = "transparent"; }}>
+                  Features
+                </button>
+                
+                {/* Quick Reference */}
+                <button
+                  onClick={() => { setDocSection("quick-reference"); setGettingStartedOpen(false); setDashboardsOpen(false); setDocGuide(null); }}
+                  className="btn text-start px-3 py-2 rounded-3 border-0 w-100"
+                  style={{ color: docSection === "quick-reference" ? "#78350f" : "#1f2937", background: docSection === "quick-reference" ? "#fef3c7" : "transparent", fontSize: "0.9rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (docSection !== "quick-reference") e.currentTarget.style.background = "#fef3c7"; }}
+                  onMouseLeave={(e) => { if (docSection !== "quick-reference") e.currentTarget.style.background = "transparent"; }}>
+                  Quick Reference
+                </button>
+                
+                {/* Troubleshooting */}
+                <button
+                  onClick={() => { setDocSection("troubleshooting"); setGettingStartedOpen(false); setDashboardsOpen(false); setDocGuide(null); }}
+                  className="btn text-start px-3 py-2 rounded-3 border-0 w-100"
+                  style={{ color: docSection === "troubleshooting" ? "#78350f" : "#1f2937", background: docSection === "troubleshooting" ? "#fef3c7" : "transparent", fontSize: "0.9rem", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { if (docSection !== "troubleshooting") e.currentTarget.style.background = "#fef3c7"; }}
+                  onMouseLeave={(e) => { if (docSection !== "troubleshooting") e.currentTarget.style.background = "transparent"; }}>
+                  Troubleshooting
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="col-12 col-lg-9">
+          {docSection === "getting-started" && docGuide && (
+            <GuidePanel role={docGuide as any} type="user" />
+          )}
+          {docSection === "dashboards" && docGuide && (
+            <GuidePanel role={docGuide.replace("-dashboard", "") as any} type="dashboard" />
+          )}
+          {docSection === "features" && <FeaturesPanel />}
+          {docSection === "quick-reference" && <QuickReferencePanel />}
+          {docSection === "troubleshooting" && <TroubleshootingPanel />}
+        </div>
+      </div>
+    );
+  }
 
   const stats = [
     {
@@ -140,24 +281,60 @@ export default function SuperAdminDashboardPage() {
         </div>
 
         <nav className="flex-grow-1 px-3 py-3 d-flex flex-column gap-2">
-          <button className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#fff", background: "#374151", boxShadow: "0 2px 8px rgba(75,85,99,0.3)" }}>
+          <button 
+            onClick={() => setActivePanel("overview")}
+            className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
+            style={{ 
+              color: activePanel === "overview" ? "#78350f" : "#1f2937", 
+              background: activePanel === "overview" ? "#fbbf24" : "transparent",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => { if (activePanel !== "overview") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activePanel !== "overview") e.currentTarget.style.background = "transparent"; }}>
             <Icon name="activity" size={20} />
             <span>Overview</span>
           </button>
-          <button onClick={() => router.push("/admin/super-admin/create")} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#6b7280", background: "transparent" }}>
+          <button 
+            onClick={() => router.push("/admin/super-admin/create")}
+            className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
+            style={{ 
+              color: "#1f2937", 
+              background: "transparent",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
             <Icon name="users" size={20} />
             <span>Manage Accounts</span>
           </button>
+          <button 
+            onClick={() => setActivePanel("documentation")}
+            className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
+            style={{ 
+              color: activePanel === "documentation" ? "#78350f" : "#1f2937", 
+              background: activePanel === "documentation" ? "#fbbf24" : "transparent",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => { if (activePanel !== "documentation") e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { if (activePanel !== "documentation") e.currentTarget.style.background = "transparent"; }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+            </svg>
+            <span>Documentation</span>
+          </button>
         </nav>
 
-        <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
+        <div className="px-3 py-4 border-top" style={{ borderColor: "#f3f4f6" }}>
           <button onClick={() => {
             localStorage.removeItem("inform_token");
             localStorage.removeItem("inform_role");
             localStorage.removeItem("inform_user");
             localStorage.removeItem("inform_admin_token");
             router.push("/login");
-          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2 rounded-3" style={{ background: "#374151", color: "#fff", border: "none", fontSize: "1rem", boxShadow: "0 4px 12px rgba(75,85,99,0.3)" }}>
+          }} className="btn w-100 fw-bold py-3 d-flex align-items-center justify-content-center gap-2 rounded-3" style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: "1rem", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#b91c1c"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#dc2626"; }}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -184,6 +361,10 @@ export default function SuperAdminDashboardPage() {
           </div>
 
           <div className="container-fluid px-3 px-md-4" style={{ marginTop:"32px", paddingBottom:32 }}>
+            {activePanel === "documentation" ? (
+              renderDocumentation()
+            ) : (
+              <>
             <div className="row g-3 mb-4">
               {stats.map(s => (
                 <div key={s.label} className="col-6 col-lg-3">
@@ -366,6 +547,8 @@ export default function SuperAdminDashboardPage() {
                   </div>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>
