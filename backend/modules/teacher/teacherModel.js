@@ -259,8 +259,17 @@ const TeacherModel = {
       [internalTeacherId]
     );
 
+    // Get total unique students enrolled in this teacher's subjects
+    const [studentRows] = await db.query(
+      `SELECT COUNT(DISTINCT sse.student_id) AS total_students
+       FROM student_schedule_enrollments sse
+       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
+       WHERE ts.teacher_id = ?`,
+      [internalTeacherId]
+    );
+
     return {
-      total_students: 0,
+      total_students: studentRows[0]?.total_students || 0,
       avg_grade: gradeRows[0]?.avg_grade || 0,
       pending_requests: (requestRows[0]?.pending_requests || 0) + (docRequestRows[0]?.pending_docs || 0),
       active_term: activeTerm
