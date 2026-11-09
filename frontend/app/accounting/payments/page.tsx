@@ -804,7 +804,8 @@ export default function TuitionPaymentsPage() {
             {/* Summary Statistics */}
             <div className="row g-3 mb-4">
               <div className="col-md-3">
-                <div className="card border-0 shadow-sm rounded-4 h-100">
+                <div className="card b
+                order-0 shadow-sm rounded-4 h-100">
                   <div className="card-body p-4">
                     <p className="text-muted mb-2 fw-semibold" style={{ fontSize: 14 }}>Students with Balance</p>
                     <h2 className="mb-0 fw-bold" style={{ fontSize: 36, color: "#f59e0b" }}>{stats.students_with_balance || 0}</h2>

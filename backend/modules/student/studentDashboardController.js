@@ -51,18 +51,20 @@ async function getDashboardData(req, res, next) {
       // Continue with basic student info from JWT
     }
 
-    // Get grades data - calculate GWA (handle empty table)
+    // Get grades data - calculate GWA from RELEASED grade requests only
     let averageGrade = 0;
     try {
       const [gradesRows] = await db.query(`
         SELECT 
-          AVG(g.percentage) as average_grade
-        FROM grades g
-        WHERE g.student_id = ?
+          AVG(gr.score) as average_grade
+        FROM grade_requests gr
+        WHERE gr.student_id = ?
+          AND gr.status = 'released_to_student'
       `, [studentId]);
       averageGrade = gradesRows[0]?.average_grade || 0;
     } catch (err) {
-      // Grades table might not exist yet
+      // Grade requests table might not exist yet
+      console.error("Error fetching grades:", err.message);
     }
 
     // Get tuition/payment data (handle missing tables)
@@ -70,13 +72,15 @@ async function getDashboardData(req, res, next) {
     try {
       const [paymentsRows] = await db.query(`
         SELECT 
-          COALESCE(SUM(amount), 0) as total_paid
-        FROM payments
-        WHERE student_id = ? AND status = 'verified'
+          COALESCE(SUM(p.amount), 0) as total_paid
+        FROM payments p
+        INNER JOIN students s ON p.student_internal_id = s.id
+        WHERE s.student_id = ? AND p.status = 'verified'
       `, [studentId]);
       totalPaid = paymentsRows[0]?.total_paid || 0;
     } catch (err) {
       // Payments table might not exist yet
+      console.error("Error fetching payments:", err.message);
     }
 
     // Get total tuition fee from new assessment system
@@ -85,10 +89,11 @@ async function getDashboardData(req, res, next) {
       // Try new assessment system first
       const [assessmentRows] = await db.query(`
         SELECT 
-          COALESCE(net_assessment, 0) as total_tuition
-        FROM student_assessments
-        WHERE student_id = ?
-        ORDER BY assessed_at DESC
+          COALESCE(sa.net_assessment, 0) as total_tuition
+        FROM student_assessments sa
+        INNER JOIN students s ON sa.student_internal_id = s.id
+        WHERE s.student_id = ?
+        ORDER BY sa.assessed_at DESC
         LIMIT 1
       `, [studentId]);
       
@@ -115,8 +120,9 @@ async function getDashboardData(req, res, next) {
     try {
       const [docsRows] = await db.query(`
         SELECT COUNT(*) as pending_count
-        FROM documents
-        WHERE student_id = ? AND status <> 'released'
+        FROM documents d
+        INNER JOIN students s ON d.student_internal_id = s.id
+        WHERE s.student_id = ? AND d.status <> 'released'
       `, [studentId]);
       pendingDocs = docsRows[0]?.pending_count || 0;
     } catch (err) {
@@ -125,26 +131,33 @@ async function getDashboardData(req, res, next) {
       pendingDocs = 0;
     }
 
-    // Get recent grades (handle missing table)
+    // Get recent RELEASED grades from grade_requests (not from grades table directly)
     let recentGradesRows = [];
     try {
       const [rows] = await db.query(`
         SELECT 
-          g.id,
-          g.subject_name,
-          g.strand,
-          g.percentage,
-          g.term,
-          g.created_at
-        FROM grades g
-        WHERE g.student_id = ?
-        ORDER BY g.created_at DESC
+          gr.id,
+          COALESCE(ts.subject_name, sub.name) AS subject_name,
+          COALESCE(ts.strand, 'N/A') AS strand,
+          gr.score as percentage,
+          gr.term,
+          gr.updated_at as created_at
+        FROM grade_requests gr
+        LEFT JOIN subjects sub ON sub.id = gr.subject_id
+        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
+        WHERE gr.student_id = ?
+          AND gr.status = 'released_to_student'
+        ORDER BY gr.updated_at DESC
         LIMIT 5
       `, [studentId]);
-      recentGradesRows = rows;
+      recentGradesRows = rows.map(row => ({
+        ...row,
+        subject_name: row.subject_name,
+        strand: row.strand
+      }));
     } catch (err) {
       console.error("Error fetching recent grades:", err.message);
-      // Grades table might not exist yet
+      // Grade requests table might not exist yet
     }
 
     // Get adviser information for current school year
@@ -317,7 +330,19 @@ async function getProfileData(req, res, next) {
  */
 async function getStudentSchedules(req, res, next) {
   try {
-    const studentId = req.student.student_id;
+    const studentId = req.student.student_id; // Display ID from JWT
+
+    // Look up student's internal ID
+    const [studentLookup] = await db.query(
+      `SELECT id FROM students WHERE student_id = ?`,
+      [studentId]
+    );
+
+    if (studentLookup.length === 0) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const studentInternalId = studentLookup[0].id;
 
     const [schedules] = await db.query(`
       SELECT 
@@ -336,9 +361,9 @@ async function getStudentSchedules(req, res, next) {
       FROM student_schedule_enrollments sse
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
       INNER JOIN teachers t ON ts.teacher_id = t.id
-      WHERE sse.student_id = ?
+      WHERE sse.student_internal_id = ?
       ORDER BY ts.day, ts.time_start ASC
-    `, [studentId]);
+    `, [studentInternalId]);
 
     res.json({
       student_id: studentId,

@@ -307,7 +307,7 @@ async function listStudents(req, res, next) {
         NULL as room,
         ea.photo_url
        FROM students s
-       LEFT JOIN grades g ON s.student_id = g.student_id
+       LEFT JOIN grades g ON s.id = g.student_internal_id
        LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
        GROUP BY s.id, s.student_id, s.full_name, s.pathway, s.track, s.strand, s.grade_level, s.term, s.email, s.account_status, ea.photo_url
        ORDER BY s.full_name`
@@ -341,7 +341,7 @@ async function searchStudents(req, res, next) {
         NULL as room,
         ea.photo_url
        FROM students s
-       LEFT JOIN grades g ON s.student_id = g.student_id
+       LEFT JOIN grades g ON s.id = g.student_internal_id
        LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
        WHERE s.full_name LIKE ? OR s.student_id LIKE ?
        GROUP BY s.id, s.student_id, s.full_name, s.pathway, s.track, s.strand, s.grade_level, s.term, s.email, s.account_status, ea.photo_url

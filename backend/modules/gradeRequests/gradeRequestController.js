@@ -105,9 +105,57 @@ async function studentSubmitRequest(req, res, next) {
 
 async function studentGetRequests(req, res, next) {
   try {
-    const requests = await GradeRequestModel.findByStudent(req.student.student_id);
-    res.json({ requests });
-  } catch (err) { next(err); }
+    const { student_id } = req.student;
+    
+    // Get all grade requests for this student
+    const requests = await GradeRequestModel.findByStudent(student_id);
+    
+    // Also get available subjects (enrolled but not requested yet)
+    const [studentLookup] = await db.query(
+      `SELECT id FROM students WHERE student_id = ?`,
+      [student_id]
+    );
+
+    let availableSubjects = [];
+    if (studentLookup.length > 0) {
+      const studentInternalId = studentLookup[0].id;
+      const { active_term } = await require("../shared/configModel").getEnrollmentConfig();
+      
+      const [subjects] = await db.query(
+        `SELECT 
+           ts.id as subject_id,
+           ts.subject_name,
+           ts.strand,
+           ts.term,
+           t.id as teacher_db_id,
+           t.full_name as teacher_name
+         FROM student_schedule_enrollments sse
+         INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         WHERE sse.student_internal_id = ?
+           AND ts.term = ?
+           AND NOT EXISTS (
+             SELECT 1 FROM grade_requests gr
+             WHERE gr.student_id = ?
+               AND gr.subject_id = ts.id
+               AND gr.term = ?
+               AND gr.status NOT IN ('rejected')
+           )
+         ORDER BY ts.subject_name ASC`,
+        [studentInternalId, active_term, student_id, active_term]
+      );
+      
+      availableSubjects = subjects;
+    }
+    
+    res.json({ 
+      requests,
+      available_subjects: availableSubjects 
+    });
+  } catch (err) { 
+    console.error('[studentGetRequests] Error:', err);
+    next(err); 
+  }
 }
 
 /* ── Teacher ── */

@@ -614,54 +614,41 @@ function WorkflowTracker({ subject, currentStep }: { subject: string; currentSte
   );
 }
 
-function GradesRequestOpen({ term, existingRequests = [] }: { term: string; existingRequests?: any[] }) {
-  // Fetch real enrolled subjects with their DB IDs
+function GradesRequestOpen({ term, existingRequests = [], availableSubjects = [] }: { term: string; existingRequests?: any[]; availableSubjects?: any[] }) {
+  // Use the available subjects from the parent component
   const [enrolledSubjects, setEnrolledSubjects] = useState<{id: number; code: string; subject_name: string; teacher_name: string}[]>([]);
   const [requestMap, setRequestMap] = useState<Record<number, SubjectRequestStatus>>({});
   const [toast, setToast]               = useState<string | null>(null);
   const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("inform_token");
-    if (!token) return;
-    fetch(`${API_BASE}/api/enrollment/schedule`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.schedule?.length) {
-          const seen = new Set<number>();
-          const unique = data.schedule.filter((s: any) => {
-            if (seen.has(s.subject_id)) return false;
-            seen.add(s.subject_id);
-            return true;
-          });
-          setEnrolledSubjects(unique.map((s: any) => ({
-            id: s.subject_id,
-            code: s.code,
-            subject_name: s.subject_name,
-            teacher_name: s.teacher_name,
-          })));
-          // Init request map � check existing requests for this term
-          const map: Record<number, SubjectRequestStatus> = {};
-          unique.forEach((s: any) => {
-            const existing = existingRequests.find(r => Number(r.subject_id) === s.subject_id);
-            if (!existing) {
-              map[s.subject_id] = "idle";
-            } else if (existing.status === "rejected") {
-              map[s.subject_id] = "rejected";
-            } else {
-              // Any other status (pending, in-progress, released) ? show as "pending" (not requestable)
-              map[s.subject_id] = "pending";
-            }
-          });
-          setRequestMap(map);
+    // Use the available subjects from the API instead of fetching separately
+    if (availableSubjects.length > 0) {
+      const subjects = availableSubjects.map((s: any) => ({
+        id: s.subject_id,
+        code: s.subject_code || s.code || '',
+        subject_name: s.subject_name,
+        teacher_name: s.teacher_name,
+      }));
+      setEnrolledSubjects(subjects);
+      
+      // Init request map – check existing requests for this term
+      const map: Record<number, SubjectRequestStatus> = {};
+      subjects.forEach((s: any) => {
+        const existing = existingRequests.find(r => Number(r.subject_id) === s.id);
+        if (!existing) {
+          map[s.id] = "idle";
+        } else if (existing.status === "rejected") {
+          map[s.id] = "rejected";
+        } else {
+          // Any other status (pending, in-progress, released) – show as "pending" (not requestable)
+          map[s.id] = "pending";
         }
-      })
-      .catch(() => {});
+      });
+      setRequestMap(map);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [term]);
+  }, [term, availableSubjects, existingRequests]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -880,6 +867,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
   const [selectedTerm, setSelectedTerm] = useState<"term1"|"term2"|"term3">("term1");
   const [requestConfig, setRequestConfig] = useState<{term: string; is_open: number}[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"list"|"card">("list"); // Default to list view
   const [schoolYear, setSchoolYear] = useState<string>("2025-2026"); // Default school year
@@ -928,7 +916,10 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
         credentials: "include",
       })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.requests) setMyRequests(data.requests); })
+        .then(data => { 
+          if (data?.requests) setMyRequests(data.requests);
+          if (data?.available_subjects) setAvailableSubjects(data.available_subjects);
+        })
         .catch(() => {});
     }
     setLoading(true);
@@ -1147,7 +1138,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
       {/* Grade request section � only when window is open */}
       {!loading && isRequestOpen && (
         <div>
-          <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} />
+          <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} availableSubjects={availableSubjects} />
         </div>
       )}
     </div>
