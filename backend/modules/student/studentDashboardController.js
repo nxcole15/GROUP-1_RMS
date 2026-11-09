@@ -160,37 +160,9 @@ async function getDashboardData(req, res, next) {
       // Grade requests table might not exist yet
     }
 
-    // Get adviser information for current school year
+    // Get adviser information - DISABLED (feature removed in migration 015)
+    // The student_adviser_assignments table no longer exists
     let adviser = null;
-    try {
-      const [adviserRows] = await db.query(`
-        SELECT 
-          t.full_name as adviser_name,
-          t.email as adviser_email,
-          ec.school_year,
-          ec.current_term
-        FROM student_adviser_assignments saa
-        INNER JOIN teachers t ON saa.teacher_id = t.id
-        INNER JOIN enrollment_config ec ON saa.school_year_id = ec.id
-        WHERE saa.student_id = ?
-          AND saa.status = 'active'
-          AND ec.status = 'active'
-        LIMIT 1
-      `, [studentId]);
-      
-      if (adviserRows && adviserRows[0]) {
-        adviser = {
-          name: adviserRows[0].adviser_name,
-          email: adviserRows[0].adviser_email,
-          department: adviserRows[0].adviser_department,
-          school_year: adviserRows[0].school_year,
-          current_term: adviserRows[0].current_term
-        };
-      }
-    } catch (err) {
-      console.error("Error fetching adviser:", err.message);
-      // Table might not exist yet
-    }
 
     res.json({
       student: {
