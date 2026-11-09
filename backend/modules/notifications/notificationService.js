@@ -11,7 +11,7 @@ const NotificationService = {
   /**
    * Create a notification for a student
    */
-  async notifyStudent({ student_id, message, type = 'info', link_url = null }) {
+  async notifyStudent({ student_id, message, type = 'system', link_url = null }) {
     try {
       return await NotificationModel.create({ student_id, message, type, link_url });
     } catch (error) {
@@ -23,7 +23,7 @@ const NotificationService = {
   /**
    * Create a notification for a specific staff member
    */
-  async notifyStaff({ recipient, role, message, type = 'info', reference_id = null, reference_type = null, link_url = null }) {
+  async notifyStaff({ recipient, role, message, type = 'system', reference_id = null, reference_type = null, link_url = null }) {
     try {
       return await StaffNotificationModel.create({ 
         recipient, 
@@ -42,7 +42,7 @@ const NotificationService = {
   /**
    * Create notification for all users of a specific role
    */
-  async notifyRole({ role, message, type = 'info', reference_id = null, reference_type = null, link_url = null }) {
+  async notifyRole({ role, message, type = 'system', reference_id = null, reference_type = null, link_url = null }) {
     try {
       return await StaffNotificationModel.createForRole({ 
         role, 
@@ -67,7 +67,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `${teacher_name} submitted your ${subject} grade (${grade}) for ${term}. Awaiting review.`,
-      type: 'grade_submitted',
+      type: 'grade',
       link_url: '/dashboard'
     });
 
@@ -89,7 +89,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Your ${subject} grade (${grade}) for ${term} has been approved by ${approved_by}.`,
-      type: 'grade_approved',
+      type: 'grade',
       link_url: '/dashboard'
     });
   },
@@ -102,7 +102,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Your ${subject} grade submission for ${term} requires revision. Reason: ${reason}`,
-      type: 'grade_rejected',
+      type: 'grade',
       link_url: '/dashboard'
     });
 
@@ -178,7 +178,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Your ${document_type} is ready for pickup!`,
-      type: 'document_ready',
+      type: 'document',
       link_url: '/documents'
     });
   },
@@ -190,7 +190,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Congratulations! Your enrollment for ${school_year} has been approved.`,
-      type: 'enrollment_approved',
+      type: 'enrollment',
       link_url: '/dashboard'
     });
   },
@@ -223,7 +223,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Payment of ₱${amount.toLocaleString()} received. Receipt #${receipt_number}`,
-      type: 'payment_received',
+      type: 'payment',
       link_url: '/dashboard'
     });
   },
@@ -249,7 +249,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Your fees have been assessed: ₱${total_amount.toLocaleString()}. View details in your dashboard.`,
-      type: 'fee_assigned',
+      type: 'payment',
       link_url: '/dashboard'
     });
   },
@@ -261,7 +261,7 @@ const NotificationService = {
     await this.notifyStudent({
       student_id,
       message: `Payment reminder: You have a balance of ₱${balance_amount.toLocaleString()}`,
-      type: 'balance_due',
+      type: 'payment',
       link_url: '/dashboard'
     });
   }

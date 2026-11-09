@@ -8,13 +8,17 @@ const GradeRequestModel = {
   async findAll() {
     const [rows] = await db.query(
       `SELECT gr.*, 
-              s.full_name AS student_name, 
-              COALESCE(ts.subject_name, sub.name) AS subject_name,
-              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
+              s.full_name AS student_name,
+              s.student_id AS student_display_id,
+              s.grade_level,
+              s.track AS student_track,
+              s.strand AS student_strand,
+              ts.subject_name,
+              ts.strand,
+              CONCAT(ts.subject_name, ' - ', ts.strand) AS subject_code,
               t.full_name AS teacher_name
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       LEFT JOIN subjects sub ON sub.id = gr.subject_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        ORDER BY gr.created_at DESC`
@@ -25,11 +29,11 @@ const GradeRequestModel = {
   async findByStudent(student_id) {
     const [rows] = await db.query(
       `SELECT gr.*, 
-              COALESCE(ts.subject_name, sub.name) AS subject_name,
-              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
+              ts.subject_name,
+              ts.strand,
+              CONCAT(ts.subject_name, ' - ', ts.strand) AS subject_code,
               t.full_name AS teacher_name
        FROM grade_requests gr
-       LEFT JOIN subjects sub ON sub.id = gr.subject_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        WHERE gr.student_id = ?
@@ -42,14 +46,16 @@ const GradeRequestModel = {
   async findByTeacher(teacher_id) {
     const [rows] = await db.query(
       `SELECT gr.*, 
-              s.full_name AS student_name, 
-              s.pathway AS student_track,
-              COALESCE(ts.subject_name, sub.name) AS subject_name,
-              COALESCE(ts.strand, s.strand) AS strand,
-              COALESCE(CONCAT(ts.subject_name, ' (', ts.strand, ')'), sub.code) AS subject_code
+              s.full_name AS student_name,
+              s.student_id AS student_display_id,
+              s.grade_level,
+              s.track AS student_track,
+              s.strand AS student_strand,
+              ts.subject_name,
+              ts.strand,
+              CONCAT(ts.subject_name, ' (', ts.strand, ')') AS subject_code
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       LEFT JOIN subjects sub ON sub.id = gr.subject_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        WHERE gr.teacher_id = ?
        ORDER BY gr.created_at DESC`,
@@ -61,13 +67,17 @@ const GradeRequestModel = {
   async findById(id) {
     const [rows] = await db.query(
       `SELECT gr.*, 
-              s.full_name AS student_name, 
-              COALESCE(ts.subject_name, sub.name) AS subject_name,
-              COALESCE(CONCAT(ts.subject_name, ' - ', ts.strand), sub.code) AS subject_code,
+              s.full_name AS student_name,
+              s.student_id AS student_display_id,
+              s.grade_level,
+              s.track AS student_track,
+              s.strand AS student_strand,
+              ts.subject_name,
+              ts.strand,
+              CONCAT(ts.subject_name, ' - ', ts.strand) AS subject_code,
               t.full_name AS teacher_name
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
-       LEFT JOIN subjects sub ON sub.id = gr.subject_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        WHERE gr.id = ? LIMIT 1`,

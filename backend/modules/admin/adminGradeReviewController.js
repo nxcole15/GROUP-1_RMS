@@ -163,7 +163,7 @@ async function getSubmissionDetails(req, res, next) {
       [grades] = await pool.query(`
         SELECT 
           g.id,
-          g.student_id,
+          s.student_id,
           g.percentage,
           g.submission_status,
           g.submitted_at,
@@ -171,11 +171,13 @@ async function getSubmissionDetails(req, res, next) {
           s.pathway,
           s.grade_level
         FROM grades g
-        INNER JOIN students s ON g.student_id = s.student_id
-        WHERE g.teacher_id = ? 
-          AND g.subject_name = ?
-          AND g.strand = ?
-          AND g.term = ?
+        INNER JOIN students s ON g.student_internal_id = s.id
+        INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+        INNER JOIN teachers t ON ts.teacher_id = t.id
+        WHERE t.id = ? 
+          AND ts.subject_name = ?
+          AND ts.strand = ?
+          AND ts.term = ?
           AND g.submission_status IN ('submitted', 'approved', 'returned')
         ORDER BY s.full_name ASC
       `, [batchData.teacher_id, batchData.subject_name, batchData.strand, batchData.term]);
@@ -183,7 +185,7 @@ async function getSubmissionDetails(req, res, next) {
       [grades] = await pool.query(`
         SELECT 
           g.id,
-          g.student_id,
+          s.student_id,
           g.percentage,
           g.submission_status,
           g.submitted_at,
@@ -191,7 +193,7 @@ async function getSubmissionDetails(req, res, next) {
           s.pathway,
           s.grade_level
         FROM grades g
-        INNER JOIN students s ON g.student_id = s.student_id
+        INNER JOIN students s ON g.student_internal_id = s.id
         WHERE g.teacher_id = ? 
           AND g.subject_id = ? 
           AND g.term = ?

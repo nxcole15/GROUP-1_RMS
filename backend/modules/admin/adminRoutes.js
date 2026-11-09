@@ -65,6 +65,12 @@ const {
   getSchedulingStatistics
 } = require("./schedulingController");
 const {
+  getStudentsForManagement,
+  getStudentDetails,
+  updateStudentInfo,
+  getStudentAuditLog
+} = require("./registrarStudentController");
+const {
   getRegistrarDocuments,
   getAllRegistrarDocuments,
   registrarForwardToPrincipal,
@@ -165,6 +171,12 @@ router.post("/scheduling/schedules/:schedule_id/enroll", enrollStudentInSchedule
 router.delete("/scheduling/schedules/:schedule_id/students/:student_id", unenrollStudentFromSchedule);
 router.get("/scheduling/schedules/:schedule_id/students", getScheduleStudents);
 router.get("/scheduling/students/:student_id/schedules", getStudentSchedules);
+
+// Manage Students (Registrar)
+router.get("/students/manage", getStudentsForManagement);
+router.get("/students/manage/:student_id", getStudentDetails);
+router.patch("/students/manage/:student_id", updateStudentInfo);
+router.get("/students/manage/:student_id/audit", getStudentAuditLog);
 
 // Priority 2 Features - Scheduling
 router.get("/scheduling/timetable", getWeeklyTimetable);

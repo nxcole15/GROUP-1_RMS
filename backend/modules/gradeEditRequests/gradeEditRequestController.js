@@ -45,15 +45,32 @@ async function teacherSubmitRequest(req, res, next) {
       });
     }
 
+    // Look up student's internal ID
+    const [studentLookup] = await db.query(
+      `SELECT id FROM students WHERE student_id = ?`,
+      [student_id]
+    );
+
+    if (studentLookup.length === 0) {
+      return res.status(404).json({ 
+        error: `Student ${student_id} not found.` 
+      });
+    }
+
+    const studentInternalId = studentLookup[0].id;
+
     // Verify the original grade exists
+    // For new system: join with teacher_schedules to match subject_name and term
     const [gradeCheck] = await db.query(
-      `SELECT id, percentage FROM grades 
-       WHERE student_id = ? 
-         AND subject_name = ? 
-         AND term = ?
-         AND submission_status IN ('submitted', 'approved')
+      `SELECT g.id, g.percentage 
+       FROM grades g
+       INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+       WHERE g.student_internal_id = ? 
+         AND ts.subject_name = ? 
+         AND ts.term = ?
+         AND g.submission_status IN ('submitted', 'approved')
        LIMIT 1`,
-      [student_id, subject_name, term]
+      [studentInternalId, subject_name, term]
     );
 
     if (!gradeCheck[0]) {
@@ -141,15 +158,32 @@ async function teacherApplyCorrection(req, res, next) {
       return res.status(409).json({ error: "This request has not been approved yet." });
     }
 
+    // Look up student's internal ID
+    const [studentLookup] = await conn.query(
+      `SELECT id FROM students WHERE student_id = ?`,
+      [request.student_id]
+    );
+
+    if (studentLookup.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ 
+        error: `Student ${request.student_id} not found.` 
+      });
+    }
+
+    const studentInternalId = studentLookup[0].id;
+
     // Update the grade in grades table
+    // For new system: need to find via teacher_schedule_id
     const [updateResult] = await conn.query(
-      `UPDATE grades 
-       SET percentage = ?,
-           updated_at = NOW()
-       WHERE student_id = ? 
-         AND subject_name = ? 
-         AND term = ?`,
-      [corrected_grade, request.student_id, request.subject_name, request.term]
+      `UPDATE grades g
+       INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+       SET g.percentage = ?,
+           g.updated_at = NOW()
+       WHERE g.student_internal_id = ? 
+         AND ts.subject_name = ? 
+         AND ts.term = ?`,
+      [corrected_grade, studentInternalId, request.subject_name, request.term]
     );
 
     if (updateResult.affectedRows === 0) {

@@ -31,6 +31,7 @@ async function getStudentsWithGradesForClass(req, res, next) {
     const [students] = await pool.query(`
       SELECT DISTINCT
         s.student_id,
+        s.id as internal_id,
         s.full_name,
         s.pathway,
         s.grade_level,
@@ -43,20 +44,18 @@ async function getStudentsWithGradesForClass(req, res, next) {
         g.return_reason,
         g.updated_at
       FROM students s
-      INNER JOIN student_schedule_enrollments sse ON s.student_id = sse.student_id
+      INNER JOIN student_schedule_enrollments sse ON s.id = sse.student_internal_id
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
       INNER JOIN teachers t ON ts.teacher_id = t.id
       LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
-      LEFT JOIN grades g ON g.student_id = s.student_id 
-        AND g.subject_name = ? 
-        AND g.strand = ?
-        AND g.term = ?
+      LEFT JOIN grades g ON g.teacher_schedule_id = ts.id
+        AND g.student_internal_id = s.id
       WHERE t.id = ?
         AND ts.subject_name = ?
         AND ts.strand = ?
         AND ts.term = ?
       ORDER BY s.full_name ASC
-    `, [subject_name, strand, term, teacherDbId, subject_name, strand, term]);
+    `, [teacherDbId, subject_name, strand, term]);
 
     // Get submission batch status
     const [batchResult] = await pool.query(`
@@ -156,7 +155,7 @@ async function getSubjectStudentsWithGrades(req, res, next) {
       FROM students s
       INNER JOIN enrollments e ON s.student_id = e.student_id
       INNER JOIN enrollment_subjects es ON e.id = es.enrollment_id
-      LEFT JOIN grades g ON g.student_id = s.student_id 
+      LEFT JOIN grades g ON g.student_internal_id = s.id 
         AND g.subject_id = ? 
         AND g.term = ?
       WHERE es.subject_id = ?
@@ -230,22 +229,63 @@ async function saveDraftGrade(req, res, next) {
       });
     }
 
+    // Look up student's internal_id from their student_id display value
+    const [studentLookup] = await pool.query(
+      `SELECT id as internal_id FROM students WHERE student_id = ?`,
+      [student_id]
+    );
+
+    if (studentLookup.length === 0) {
+      return res.status(404).json({
+        error: `Student ${student_id} not found.`
+      });
+    }
+
+    const studentInternalId = studentLookup[0].internal_id;
+
     // Determine which system to use
     const useNewSystem = subject_name && strand;
+
+    // For new system, find the teacher_schedule_id for this student
+    let teacherScheduleId = null;
+    if (useNewSystem) {
+      // Find which teacher_schedule this student is enrolled in for this subject+strand+term
+      const [scheduleResult] = await pool.query(
+        `SELECT ts.id 
+         FROM teacher_schedules ts
+         INNER JOIN student_schedule_enrollments sse ON ts.id = sse.teacher_schedule_id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?
+           AND sse.student_internal_id = ?
+         LIMIT 1`,
+        [teacherDbId, subject_name, strand, term, studentInternalId]
+      );
+
+      if (scheduleResult.length === 0) {
+        return res.status(404).json({
+          error: `No schedule found for student ${student_id} in ${subject_name} (${strand}) for ${term}.`
+        });
+      }
+
+      teacherScheduleId = scheduleResult[0].id;
+    }
 
     // Check if grade already exists
     let existing;
     if (useNewSystem) {
       [existing] = await pool.query(
         `SELECT id, percentage, submission_status FROM grades 
-         WHERE student_id = ? AND subject_name = ? AND strand = ? AND term = ?`,
-        [student_id, subject_name, strand, term]
+         WHERE teacher_schedule_id = ? AND student_internal_id = ?`,
+        [teacherScheduleId, studentInternalId]
       );
     } else {
       [existing] = await pool.query(
         `SELECT id, percentage, submission_status FROM grades 
-         WHERE student_id = ? AND subject_id = ? AND term = ?`,
-        [student_id, subject_id, term]
+         WHERE student_internal_id = ? AND subject_id = ? AND term = ?`,
+        [studentInternalId, subject_id, term]
       );
     }
 
@@ -279,16 +319,16 @@ async function saveDraftGrade(req, res, next) {
       // Insert new draft grade
       if (useNewSystem) {
         const [result] = await pool.query(
-          `INSERT INTO grades (student_id, subject_name, strand, teacher_id, percentage, term, submission_status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'draft', NOW())`,
-          [student_id, subject_name, strand, teacherDbId, percentage, term]
+          `INSERT INTO grades (student_internal_id, teacher_schedule_id, percentage, term, submission_status, created_at)
+           VALUES (?, ?, ?, ?, 'draft', NOW())`,
+          [studentInternalId, teacherScheduleId, percentage, term]
         );
         gradeId = result.insertId;
       } else {
         const [result] = await pool.query(
-          `INSERT INTO grades (student_id, subject_id, teacher_id, percentage, term, submission_status, created_at)
-           VALUES (?, ?, ?, ?, ?, 'draft', NOW())`,
-          [student_id, subject_id, teacherDbId, percentage, term]
+          `INSERT INTO grades (student_internal_id, student_id, subject_id, teacher_id, percentage, term, submission_status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'draft', NOW())`,
+          [studentInternalId, student_id, subject_id, teacherDbId, percentage, term]
         );
         gradeId = result.insertId;
       }
@@ -395,19 +435,37 @@ async function submitGradesBatch(req, res, next) {
     // Get all draft/returned grades for this subject
     let grades;
     if (useNewSystem) {
-      [grades] = await conn.query(
-        `SELECT id, student_id, percentage 
-         FROM grades 
-         WHERE teacher_id = ? 
-           AND subject_name = ?
-           AND strand = ?
-           AND term = ? 
-           AND submission_status IN ('draft', 'returned')`,
+      // Find all teacher_schedule IDs for this teacher + subject + strand + term
+      const [schedules] = await conn.query(
+        `SELECT ts.id 
+         FROM teacher_schedules ts
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?`,
         [teacherDbId, subject_name, strand, term]
+      );
+
+      if (schedules.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({
+          error: "No schedules found for this subject."
+        });
+      }
+
+      const scheduleIds = schedules.map(s => s.id);
+
+      [grades] = await conn.query(
+        `SELECT id, student_internal_id, teacher_schedule_id, percentage 
+         FROM grades 
+         WHERE teacher_schedule_id IN (?) 
+           AND submission_status IN ('draft', 'returned')`,
+        [scheduleIds]
       );
     } else {
       [grades] = await conn.query(
-        `SELECT id, student_id, percentage 
+        `SELECT id, student_internal_id, student_id, percentage 
          FROM grades 
          WHERE teacher_id = ? 
            AND subject_id = ? 
@@ -429,7 +487,7 @@ async function submitGradesBatch(req, res, next) {
     if (useNewSystem) {
       // Count students in new scheduling system
       [enrolledCount] = await conn.query(
-        `SELECT COUNT(DISTINCT sse.student_id) as total
+        `SELECT COUNT(DISTINCT sse.student_internal_id) as total
          FROM student_schedule_enrollments sse
          INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
          INNER JOIN teachers t ON ts.teacher_id = t.id
@@ -442,9 +500,9 @@ async function submitGradesBatch(req, res, next) {
     } else {
       // Count students in old system
       [enrolledCount] = await conn.query(
-        `SELECT COUNT(DISTINCT s.student_id) as total
+        `SELECT COUNT(DISTINCT s.id) as total
          FROM students s
-         INNER JOIN enrollments e ON s.student_id = e.student_id
+         INNER JOIN enrollments e ON s.id = e.student_internal_id
          INNER JOIN enrollment_subjects es ON e.id = es.enrollment_id
          WHERE es.subject_id = ? 
            AND e.status = 'approved' 
@@ -464,6 +522,20 @@ async function submitGradesBatch(req, res, next) {
 
     // ✨ NEW: No approval needed - mark as 'approved' immediately!
     if (useNewSystem) {
+      // Get schedule IDs again for UPDATE
+      const [schedules] = await conn.query(
+        `SELECT ts.id 
+         FROM teacher_schedules ts
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?`,
+        [teacherDbId, subject_name, strand, term]
+      );
+
+      const scheduleIds = schedules.map(s => s.id);
+
       await conn.query(
         `UPDATE grades 
          SET submission_status = 'approved',   -- Direct to approved!
@@ -471,12 +543,9 @@ async function submitGradesBatch(req, res, next) {
              approved_at = NOW(),               -- Approved same time as submitted
              approved_by = 'auto',              -- System auto-approval
              updated_at = NOW()
-         WHERE teacher_id = ? 
-           AND subject_name = ?
-           AND strand = ?
-           AND term = ?
+         WHERE teacher_schedule_id IN (?)
            AND submission_status IN ('draft', 'returned')`,
-        [teacherDbId, subject_name, strand, term]
+        [scheduleIds]
       );
 
       // Create submission batch record
@@ -525,19 +594,27 @@ async function submitGradesBatch(req, res, next) {
 
     // Log submission for each grade
     for (const grade of grades) {
+      // Get student_id display value for audit log
+      const [studentInfo] = await conn.query(
+        `SELECT student_id FROM students WHERE id = ?`,
+        [grade.student_internal_id]
+      );
+      
+      const studentDisplayId = studentInfo[0]?.student_id;
+      
       if (useNewSystem) {
         await conn.query(
           `INSERT INTO grade_audit_log 
            (grade_id, student_id, subject_name, strand, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
            VALUES (?, ?, ?, ?, ?, 'approved', ?, 'draft', 'approved', 'teacher', ?, ?, NOW())`,
-          [grade.id, grade.student_id, subject_name, strand, term, grade.percentage, req.teacher.teacher_id, notes || null]
+          [grade.id, studentDisplayId, subject_name, strand, term, grade.percentage, req.teacher.teacher_id, notes || null]
         );
       } else {
         await conn.query(
           `INSERT INTO grade_audit_log 
            (grade_id, student_id, subject_id, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
            VALUES (?, ?, ?, ?, 'approved', ?, 'draft', 'approved', 'teacher', ?, ?, NOW())`,
-          [grade.id, grade.student_id, subject_id, term, grade.percentage, req.teacher.teacher_id, notes || null]
+          [grade.id, studentDisplayId, subject_id, term, grade.percentage, req.teacher.teacher_id, notes || null]
         );
       }
     }
@@ -729,9 +806,9 @@ async function getTeacherSubjectsForGrades(req, res, next) {
         ts.strand,
         ts.term,
         -- Count total students across all sections of this subject+strand+term
-        COUNT(DISTINCT sse.student_id) as total_students,
+        COUNT(DISTINCT sse.student_internal_id) as total_students,
         -- Count how many students have grades (any status)
-        COUNT(DISTINCT g.student_id) as graded_count,
+        COUNT(DISTINCT g.student_internal_id) as graded_count,
         -- Collect all schedule IDs for this combination (for later queries)
         GROUP_CONCAT(DISTINCT ts.id) as schedule_ids,
         -- Get submission status if exists (use MAX to satisfy GROUP BY)
@@ -741,10 +818,8 @@ async function getTeacherSubjectsForGrades(req, res, next) {
       FROM teacher_schedules ts
       INNER JOIN teachers t ON ts.teacher_id = t.id
       LEFT JOIN student_schedule_enrollments sse ON ts.id = sse.teacher_schedule_id
-      LEFT JOIN grades g ON sse.student_id = g.student_id 
-        AND g.subject_name = ts.subject_name 
-        AND g.strand = ts.strand 
-        AND g.term = ts.term
+      LEFT JOIN grades g ON g.teacher_schedule_id = ts.id 
+        AND g.student_internal_id = sse.student_internal_id
       LEFT JOIN grade_submission_batches b ON b.teacher_id = t.id
         AND b.subject_name = ts.subject_name
         AND b.strand = ts.strand

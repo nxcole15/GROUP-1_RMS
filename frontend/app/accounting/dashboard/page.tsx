@@ -645,11 +645,11 @@ export default function AccountingDashboardPage() {
           <div className="border-top my-2" style={{ borderColor: "#f1f5f9" }}></div>
           
           <button 
-            onClick={() => setActiveView("tuition-payments")} 
+            onClick={() => router.push("/accounting/payments")}
             className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" 
-            style={{ color: activeView === "tuition-payments" ? "#78350f" : "#1f2937", background: activeView === "tuition-payments" ? "#fbbf24" : "transparent", transition: "all 0.2s ease" }}
-            onMouseEnter={(e) => { if (activeView !== "tuition-payments") e.currentTarget.style.background = "#fef3c7"; }}
-            onMouseLeave={(e) => { if (activeView !== "tuition-payments") e.currentTarget.style.background = "transparent"; }}
+            style={{ color: "#1f2937", background: "transparent", transition: "all 0.2s ease" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           >
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>

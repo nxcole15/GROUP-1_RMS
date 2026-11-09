@@ -388,10 +388,26 @@ async function enrollStudentInSchedule(req, res, next) {
   try {
     const adminId = req.admin?.admin_id;
     const { schedule_id } = req.params;
-    const { student_ids } = req.body; // Array of student IDs
+    const { student_ids } = req.body; // Array of student IDs (VARCHAR display IDs)
 
     if (!Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ error: "student_ids must be a non-empty array" });
+    }
+
+    // Look up student internal IDs from display IDs
+    const placeholders = student_ids.map(() => '?').join(',');
+    const [students] = await pool.query(`
+      SELECT id as internal_id, student_id 
+      FROM students 
+      WHERE student_id IN (${placeholders})
+    `, student_ids);
+
+    if (students.length !== student_ids.length) {
+      return res.status(404).json({ 
+        error: "One or more students not found",
+        found: students.length,
+        requested: student_ids.length
+      });
     }
 
     // Check schedule capacity
@@ -412,11 +428,11 @@ async function enrollStudentInSchedule(req, res, next) {
       });
     }
 
-    // Insert enrollments
-    const values = student_ids.map(student_id => [student_id, schedule_id, adminId]);
+    // Insert enrollments using internal IDs
+    const values = students.map(student => [student.internal_id, schedule_id, adminId]);
     
     await pool.query(`
-      INSERT IGNORE INTO student_schedule_enrollments (student_id, teacher_schedule_id, enrolled_by)
+      INSERT IGNORE INTO student_schedule_enrollments (student_internal_id, teacher_schedule_id, enrolled_by)
       VALUES ?
     `, [values]);
 
@@ -434,12 +450,23 @@ async function enrollStudentInSchedule(req, res, next) {
  */
 async function unenrollStudentFromSchedule(req, res, next) {
   try {
-    const { schedule_id, student_id } = req.params;
+    const { schedule_id, student_id } = req.params; // student_id is display ID
+
+    // Look up student's internal ID
+    const [studentLookup] = await pool.query(`
+      SELECT id FROM students WHERE student_id = ?
+    `, [student_id]);
+
+    if (studentLookup.length === 0) {
+      return res.status(404).json({ error: `Student ${student_id} not found` });
+    }
+
+    const studentInternalId = studentLookup[0].id;
 
     const [result] = await pool.query(`
       DELETE FROM student_schedule_enrollments 
-      WHERE teacher_schedule_id = ? AND student_id = ?
-    `, [schedule_id, student_id]);
+      WHERE teacher_schedule_id = ? AND student_internal_id = ?
+    `, [schedule_id, studentInternalId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Enrollment not found" });
@@ -468,7 +495,7 @@ async function getScheduleStudents(req, res, next) {
         sse.enrolled_at,
         sse.enrolled_by
       FROM student_schedule_enrollments sse
-      INNER JOIN students s ON sse.student_id = s.student_id
+      INNER JOIN students s ON sse.student_internal_id = s.id
       WHERE sse.teacher_schedule_id = ?
       ORDER BY s.full_name ASC
     `, [schedule_id]);
@@ -488,7 +515,18 @@ async function getScheduleStudents(req, res, next) {
  */
 async function getStudentSchedules(req, res, next) {
   try {
-    const { student_id } = req.params;
+    const { student_id } = req.params; // This is the display ID
+
+    // Look up student's internal ID
+    const [studentLookup] = await pool.query(`
+      SELECT id FROM students WHERE student_id = ?
+    `, [student_id]);
+
+    if (studentLookup.length === 0) {
+      return res.status(404).json({ error: `Student ${student_id} not found` });
+    }
+
+    const studentInternalId = studentLookup[0].id;
 
     const [schedules] = await pool.query(`
       SELECT 
@@ -507,9 +545,9 @@ async function getStudentSchedules(req, res, next) {
       FROM student_schedule_enrollments sse
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
       INNER JOIN teachers t ON ts.teacher_id = t.id
-      WHERE sse.student_id = ?
+      WHERE sse.student_internal_id = ?
       ORDER BY ts.day, ts.time_start ASC
-    `, [student_id]);
+    `, [studentInternalId]);
 
     res.json({
       student_id,
@@ -664,7 +702,7 @@ async function bulkEnrollStudents(req, res, next) {
   try {
     const adminId = req.admin?.admin_id;
     const { schedule_id } = req.params;
-    const { student_ids } = req.body;
+    const { student_ids } = req.body; // Display IDs
 
     if (!Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ error: "student_ids must be a non-empty array" });
@@ -688,10 +726,11 @@ async function bulkEnrollStudents(req, res, next) {
       });
     }
 
-    // Validate track/strand compatibility
+    // Validate track/strand compatibility and get internal IDs
     const placeholders = student_ids.map(() => '?').join(',');
     const [students] = await pool.query(`
       SELECT 
+        s.id as internal_id,
         s.student_id,
         s.full_name,
         s.pathway as strand,
@@ -703,6 +742,14 @@ async function bulkEnrollStudents(req, res, next) {
       FROM students s
       WHERE s.student_id IN (${placeholders})
     `, student_ids);
+
+    if (students.length !== student_ids.length) {
+      return res.status(404).json({
+        error: "One or more students not found",
+        found: students.length,
+        requested: student_ids.length
+      });
+    }
 
     const incompatibleStudents = students.filter(student => 
       student.track !== schedule[0].track || student.strand !== schedule[0].strand
@@ -722,35 +769,37 @@ async function bulkEnrollStudents(req, res, next) {
       });
     }
 
-    // Check for already enrolled students
+    // Check for already enrolled students using internal IDs
+    const internalIds = students.map(s => s.internal_id);
+    const internalPlaceholders = internalIds.map(() => '?').join(',');
     const [alreadyEnrolled] = await pool.query(`
-      SELECT student_id 
+      SELECT student_internal_id 
       FROM student_schedule_enrollments 
-      WHERE teacher_schedule_id = ? AND student_id IN (${placeholders})
-    `, [schedule_id, ...student_ids]);
+      WHERE teacher_schedule_id = ? AND student_internal_id IN (${internalPlaceholders})
+    `, [schedule_id, ...internalIds]);
 
-    const alreadyEnrolledIds = alreadyEnrolled.map(e => e.student_id);
-    const newEnrollments = student_ids.filter(id => !alreadyEnrolledIds.includes(id));
+    const alreadyEnrolledInternalIds = alreadyEnrolled.map(e => e.student_internal_id);
+    const newEnrollments = students.filter(s => !alreadyEnrolledInternalIds.includes(s.internal_id));
 
     if (newEnrollments.length === 0) {
       return res.status(400).json({
         error: "All students are already enrolled in this schedule",
-        already_enrolled: alreadyEnrolledIds.length
+        already_enrolled: alreadyEnrolledInternalIds.length
       });
     }
 
-    // Insert enrollments
-    const values = newEnrollments.map(student_id => [student_id, schedule_id, adminId]);
+    // Insert enrollments using internal IDs
+    const values = newEnrollments.map(student => [student.internal_id, schedule_id, adminId]);
     
     await pool.query(`
-      INSERT INTO student_schedule_enrollments (student_id, teacher_schedule_id, enrolled_by)
+      INSERT INTO student_schedule_enrollments (student_internal_id, teacher_schedule_id, enrolled_by)
       VALUES ?
     `, [values]);
 
     res.json({
       message: "Students enrolled successfully",
       enrolled: newEnrollments.length,
-      skipped: alreadyEnrolledIds.length,
+      skipped: alreadyEnrolledInternalIds.length,
       total_requested: student_ids.length
     });
   } catch (err) {

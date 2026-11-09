@@ -62,15 +62,35 @@ async function recordTuitionPayment(req, res, next) {
         });
       }
 
-      // Record the payment
+      // Look up the "Tuition Payment" fee item (or create it if it doesn't exist)
+      const [feeItemRows] = await connection.query(
+        'SELECT id FROM fee_items WHERE item_name = ? LIMIT 1',
+        ["Tuition Payment"]
+      );
+      
+      let fee_item_id;
+      if (feeItemRows.length > 0) {
+        fee_item_id = feeItemRows[0].id;
+      } else {
+        // Create default "Tuition Payment" fee item
+        const [insertResult] = await connection.query(
+          'INSERT INTO fee_items (item_name, description, default_amount, created_by, is_active) VALUES (?, ?, ?, ?, ?)',
+          ["Tuition Payment", "General tuition payment", 0, recorded_by, 1]
+        );
+        fee_item_id = insertResult.insertId;
+      }
+
+      // Record the payment (use the transaction connection)
       const payment = await PaymentModel.recordManualPayment({
         student_id,
-        fee_item: "Tuition Payment", // Generic fee item for manual payments
+        fee_item_id,
+        fee_item_name: "Tuition Payment",
         amount: parsedAmount,
         payment_date: paymentDateTime,
         payment_method: payment_method?.trim() || null,
         notes: notes?.trim() || null,
-        recorded_by
+        recorded_by,
+        connection // Pass the transaction connection
       });
 
       // Calculate new balance

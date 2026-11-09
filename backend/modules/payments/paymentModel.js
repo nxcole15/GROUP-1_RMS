@@ -52,18 +52,36 @@ const PaymentModel = {
    */
   async recordManualPayment({ 
     student_id, 
-    fee_item, 
+    fee_item_id,
+    fee_item_name,
     amount, 
     payment_date, 
     payment_method, 
     notes, 
-    recorded_by 
+    recorded_by,
+    connection = null // Allow passing a transaction connection
   }) {
-    const [result] = await db.query(
+    const conn = connection || db; // Use transaction connection if provided, otherwise default db
+    
+    // Look up student's internal ID
+    const [studentRows] = await conn.query(
+      'SELECT id FROM students WHERE student_id = ? LIMIT 1',
+      [student_id]
+    );
+    const student_internal_id = studentRows[0]?.id;
+
+    // Look up admin's internal ID
+    const [adminRows] = await conn.query(
+      'SELECT id FROM admins WHERE admin_id = ? LIMIT 1',
+      [recorded_by]
+    );
+    const verified_by_internal_id = adminRows[0]?.id;
+
+    const [result] = await conn.query(
       `INSERT INTO payments 
-       (student_id, fee_item, amount, status, paid_at, admin_id, admin_timestamp, payment_method, notes)
-       VALUES (?, ?, ?, 'verified', ?, ?, NOW(), ?, ?)`,
-      [student_id, fee_item, amount, payment_date, recorded_by, payment_method, notes]
+       (student_id, student_internal_id, fee_item, fee_item_id, amount, status, paid_at, admin_id, verified_by_internal_id, admin_timestamp, payment_method, notes)
+       VALUES (?, ?, ?, ?, ?, 'verified', ?, ?, ?, NOW(), ?, ?)`,
+      [student_id, student_internal_id, fee_item_name, fee_item_id, amount, payment_date, recorded_by, verified_by_internal_id, payment_method, notes]
     );
     return this.findById(result.insertId);
   },
