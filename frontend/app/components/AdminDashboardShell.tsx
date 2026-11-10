@@ -188,6 +188,12 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
+  } else if (role === "teacher_coordinator") {
+    // Teacher Coordinator: Only scheduling access
+    filteredNavItems = [
+      { id: "overview", label: "Overview" },
+      { id: "scheduling", label: "Scheduling" }
+    ];
   } else if (role === "principal") {
     // Principal: No filtering needed
     filteredNavItems = navItems;
@@ -270,7 +276,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
                   style={{ color:"#6b7280", background: active === "dashboard-guide" ? "#fef3c7" : "transparent" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1.25rem"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active === "dashboard-guide" ? "#fef3c7" : "transparent"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1rem"; }}>
-                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} Dashboard Guide
+                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : role === "teacher_coordinator" ? "Teacher Coordinator" : "Admin"} Dashboard Guide
                 </button>
                 <button
                   onClick={() => { setActive("user-guide"); setShow(false); }}
@@ -278,7 +284,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
                   style={{ color:"#6b7280", background: active === "user-guide" ? "#fef3c7" : "transparent" }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fef3c7"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1.25rem"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active === "user-guide" ? "#fef3c7" : "transparent"; (e.currentTarget as HTMLButtonElement).style.paddingLeft = "1rem"; }}>
-                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin"} Guide
+                  {role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : role === "teacher_coordinator" ? "Teacher Coordinator" : "Admin"} Guide
                 </button>
               </div>
             )}
@@ -295,7 +301,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
               </div>
               <div className="flex-grow-1 overflow-hidden">
                 <div className="fw-semibold text-truncate" style={{ fontSize:13, color:"#1f2937" }}>
-                  {adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : "Admin") + " User"}
+                  {adminName || (role === "principal" ? "Principal" : role === "registrar" ? "Registrar" : role === "accounting" ? "Accounting" : role === "teacher_coordinator" ? "Teacher Coordinator" : "Admin") + " User"}
                 </div>
                 <div className="text-truncate" style={{ color:"#6b7280", fontSize:11 }}>{config.email}</div>
               </div>
@@ -317,7 +323,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
 }
 
 /*  Overview  */
-function Overview({ setActive, hideBanner, adminName, academicConfig }: { setActive: (s: string) => void; hideBanner?: boolean; adminName?: string | null; academicConfig?: AcademicConfig | null }) {
+function Overview({ setActive, hideBanner, adminName, academicConfig, role }: { setActive: (s: string) => void; hideBanner?: boolean; adminName?: string | null; academicConfig?: AcademicConfig | null; role?: string }) {
     // Calculate current school year
   const getCurrentSchoolYear = () => {
     const now = new Date();
@@ -445,17 +451,32 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
       {/* Stats */}
       {!hideBanner && (
         <div className="row g-3 mb-4">
-          {[
-            { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
-              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-            { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#4b5563,#374151)", shadow:"rgba(55,65,81,0.2)", bgLight:"#f3f4f6", textColor:"#1f2937",
-              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
-            { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
-              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
-            { label:"Pending Payments",    value: pendingStats?.payments ?? "—",          gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)",   bgLight:"#f3f4f6", textColor:"#374151",
-              icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
-          ].map(s => (
-            <div key={s.label} className="col-6 col-lg-3">
+          {(role === "teacher_coordinator" ? 
+            // Teacher Coordinator: Scheduling-specific stats
+            [
+              { label:"Total Schedules",     value: "—", gradient:"linear-gradient(135deg,#8b5cf6,#7c3aed)", shadow:"rgba(139,92,246,0.2)", bgLight:"#f5f3ff", textColor:"#6b21a8",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+              { label:"Active Rooms",        value: "—", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+              { label:"Teachers Assigned",   value: "—", gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+              { label:"Schedule Conflicts",  value: "—", gradient:"linear-gradient(135deg,#ef4444,#dc2626)", shadow:"rgba(239,68,68,0.2)", bgLight:"#fef2f2", textColor:"#b91c1c",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> },
+            ] 
+          : 
+            // Other admin roles: Original stats
+            [
+              { label:"Active Students",     value: dashboardStats?.activeStudents ?? "—", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+              { label:"Class Avg. GWA",      value: dashboardStats?.avgGwa ?? "—",         gradient:"linear-gradient(135deg,#4b5563,#374151)", shadow:"rgba(55,65,81,0.2)", bgLight:"#f3f4f6", textColor:"#1f2937",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+              { label:"Pending Enrollments", value: pendingStats?.enrollments ?? "—",       gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg> },
+              { label:"Pending Payments",    value: pendingStats?.payments ?? "—",          gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)",   bgLight:"#f3f4f6", textColor:"#374151",
+                icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
+            ]
+          ).map((s, idx) => (
+            <div key={s.label || idx} className="col-6 col-lg-3">
               <div className="card border-0 shadow-lg rounded-4 h-100" style={{ overflow:"hidden" }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center justify-content-between mb-3">
@@ -477,7 +498,8 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
         </div>
       )}
 
-      {/* Recent activity + enrollment insights */}
+      {/* Recent activity + enrollment insights (hidden for teacher_coordinator) */}
+      {role !== "teacher_coordinator" && (
       <div className="row g-4 mb-4">
         <div className="col-12 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 h-100">
@@ -600,6 +622,48 @@ function Overview({ setActive, hideBanner, adminName, academicConfig }: { setAct
           </div>
         </div>
       </div>
+      )}
+
+      {/* Teacher Coordinator: Scheduling Summary */}
+      {role === "teacher_coordinator" && (
+        <div className="row g-4 mb-4">
+          <div className="col-12">
+            <div className="card border-0 shadow-sm rounded-4">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-4">
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center justify-content-center rounded-3"
+                      style={{ width:36, height:36, background:"linear-gradient(135deg,#8b5cf6,#7c3aed)" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <h3 className="fw-bold mb-0" style={{ fontSize:"0.95rem", color:"#1e293b" }}>Scheduling Overview</h3>
+                  </div>
+                  <button onClick={() => setActive("scheduling")} className="btn btn-sm px-3 py-2" style={{ background:"#8b5cf6", color:"white", fontSize:"0.8rem" }}>
+                    Go to Scheduling
+                  </button>
+                </div>
+                
+                <div className="text-center py-5">
+                  <div className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                    style={{ width:64, height:64, background:"#f5f3ff" }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <h4 className="fw-bold mb-2" style={{ color:"#1e293b" }}>Welcome, Teacher Coordinator!</h4>
+                  <p className="text-muted mb-4" style={{ maxWidth:480, margin:"0 auto" }}>
+                    Manage class schedules, assign rooms and teachers, and coordinate timetables for the academic year.
+                  </p>
+                  <div className="d-flex gap-3 justify-content-center">
+                    <button onClick={() => setActive("scheduling")} className="btn btn-sm px-4 py-2" style={{ background:"#8b5cf6", color:"white" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight:6 }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      View Timetable
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
@@ -2438,7 +2502,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
           student_name?: string; 
           email: string;
           pathway?: string;  // This is actually the Track
-          track?: string;    // This is actually the Strand (confusing naming!)
+          track?: string;    // New: Track field (e.g., "TECH-PRO", "Academic Track")
+          strand?: string;   // New: Strand field (e.g., "ICT", "STEM")
           grade_level?: number; 
           school_year?: string;
           status: string; 
@@ -6075,7 +6140,7 @@ function StatisticsDashboard({ filters, setFilters, showToast }: any) {
 }
 
 function SchedulingPanel() {
-  const [activeTab, setActiveTab] = useState<"teacher" | "student" | "timetable" | "statistics">("teacher");
+  const [activeTab, setActiveTab] = useState<"teacher" | "student" | "timetable">("teacher");
   
   // Calculate current school year
   const getCurrentSchoolYear = () => {
@@ -6716,29 +6781,14 @@ function SchedulingPanel() {
           style={{
             background: activeTab === "timetable" ? "#374151" : "transparent",
             color: activeTab === "timetable" ? "#fff" : "#374151",
-            borderTop: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
-            borderBottom: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
-            borderLeft: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`,
-            borderRight: "none"
+            border: `1px solid ${activeTab === "timetable" ? "#374151" : "#d1d5db"}`
           }}
           onClick={() => setActiveTab("timetable")}
         >
          Timetable
         </button>
-        <button 
-          className="btn"
-          style={{
-            background: activeTab === "statistics" ? "#374151" : "transparent",
-            color: activeTab === "statistics" ? "#fff" : "#374151",
-            border: `1px solid ${activeTab === "statistics" ? "#374151" : "#d1d5db"}`
-          }}
-          onClick={() => setActiveTab("statistics")}
-        >
-           Statistics
-        </button>
       </div>
       
-      {/* Teacher Schedule */}
       {/* Teacher Schedule */}
       {activeTab === "teacher" && (
         <div className="card border-0 shadow-sm rounded-3">
@@ -6768,7 +6818,9 @@ function SchedulingPanel() {
                     style={{
                       background: teacherFilter === "all" ? "#374151" : "transparent",
                       color: teacherFilter === "all" ? "#fff" : "#374151",
-                      border: `1px solid ${teacherFilter === "all" ? "#374151" : "#d1d5db"}`,
+                      borderTop: `1px solid ${teacherFilter === "all" ? "#374151" : "#d1d5db"}`,
+                      borderBottom: `1px solid ${teacherFilter === "all" ? "#374151" : "#d1d5db"}`,
+                      borderLeft: `1px solid ${teacherFilter === "all" ? "#374151" : "#d1d5db"}`,
                       borderRight: "none"
                     }}
                     onClick={() => setTeacherFilter("all")}
@@ -6780,7 +6832,9 @@ function SchedulingPanel() {
                     style={{
                       background: teacherFilter === "with" ? "#10b981" : "transparent",
                       color: teacherFilter === "with" ? "#fff" : "#10b981",
-                      border: `1px solid ${teacherFilter === "with" ? "#10b981" : "#d1d5db"}`,
+                      borderTop: `1px solid ${teacherFilter === "with" ? "#10b981" : "#d1d5db"}`,
+                      borderBottom: `1px solid ${teacherFilter === "with" ? "#10b981" : "#d1d5db"}`,
+                      borderLeft: `1px solid ${teacherFilter === "with" ? "#10b981" : "#d1d5db"}`,
                       borderRight: "none"
                     }}
                     onClick={() => setTeacherFilter("with")}
@@ -6792,7 +6846,10 @@ function SchedulingPanel() {
                     style={{
                       background: teacherFilter === "without" ? "#f59e0b" : "transparent",
                       color: teacherFilter === "without" ? "#fff" : "#f59e0b",
-                      border: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`
+                      borderTop: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`,
+                      borderBottom: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`,
+                      borderLeft: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`,
+                      borderRight: `1px solid ${teacherFilter === "without" ? "#f59e0b" : "#d1d5db"}`
                     }}
                     onClick={() => setTeacherFilter("without")}
                   >
@@ -7086,15 +7143,6 @@ function SchedulingPanel() {
         />
       )}
 
-      {/* Statistics Dashboard */}
-      {activeTab === "statistics" && (
-        <StatisticsDashboard 
-          filters={statisticsFilters}
-          setFilters={setStatisticsFilters}
-          showToast={showToast}
-        />
-      )}
-
       {/* Add Teacher Schedule Modal */}
       {showAddTeacherSchedule && selectedTeacher && (
         <>
@@ -7169,10 +7217,11 @@ function SchedulingPanel() {
                           setTeacherScheduleForm({
                             ...teacherScheduleForm, 
                             track: e.target.value,
-                            strand: "" // Reset strand when track changes
+                            strand: e.target.value === "All Tracks" ? "All Strands" : "" // Auto-set All Strands if All Tracks selected
                           });
                         }}
                       >
+                        <option value="All Tracks">All Tracks (General Subject)</option>
                         <option value="Academic Track">Academic Track</option>
                         <option value="TechPro Track">TechPro Track</option>
                       </select>
@@ -7183,9 +7232,17 @@ function SchedulingPanel() {
                         className="form-select"
                         value={teacherScheduleForm.strand}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
+                        disabled={teacherScheduleForm.track === "All Tracks"}
                       >
                         <option value="">Select Strand</option>
-                        {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                        {teacherScheduleForm.track === "All Tracks" ? (
+                          <option value="All Strands">All Strands</option>
+                        ) : (
+                          <>
+                            <option value="All Strands">All Strands (General for this Track)</option>
+                            {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                          </>
+                        )}
                       </select>
                     </div>
                     <div className="col-md-12">
@@ -7454,10 +7511,11 @@ function SchedulingPanel() {
                           setTeacherScheduleForm({
                             ...teacherScheduleForm, 
                             track: e.target.value,
-                            strand: ""
+                            strand: e.target.value === "All Tracks" ? "All Strands" : ""
                           });
                         }}
                       >
+                        <option value="All Tracks">All Tracks (General Subject)</option>
                         <option value="Academic Track">Academic Track</option>
                         <option value="TechPro Track">TechPro Track</option>
                       </select>
@@ -7468,9 +7526,17 @@ function SchedulingPanel() {
                         className="form-select"
                         value={teacherScheduleForm.strand}
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, strand: e.target.value})}
+                        disabled={teacherScheduleForm.track === "All Tracks"}
                       >
                         <option value="">Select Strand</option>
-                        {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                        {teacherScheduleForm.track === "All Tracks" ? (
+                          <option value="All Strands">All Strands</option>
+                        ) : (
+                          <>
+                            <option value="All Strands">All Strands (General for this Track)</option>
+                            {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
@@ -7710,9 +7776,12 @@ function SchedulingPanel() {
                           <tbody>
                             {filteredStudents.map(student => {
                               const selectedSchedule = availableSchedules.find(s => s.id.toString() === bulkEnrollScheduleId);
-                              const isCompatible = selectedSchedule && 
-                                student.track === selectedSchedule.track && 
-                                student.strand === selectedSchedule.strand;
+                              const isCompatible = selectedSchedule && (
+                                // Compatible if schedule is "All Tracks" OR tracks match
+                                (selectedSchedule.track === "All Tracks" || student.track === selectedSchedule.track) &&
+                                // Compatible if schedule is "All Strands" OR strands match
+                                (selectedSchedule.strand === "All Strands" || student.strand === selectedSchedule.strand)
+                              );
                               
                               return (
                                 <tr 
@@ -8172,7 +8241,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     if (hideBanner) return; // wrapped by principal/registrar � they handle auth
     const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
     const role  = localStorage.getItem("inform_role");
-    const adminRoles = ["registrar", "principal", "accounting"];
+    const adminRoles = ["registrar", "principal", "accounting", "teacher_coordinator"];
     if (!token || !adminRoles.includes(role ?? "")) {
       window.location.replace("/login");
     }
@@ -8291,7 +8360,7 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "settings":      return <SettingsPanel />;
       case "dashboard-guide": return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="dashboard" />;
       case "user-guide":    return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="user" />;
-      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} academicConfig={academicConfig} />;
+      default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} academicConfig={academicConfig} role={role} />;
     }
   }
 

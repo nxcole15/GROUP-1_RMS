@@ -19,22 +19,22 @@ async function createAdminAccount(req, res, next) {
     }
 
     const { admin_id, full_name, email, password, role } = req.body || {};
-    const allowedRoles = ["principal", "registrar", "accounting"];
+    const allowedRoles = ["principal", "registrar", "accounting", "teacher_coordinator"];
 
     if (!admin_id || !full_name || !email || !password || !role) {
       return res.status(400).json({ error: "Admin ID, full name, email, password, and role are required." });
     }
 
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ error: "Role must be principal, registrar, or accounting." });
+      return res.status(400).json({ error: "Role must be principal, registrar, accounting, or teacher_coordinator." });
     }
 
     const normalizedAdminId = String(admin_id).trim();
     const normalizedName = String(full_name).trim();
     const normalizedEmail = String(email).trim();
 
-    if (normalizedAdminId.length < 4 || normalizedName.length < 2 || normalizedEmail.length < 6 || password.length < 8) {
-      return res.status(400).json({ error: "Please provide valid values. Password must be at least 8 characters long." });
+    if (normalizedAdminId.length < 2 || normalizedName.length < 2 || normalizedEmail.length < 6 || password.length < 8) {
+      return res.status(400).json({ error: "Please provide valid values. Admin ID must be at least 2 characters, password must be at least 8 characters long." });
     }
 
     if (await AdminModel.findByAdminId(normalizedAdminId)) {
@@ -84,7 +84,7 @@ async function updateAdminAccount(req, res, next) {
 
     const id = Number(req.params.id);
     const { full_name, email, role } = req.body || {};
-    const allowedRoles = ["principal", "registrar", "accounting"];
+    const allowedRoles = ["principal", "registrar", "accounting", "teacher_coordinator"];
 
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "A valid admin ID is required." });
@@ -95,7 +95,7 @@ async function updateAdminAccount(req, res, next) {
     }
 
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ error: "Role must be principal, registrar, or accounting." });
+      return res.status(400).json({ error: "Role must be principal, registrar, accounting, or teacher_coordinator." });
     }
 
     const normalizedName = String(full_name).trim();

@@ -1192,7 +1192,9 @@ function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=
       const scheduleEnd = schedule.time_end.slice(0, 5);
       const slotEnd = `${(parseInt(timeSlot.slice(0, 2)) + 1).toString().padStart(2, '0')}:00`;
       
-      return scheduleStart <= timeSlot && scheduleEnd > timeSlot;
+      // Check if the schedule overlaps with this time slot hour
+      // A schedule overlaps if it starts before the slot ends AND ends after the slot starts
+      return scheduleStart < slotEnd && scheduleEnd > timeSlot;
     });
   }
 
