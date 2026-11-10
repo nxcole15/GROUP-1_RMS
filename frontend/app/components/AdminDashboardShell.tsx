@@ -801,7 +801,7 @@ function StudentsPanel() {
                 <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>#</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Name</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>ID</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Track & Grade</th>
+                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Grade - Track & Strand</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>GWA</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Room</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Status</th>
@@ -835,7 +835,7 @@ function StudentsPanel() {
                       </div>
                     </td>
                     <td className="d-none d-sm-table-cell font-mono text-muted small">{s.id}</td>
-                    <td className="d-none d-lg-table-cell text-muted small">{s.track} Grade {s.grade}</td>
+                    <td className="d-none d-lg-table-cell text-muted small">Grade {s.grade} - {s.track}</td>
                     <td className="d-none d-lg-table-cell fw-bold text-primary small">
                       {s.gwa != null && s.gwa > 0 ? Number(s.gwa).toFixed(2) : <span className="text-muted">--</span>}
                     </td>
@@ -2253,7 +2253,7 @@ function GradesPanel({ role }: { role?: string } = {}) {
         </div>
         <div className="flex-grow-1 rounded-3 p-3 d-flex align-items-center gap-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
           <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style={{ width:44, height:44, fontSize:16 }}>{initials(student.name)}</div>
-          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} • {student.track} Grade {student.grade}</div></div>
+          <div className="flex-grow-1"><div className="fw-bold text-dark">{student.name}</div><div className="text-muted small">{student.id} • Grade {student.grade} - {student.track}</div></div>
           <div className="text-end"><div className="fw-black fs-3 text-primary">{avg}%</div><div className="text-muted small">General Average</div></div>
         </div>
       </div>
@@ -2437,7 +2437,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
           extension_name?: string;
           student_name?: string; 
           email: string;
-          pathway?: string; 
+          pathway?: string;  // This is actually the Track
+          track?: string;    // This is actually the Strand (confusing naming!)
           grade_level?: number; 
           school_year?: string;
           status: string; 
@@ -2453,10 +2454,16 @@ function EnrollmentPanel({ role }: { role?: string }) {
             app.extension_name
           ].filter(Boolean).join(" ") || app.student_name || app.email || "Unknown";
 
+          // Format track and strand display
+          // In enrollment_applications: pathway = Track, track = Strand
+          const trackDisplay = app.pathway && app.track 
+            ? `${app.pathway} - ${app.track}` 
+            : app.pathway || "N/A";
+
           return {
             name: fullName,
             id: app.email,
-            track: app.pathway || "N/A",
+            track: trackDisplay,
             grade: app.grade_level || 0,
             date: new Date(app.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
             enrollDate: new Date(app.created_at),
@@ -2895,7 +2902,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
               <tr>
                 <th className="small text-muted fw-semibold text-uppercase ps-4" style={{ letterSpacing:"0.05em" }}>Student</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Student ID</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Track</th>
+                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Grade - Track & Strand</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>Date</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Status</th>
                 <th className="small text-muted fw-semibold text-uppercase text-end pe-4" style={{ letterSpacing:"0.05em" }}>Action</th>
@@ -2944,7 +2951,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
                       <td className="d-none d-sm-table-cell text-muted small">
                         {e.generatedStudentId || "—"}
                       </td>
-                      <td className="d-none d-lg-table-cell text-muted small">{e.track} Grade {e.grade}</td>
+                      <td className="d-none d-lg-table-cell text-muted small">Grade {e.grade} - {e.track}</td>
                       <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
                       <td>
                         <span className={`badge ${
@@ -3174,6 +3181,11 @@ function EnrollmentPanel({ role }: { role?: string }) {
                           <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
                             {selectedApplication.pathway || "—"}
                           </span>
+                          {selectedApplication.track && (
+                            <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
+                              {selectedApplication.track}
+                            </span>
+                          )}
                           <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
                             Grade {selectedApplication.grade_level || "—"}
                           </span>
