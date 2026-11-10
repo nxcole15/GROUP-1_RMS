@@ -80,13 +80,19 @@ async function getTeacherSchedules(req, res, next) {
     }
     
     if (track) {
-      query += ` AND ts.track = ?`;
-      params.push(track);
+      // Use flexible matching for track (handles variations like "TechPro Track", "TVL - TechPro", etc.)
+      query += ` AND (ts.track LIKE ? OR ts.track LIKE ?)`;
+      // Extract key words from track for matching
+      const trackKeywords = track.replace(/[-\s]+/g, '%');
+      params.push(`%${trackKeywords}%`);
+      params.push(`%${track.split(/[-\s]+/).filter(Boolean).join('%')}%`);
     }
     
     if (strand) {
-      query += ` AND ts.strand = ?`;
+      // Use flexible matching for strand (handles exact match and variations)
+      query += ` AND (ts.strand = ? OR ts.strand LIKE ?)`;
       params.push(strand);
+      params.push(`%${strand}%`);
     }
     
     query += ` ORDER BY ts.day, ts.time_start ASC`;
