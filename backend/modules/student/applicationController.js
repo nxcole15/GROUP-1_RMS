@@ -343,12 +343,19 @@ async function confirmStudentId(req, res, next) {
     const term = configRows[0]?.current_term || "Term 1";
 
     // Create student account with track and strand
-    // Map track values to match teacher_schedules ENUM
+    // Store track as-is from application (TECH-PRO or Academic Track)
     let trackValue = app.track;
-    if (app.pathway === 'TVL-TechPro' || app.track === 'TECH-PRO' || app.track === 'TVL - Tech Pro') {
-      trackValue = 'TechPro Track';
-    } else if (app.track === 'Academic Track' || app.pathway === 'STEM' || app.pathway === 'ABM' || app.pathway === 'HUMSS') {
-      trackValue = 'Academic Track';
+    
+    // Ensure consistent track naming
+    if (app.pathway === 'TVL-TechPro' || app.track === 'TechPro Track' || app.track === 'TVL - Tech Pro') {
+      trackValue = 'TECH-PRO';
+    } else if (!app.track || app.track === '') {
+      // Fallback: derive track from pathway if track is empty
+      if (app.pathway === 'STEM' || app.pathway === 'ABM' || app.pathway === 'HUMSS') {
+        trackValue = 'Academic Track';
+      } else if (app.pathway === 'ICT' || app.pathway === 'Cookery') {
+        trackValue = 'TECH-PRO';
+      }
     }
 
     await db.query(
