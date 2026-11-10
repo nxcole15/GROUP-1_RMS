@@ -6181,13 +6181,11 @@ function SchedulingPanel() {
             return {
               student_id: student.student_id,
               full_name: student.full_name,
-              profile_picture_url: student.photo_url,  // Backend returns photo_url
-              strand: student.pathway || student.strand,
-              track: student.pathway && ['STEM', 'HUMMS', 'ABM', 'GAS'].includes(student.pathway) 
-                ? 'Academic Track' 
-                : student.pathway && ['ICT', 'Cookery'].includes(student.pathway)
-                  ? 'TechPro Track'
-                  : 'Academic Track',
+              profile_picture_url: student.photo_url,
+              // Use track and strand from students table or enrollment_applications
+              // In enrollment_applications: pathway = Track, track = Strand
+              track: student.track || 'Academic Track',  // Get actual track from student record
+              strand: student.strand || student.pathway || 'STEM',  // Get actual strand from student record
               term: 'Term 1', // Default term, adjust if needed
               hasSchedule: schedData.total > 0,
               scheduleCount: schedData.total
