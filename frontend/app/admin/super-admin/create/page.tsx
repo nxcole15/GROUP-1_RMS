@@ -228,6 +228,16 @@ export default function SuperAdminCreateAccountPage() {
             <Icon name="users" size={20} />
             <span>Manage Accounts</span>
           </button>
+          <button onClick={() => {
+            localStorage.setItem("superadmin_active_panel", "documentation");
+            router.push("/admin/super-admin/dashboard");
+          }} className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 small fw-medium border-0" style={{ color: "#6b7280", background: "transparent" }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+            </svg>
+            <span>Documentation</span>
+          </button>
         </nav>
 
         <div className="px-3 py-4 border-top" style={{ borderColor: "#f1f5f9" }}>
@@ -401,6 +411,7 @@ export default function SuperAdminCreateAccountPage() {
                             <option value="principal">Principal</option>
                             <option value="registrar">Registrar</option>
                             <option value="accounting">Accounting</option>
+                            <option value="teacher_coordinator">Teacher Coordinator</option>
                           </select>
                         </div>
 
@@ -624,6 +635,8 @@ export default function SuperAdminCreateAccountPage() {
                                           ? "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)" 
                                           : admin.role === "registrar"
                                           ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+                                          : admin.role === "teacher_coordinator"
+                                          ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
                                           : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                                         color: "#fff",
                                         fontWeight: "bold",
@@ -653,16 +666,20 @@ export default function SuperAdminCreateAccountPage() {
                                         ? "#f3f4f6" 
                                         : admin.role === "registrar"
                                         ? "#eff6ff"
+                                        : admin.role === "teacher_coordinator"
+                                        ? "#f5f3ff"
                                         : "#f0fdf4",
                                       color: admin.role === "principal" 
                                         ? "#374151" 
                                         : admin.role === "registrar"
                                         ? "#2563eb"
+                                        : admin.role === "teacher_coordinator"
+                                        ? "#7c3aed"
                                         : "#16a34a",
                                       borderRadius: "6px"
                                     }}
                                   >
-                                    {admin.role}
+                                    {admin.role === "teacher_coordinator" ? "Teacher Coordinator" : admin.role}
                                   </span>
                                 </td>
                                 <td className="py-3 px-3">
@@ -876,9 +893,9 @@ export default function SuperAdminCreateAccountPage() {
                           </div>
                           <span className="badge px-2 py-1" style={{ 
                             background: "#f3f4f6",
-                            color: admin.role === "principal" ? "#374151" : admin.role === "registrar" ? "#4b5563" : "#6b7280",
+                            color: admin.role === "principal" ? "#374151" : admin.role === "registrar" ? "#4b5563" : admin.role === "teacher_coordinator" ? "#8b5cf6" : "#6b7280",
                             fontSize:"0.65rem"
-                          }}>{admin.role}</span>
+                          }}>{admin.role === "teacher_coordinator" ? "Teacher Coordinator" : admin.role}</span>
                         </div>
                         <div className="d-flex gap-1">
                           <button type="button" className="btn btn-sm flex-grow-1 py-1" onClick={() => startEdit(admin)} style={{ fontSize: "0.7rem", background:"#f3f4f6", color:"#374151", border:"none" }}>Edit</button>

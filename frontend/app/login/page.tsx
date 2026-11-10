@@ -20,6 +20,7 @@ function detectRole(id: string): string {
   if (/^PRINCIPAL\d+/i.test(value)) return "Principal";
   if (/^REGISTRAR\d+/i.test(value)) return "Registrar";
   if (/^ACCOUNTING\d+/i.test(value)) return "Accounting";
+  if (/^TC\d+/i.test(value)) return "Teacher Coordinator";
 
   return "";
 }
@@ -102,7 +103,7 @@ async function handleSubmit(e: React.FormEvent) {
       ));
 
       // Also save role-specific token to prevent tab collisions
-      const adminRoles = ["principal", "registrar", "accounting", "admin", "super_admin"];
+      const adminRoles = ["principal", "registrar", "accounting", "admin", "super_admin", "teacher_coordinator"];
       if (adminRoles.includes(data.role)) {
         localStorage.setItem("inform_admin_token", data.token);
       } else if (data.role === "teacher") {
@@ -115,6 +116,7 @@ async function handleSubmit(e: React.FormEvent) {
       else if (data.role === "principal") router.push("/admin/principal/dashboard");
       else if (data.role === "registrar") router.push("/admin/registrar/dashboard");
       else if (data.role === "accounting") router.push("/accounting/dashboard");
+      else if (data.role === "teacher_coordinator") router.push("/teacher-coordinator-dashboard");
       else if (data.role === "admin") router.push("/admin/dashboard");
       else if (data.role === "teacher") router.push("/teacher/dashboard");
       else router.push("/dashboard");

@@ -106,11 +106,13 @@ export default function SuperAdminDashboardPage() {
   const principalCount = admins.filter(a => a.role === "principal" && !a.is_archived).length;
   const registrarCount = admins.filter(a => a.role === "registrar" && !a.is_archived).length;
   const accountingCount = admins.filter(a => a.role === "accounting" && !a.is_archived).length;
+  const teacherCoordinatorCount = admins.filter(a => a.role === "teacher_coordinator" && !a.is_archived).length;
 
   const roleDistribution = [
     { role: "Principal", count: principalCount, color: "#4b5563", percentage: activeAdmins > 0 ? (principalCount / activeAdmins * 100) : 0 },
     { role: "Registrar", count: registrarCount, color: "#6b7280", percentage: activeAdmins > 0 ? (registrarCount / activeAdmins * 100) : 0 },
     { role: "Accounting", count: accountingCount, color: "#9ca3af", percentage: activeAdmins > 0 ? (accountingCount / activeAdmins * 100) : 0 },
+    { role: "Teacher Coordinator", count: teacherCoordinatorCount, color: "#8b5cf6", percentage: activeAdmins > 0 ? (teacherCoordinatorCount / activeAdmins * 100) : 0 },
   ];
 
   function renderDocumentation() {
@@ -466,6 +468,17 @@ export default function SuperAdminDashboardPage() {
                         </div>
                         <span className="badge rounded-pill px-3 py-2" style={{ background:"#9ca3af", color:"white", fontSize:"0.85rem" }}>{accountingCount}</span>
                       </div>
+
+                      <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background:"#f9fafb" }}>
+                        <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width:40, height:40, background:"#8b5cf6" }}>
+                          <Icon name="calendar" size={18} />
+                        </div>
+                        <div className="flex-grow-1">
+                          <div className="small fw-bold text-dark">Teacher Coordinators</div>
+                          <div className="text-muted" style={{ fontSize:11 }}>Scheduling & coordination</div>
+                        </div>
+                        <span className="badge rounded-pill px-3 py-2" style={{ background:"#8b5cf6", color:"white", fontSize:"0.85rem" }}>{teacherCoordinatorCount}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -514,9 +527,9 @@ export default function SuperAdminDashboardPage() {
                                 <td>
                                   <span className="badge px-2 py-1 text-capitalize" style={{ 
                                     background: "#f3f4f6",
-                                    color: admin.role === "principal" ? "#4b5563" : admin.role === "registrar" ? "#6b7280" : "#9ca3af",
+                                    color: admin.role === "principal" ? "#4b5563" : admin.role === "registrar" ? "#6b7280" : admin.role === "teacher_coordinator" ? "#8b5cf6" : "#9ca3af",
                                     fontSize:"0.7rem"
-                                  }}>{admin.role}</span>
+                                  }}>{admin.role === "teacher_coordinator" ? "Teacher Coordinator" : admin.role}</span>
                                 </td>
                                 <td className="text-muted small">{admin.email}</td>
                                 <td>

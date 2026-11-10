@@ -80,19 +80,15 @@ async function getTeacherSchedules(req, res, next) {
     }
     
     if (track) {
-      // Use flexible matching for track (handles variations like "TechPro Track", "TVL - TechPro", etc.)
-      query += ` AND (ts.track LIKE ? OR ts.track LIKE ?)`;
-      // Extract key words from track for matching
-      const trackKeywords = track.replace(/[-\s]+/g, '%');
-      params.push(`%${trackKeywords}%`);
-      params.push(`%${track.split(/[-\s]+/).filter(Boolean).join('%')}%`);
+      // Handle "All Tracks" - show schedules that match the track OR are marked "All Tracks"
+      query += ` AND (ts.track = ? OR ts.track = 'All Tracks')`;
+      params.push(track);
     }
     
     if (strand) {
-      // Use flexible matching for strand (handles exact match and variations)
-      query += ` AND (ts.strand = ? OR ts.strand LIKE ?)`;
+      // Handle "All Strands" - show schedules that match the strand OR are marked "All Strands"
+      query += ` AND (ts.strand = ? OR ts.strand = 'All Strands')`;
       params.push(strand);
-      params.push(`%${strand}%`);
     }
     
     query += ` ORDER BY ts.day, ts.time_start ASC`;
@@ -757,9 +753,16 @@ async function bulkEnrollStudents(req, res, next) {
       });
     }
 
-    const incompatibleStudents = students.filter(student => 
-      student.track !== schedule[0].track || student.strand !== schedule[0].strand
-    );
+    const incompatibleStudents = students.filter(student => {
+      // Check track compatibility: compatible if schedule is "All Tracks" OR exact match
+      const trackCompatible = schedule[0].track === 'All Tracks' || student.track === schedule[0].track;
+      
+      // Check strand compatibility: compatible if schedule is "All Strands" OR exact match
+      const strandCompatible = schedule[0].strand === 'All Strands' || student.strand === schedule[0].strand;
+      
+      // Student is incompatible if EITHER track OR strand doesn't match
+      return !trackCompatible || !strandCompatible;
+    });
 
     if (incompatibleStudents.length > 0) {
       return res.status(400).json({
