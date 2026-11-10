@@ -776,7 +776,7 @@ async function getTeacherSubjectsWithStatus(req, res, next) {
  * This replaces getTeacherSubjectsWithStatus for the new teacher_schedules architecture
  * 
  * Groups by: subject_name + strand + term
- * Why? Because a teacher might teach "Mathematics" to both STEM and HUMMS students
+ * Why? Because a teacher might teach "Mathematics" to both STEM and HUMSS students
  */
 async function getTeacherSubjectsForGrades(req, res, next) {
   try {
