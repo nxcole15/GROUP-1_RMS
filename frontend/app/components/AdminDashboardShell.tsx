@@ -178,13 +178,11 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
       !["students", "teachers", "tuition", "grades", "requests", "settings"].includes(item.id)
     );
     // Add manage-students link (will navigate to separate page)
-    // Add scheduling item after enrollment
     const enrollmentIndex = filteredNavItems.findIndex(item => item.id === "enrollment");
     if (enrollmentIndex !== -1) {
       filteredNavItems = [
         ...filteredNavItems.slice(0, enrollmentIndex + 1),
         { id: "manage-students", label: "Manage Students" },
-        { id: "scheduling", label: "Scheduling" },
         ...filteredNavItems.slice(enrollmentIndex + 1)
       ];
     }
