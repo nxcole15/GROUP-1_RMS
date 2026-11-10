@@ -85,6 +85,9 @@ export default function SuperAdminCreateAccountPage() {
   const filteredAdmins = useMemo(() => {
     const term = search.toLowerCase();
     return admins.filter((admin) => {
+      // Exclude super_admin role from the list
+      if (admin.role === 'super_admin') return false;
+      
       const matchesText = !term || [admin.admin_id, admin.full_name, admin.email, admin.role].join(" ").toLowerCase().includes(term);
       return matchesText;
     });
