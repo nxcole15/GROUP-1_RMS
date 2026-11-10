@@ -2459,11 +2459,11 @@ function ProfilePanel({ student }: { student?: {
                   <div className="row g-3">
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Track</label>
-                      <input type="text" className="form-control rounded-3" value={profileData?.track || "Academic"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                      <input type="text" className="form-control rounded-3" value={profileData?.track || "—"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Strand</label>
-                      <input type="text" className="form-control rounded-3" value={profileData?.strand || student?.pathway || ""} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
+                      <input type="text" className="form-control rounded-3" value={profileData?.strand || "—"} disabled style={{ border:"1.5px solid #e2e8f0", background:"#f8fafc" }} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label small fw-semibold text-uppercase text-muted" style={{ fontSize:10.5 }}>Year Level</label>
