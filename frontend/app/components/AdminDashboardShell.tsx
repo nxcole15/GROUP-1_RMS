@@ -2320,7 +2320,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
   const [filterSchoolYear, setFilterSchoolYear] = useState(getCurrentSchoolYear());
 
   const [enrollments, setEnrollments] = useState<{
-    name: string; id: string; track: string; grade: number;
+    name: string; id: string; track: string; strand?: string; grade: number;
     date: string; enrollDate: Date; status: string; photo: string | null;
     appId?: number; generatedStudentId?: string | null; schoolYear?: string;
   }[]>([]);
@@ -2455,15 +2455,30 @@ function EnrollmentPanel({ role }: { role?: string }) {
           ].filter(Boolean).join(" ") || app.student_name || app.email || "Unknown";
 
           // Format track and strand display
-          // In enrollment_applications: pathway = Track, track = Strand
-          const trackDisplay = app.pathway && app.track 
-            ? `${app.pathway} - ${app.track}` 
-            : app.pathway || "N/A";
+          // In enrollment_applications: track = Track (e.g., "TECH-PRO" or "Academic Track"), strand = Strand (e.g., "ICT")
+          // We need to format it as "TVL-TechPro - ICT" or "Academic Track - STEM"
+          const trackValue = app.track || "";
+          const strandValue = app.strand || "";
+          
+          // Format the display string
+          let trackDisplay = "N/A";
+          if (trackValue && strandValue) {
+            // Map TECH-PRO to TVL-TechPro for display
+            const displayTrack = trackValue === "TECH-PRO" ? "TVL-TechPro" : trackValue;
+            trackDisplay = `${displayTrack} - ${strandValue}`;
+          } else if (strandValue) {
+            // Fallback: just show strand if track is missing
+            trackDisplay = strandValue;
+          } else if (app.pathway) {
+            // Legacy fallback
+            trackDisplay = app.pathway;
+          }
 
           return {
             name: fullName,
             id: app.email,
             track: trackDisplay,
+            strand: strandValue, // Store strand separately for filtering
             grade: app.grade_level || 0,
             date: new Date(app.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }),
             enrollDate: new Date(app.created_at),
@@ -2698,8 +2713,11 @@ function EnrollmentPanel({ role }: { role?: string }) {
     // Status filter
     const matchesStatus = filterStatus === "All" || enrollment.status === filterStatus;
 
-    // Track filter
-    const matchesTrack = filterTrack === "All" || enrollment.track.includes(filterTrack);
+    // Strand filter (formerly labeled "Track" but should filter by strand)
+    // Match against the strand value, not the full track display
+    const matchesStrand = filterTrack === "All" || 
+      (enrollment.strand && enrollment.strand.includes(filterTrack)) ||
+      enrollment.track.includes(filterTrack);
 
     // Grade filter
     const matchesGrade = filterGrade === "All" || String(enrollment.grade) === filterGrade;
@@ -2707,7 +2725,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
     // School year filter
     const matchesSchoolYear = filterSchoolYear === "All" || enrollment.schoolYear === filterSchoolYear;
 
-    return matchesSearch && matchesStatus && matchesTrack && matchesGrade && matchesSchoolYear;
+    return matchesSearch && matchesStatus && matchesStrand && matchesGrade && matchesSchoolYear;
   });
 
   // Get unique school years for filter dropdown
@@ -2752,15 +2770,15 @@ function EnrollmentPanel({ role }: { role?: string }) {
               </select>
             </div>
 
-            {/* Track Filter */}
+            {/* Strand Filter */}
             <div className="col-6 col-md-2">
-              <label className="form-label small fw-semibold text-muted">Track</label>
+              <label className="form-label small fw-semibold text-muted">Strand</label>
               <select
                 className="form-select"
                 value={filterTrack}
                 onChange={(e) => setFilterTrack(e.target.value)}
               >
-                <option value="All">All Tracks</option>
+                <option value="All">All Strands</option>
                 <option value="STEM">STEM</option>
                 <option value="ABM">ABM</option>
                 <option value="HUMSS">HUMSS</option>

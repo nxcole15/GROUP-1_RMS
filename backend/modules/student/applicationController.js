@@ -179,7 +179,17 @@ async function submitApplication(req, res, next) {
  * ───────────────────────────────────────────────────────────── */
 async function listApplications(req, res, next) {
   try {
-    const apps = await ApplicationModel.findForRegistrar();
+    const [apps] = await db.query(`
+      SELECT 
+        id, first_name, middle_name, last_name, extension_name,
+        email, phone, date_of_birth, gender, address,
+        pathway, track, strand, grade_level, school_year,
+        status, created_at, generated_student_id, official_student_id,
+        photo_url, lrn
+      FROM enrollment_applications
+      WHERE status IN ('submitted','registrar_review','principal_review','approved','rejected')
+      ORDER BY created_at DESC
+    `);
     res.json({ applications: apps });
   } catch (err) { next(err); }
 }
