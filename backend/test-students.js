@@ -34,7 +34,7 @@ async function checkStudents() {
         e.status,
         e.term,
         CASE 
-          WHEN s.pathway IN ('STEM', 'HUMMS', 'ABM', 'GAS') THEN 'Academic Track'
+          WHEN s.pathway IN ('STEM', 'HUMSS', 'ABM') THEN 'Academic Track'
           WHEN s.pathway IN ('ICT', 'Cookery') THEN 'TechPro Track'
           ELSE 'Academic Track'
         END as track

@@ -5315,9 +5315,8 @@ function TimetableView({ filters, setFilters, showToast }: any) {
               {filters.track === "Academic Track" && (
                 <>
                   <option value="STEM">STEM</option>
-                  <option value="HUMMS">HUMMS</option>
+                  <option value="HUMSS">HUMSS</option>
                   <option value="ABM">ABM</option>
-                  <option value="GAS">GAS</option>
                 </>
               )}
               {filters.track === "TechPro Track" && (
@@ -6112,7 +6111,7 @@ function SchedulingPanel() {
   const [toast, setToast] = useState<string | null>(null);
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const academicStrands = ["STEM", "HUMMS", "ABM", "GAS"];
+  const academicStrands = ["STEM", "HUMSS", "ABM"];
   const techProStrands = ["ICT", "Cookery"];
   const allStrands = [...academicStrands, ...techProStrands];
   const terms = ["Term 1", "Term 2", "Term 3"];

@@ -345,7 +345,7 @@ async function getEnrolledStudents(req, res, next) {
         s.email,
         e.term,
         CASE 
-          WHEN s.pathway IN ('STEM', 'HUMMS', 'ABM', 'GAS') THEN 'Academic Track'
+          WHEN s.pathway IN ('STEM', 'HUMSS', 'ABM') THEN 'Academic Track'
           WHEN s.pathway IN ('ICT', 'Cookery') THEN 'TechPro Track'
           ELSE 'Academic Track'
         END as track
@@ -363,7 +363,7 @@ async function getEnrolledStudents(req, res, next) {
 
     if (track) {
       if (track === 'Academic Track') {
-        query += ` AND s.pathway IN ('STEM', 'HUMMS', 'ABM', 'GAS')`;
+        query += ` AND s.pathway IN ('STEM', 'HUMSS', 'ABM')`;
       } else if (track === 'TechPro Track') {
         query += ` AND s.pathway IN ('ICT', 'Cookery')`;
       }
@@ -741,7 +741,7 @@ async function bulkEnrollStudents(req, res, next) {
         s.full_name,
         s.pathway as strand,
         CASE 
-          WHEN s.pathway IN ('STEM', 'HUMMS', 'ABM', 'GAS') THEN 'Academic Track'
+          WHEN s.pathway IN ('STEM', 'HUMSS', 'ABM') THEN 'Academic Track'
           WHEN s.pathway IN ('ICT', 'Cookery') THEN 'TechPro Track'
           ELSE 'Academic Track'
         END as track

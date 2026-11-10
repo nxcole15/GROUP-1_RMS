@@ -56,10 +56,10 @@ export const stemSubjects: Subject[] = [
 ];
 
 // ============================================================
-// HUMMS TRACK
+// HUMSS TRACK
 // ============================================================
 
-export const hummsSubjects: Subject[] = [
+export const humssSubjects: Subject[] = [
   { code: "HIST11", name: "Philippine History", units: 3, description: "National history & culture" },
   { code: "GEOG11", name: "Geography", units: 3, description: "Physical & human geography" },
   { code: "ECON11", name: "Economics", units: 3, description: "Microeconomics basics" },
@@ -79,19 +79,6 @@ export const abmSubjects: Subject[] = [
   { code: "ENTREP11", name: "Entrepreneurship", units: 3, description: "Business startup concepts" },
   { code: "FINANCE11", name: "Personal Finance", units: 3, description: "Money management" },
   { code: "MARKETING11", name: "Marketing", units: 3, description: "Marketing principles" },
-];
-
-// ============================================================
-// GAS TRACK
-// ============================================================
-
-export const gasSubjects: Subject[] = [
-  { code: "HIST11", name: "Philippine History", units: 3, description: "National history" },
-  { code: "GEOG11", name: "Geography", units: 3, description: "World geography" },
-  { code: "ECON11", name: "Economics", units: 3, description: "Basic economics" },
-  { code: "PSYCH11", name: "Psychology", units: 3, description: "Human behavior" },
-  { code: "PHYS11", name: "Physics", units: 3, description: "Basic physics" },
-  { code: "CHEM11", name: "Chemistry", units: 3, description: "Basic chemistry" },
 ];
 
 // ============================================================
@@ -187,12 +174,12 @@ export const academicTracks: Track[] = [
     totalUnits: 44,
   },
   {
-    id: "humms",
-    name: "HUMMS",
+    id: "humss",
+    name: "HUMSS",
     pathway: "academic",
     description: "Humanities, Social Sciences, Arts",
     coreSubjects: coreSubjectsAcademic,
-    specializedSubjects: hummsSubjects,
+    specializedSubjects: humssSubjects,
     totalUnits: 41,
   },
   {
@@ -202,15 +189,6 @@ export const academicTracks: Track[] = [
     description: "Accountancy, Business, Management",
     coreSubjects: coreSubjectsAcademic,
     specializedSubjects: abmSubjects,
-    totalUnits: 41,
-  },
-  {
-    id: "gas",
-    name: "GAS",
-    pathway: "academic",
-    description: "General Academic Strand",
-    coreSubjects: coreSubjectsAcademic,
-    specializedSubjects: gasSubjects,
     totalUnits: 41,
   },
 ];
