@@ -863,35 +863,25 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
   );
 }
 
-function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>void }) {
+function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert:(p:string)=>void; academicConfig?: AcademicConfig | null }) {
   const [selectedTerm, setSelectedTerm] = useState<"term1"|"term2"|"term3">("term1");
   const [requestConfig, setRequestConfig] = useState<{term: string; is_open: number}[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"list"|"card">("list"); // Default to list view
-  const [schoolYear, setSchoolYear] = useState<string>("2025-2026"); // Default school year
+  const [schoolYear, setSchoolYear] = useState<string>(academicConfig?.school_year || "2026-2027"); // Use config or default to current year
 
   const termLabel = selectedTerm === "term1" ? "Term 1" : selectedTerm === "term2" ? "Term 2" : "Term 3";
   const configEntry = requestConfig.find(c => c.term === termLabel);
   const isRequestOpen = !!configEntry?.is_open;
 
-  // Fetch student info to get school year from schedules
+  // Update school year when config changes
   useEffect(() => {
-    const token = localStorage.getItem("inform_token");
-    if (!token) return;
-    fetch(`${API_BASE}/api/student/schedules`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { 
-        if (data?.schedules?.[0]?.school_year) {
-          setSchoolYear(data.schedules[0].school_year);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (academicConfig?.school_year) {
+      setSchoolYear(academicConfig.school_year);
+    }
+  }, [academicConfig]);
 
   // Fetch term config (no auth needed) – poll every 15s so it auto-updates when principal opens/closes
   useEffect(() => {
@@ -1146,7 +1136,7 @@ function GradesView({ onAskJobert: _onAskJobert }: { onAskJobert:(p:string)=>voi
 }
 
 /* -- Schedule View -- */
-function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
+function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=>void; academicConfig?: AcademicConfig | null }) {
   const [schedules, setSchedules] = useState<{
     schedule_id: number;
     subject_name: string;
@@ -1211,7 +1201,7 @@ function ScheduleView({ onAskJobert }: { onAskJobert:(p:string)=>void }) {
       <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
         <div>
           <h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2>
-          <p className="text-muted small mb-0">Term 1 - 2025-2026</p>
+          <p className="text-muted small mb-0">{academicConfig?.current_term || "Term 1"} - {academicConfig?.school_year || "2026-2027"}</p>
         </div>
         <button 
           onClick={loadSchedules}
@@ -2665,8 +2655,8 @@ export default function DashboardPage() {
   function renderPanel() {
     switch (panel) {
       case "profile":       return <ProfilePanel student={student} />;
-      case "grades":        return <GradesView       onAskJobert={askJobert} />;
-      case "schedule":      return <ScheduleView     onAskJobert={askJobert} />;
+      case "grades":        return <GradesView       onAskJobert={askJobert} academicConfig={academicConfig} />;
+      case "schedule":      return <ScheduleView     onAskJobert={askJobert} academicConfig={academicConfig} />;
       case "tuition":       return <TuitionView      onAskJobert={askJobert} />;
       case "documents":     return <DocumentsView    onAskJobert={askJobert} />;
       case "dashboard-guide": return <GuidePanel role="student" type="dashboard" />;

@@ -195,11 +195,35 @@ async function getDashboardData(req, res, next) {
  * GET /api/student/profile
  * Returns detailed student profile data from enrollment application
  */
+/**
+ * Helper: Map pathway/strand to track
+ * Academic track: STEM, ABM, HUMSS
+ * TVL - TechPro track: ICT, Cookery
+ * Sports track: specific sports strands
+ * Arts track: specific arts strands
+ */
+function getTrackFromStrand(strand) {
+  const academicStrands = ['STEM', 'ABM', 'HUMSS'];
+  const techProStrands = ['ICT', 'Cookery'];
+  
+  if (academicStrands.includes(strand)) {
+    return 'Academic';
+  } else if (techProStrands.includes(strand)) {
+    return 'TVL - TechPro';
+  } else if (strand && strand.includes('Sports')) {
+    return 'Sports';
+  } else if (strand && strand.includes('Arts')) {
+    return 'Arts';
+  }
+  return 'Academic'; // default
+}
+
 async function getProfileData(req, res, next) {
   try {
     const studentId = req.student.student_id;
     
     // Get detailed info from enrollment_applications and students table
+    // Note: pathway in students table is actually the strand
     const [rows] = await db.query(`
       SELECT 
         ea.date_of_birth,
@@ -210,48 +234,34 @@ async function getProfileData(req, res, next) {
         ea.guardian_name,
         ea.guardian_phone,
         ea.created_at as enrollment_date,
-        ea.track,
-        ea.strand,
-        s.grade_level,
-        s.track as student_track,
-        s.strand as student_strand
-      FROM enrollment_applications ea
-      LEFT JOIN students s ON ea.generated_student_id = s.student_id
-      WHERE ea.generated_student_id = ?
+        s.pathway as strand,
+        s.grade_level
+      FROM students s
+      LEFT JOIN enrollment_applications ea ON ea.generated_student_id = s.student_id
+      WHERE s.student_id = ?
       LIMIT 1
     `, [studentId]);
 
-    // Get current academic period
+    // Get current academic period from enrollment_config
     let academicInfo = {
       school_year: null,
-      current_term: null,
-      track: null,
-      strand: null,
-      grade_level: null
+      current_term: null
     };
 
     try {
       const [academicRows] = await db.query(`
         SELECT 
-          ec.school_year,
-          ec.current_term,
-          s.track,
-          s.strand,
-          s.grade_level
-        FROM enrollment_config ec
-        CROSS JOIN students s
-        WHERE ec.status = 'active'
-          AND s.student_id = ?
+          school_year,
+          current_term
+        FROM enrollment_config
+        WHERE status = 'active'
         LIMIT 1
-      `, [studentId]);
+      `);
 
       if (academicRows && academicRows[0]) {
         academicInfo = {
           school_year: academicRows[0].school_year,
-          current_term: academicRows[0].current_term,
-          track: academicRows[0].track,
-          strand: academicRows[0].strand,
-          grade_level: academicRows[0].grade_level
+          current_term: academicRows[0].current_term
         };
       }
     } catch (err) {
@@ -270,25 +280,23 @@ async function getProfileData(req, res, next) {
         enrollment_date: null,
         school_year: academicInfo.school_year,
         current_term: academicInfo.current_term,
-        adviser_name: academicInfo.adviser_name,
-        track: academicInfo.track,
-        strand: academicInfo.strand,
-        grade_level: academicInfo.grade_level
+        track: null,
+        strand: null,
+        grade_level: null
       });
     }
 
-    // Use track/strand from students table if available, otherwise from enrollment_applications
-    const finalTrack = academicInfo.track || rows[0].student_track || rows[0].track;
-    const finalStrand = academicInfo.strand || rows[0].student_strand || rows[0].strand;
+    // The pathway field in students table is actually the strand
+    const strand = rows[0].strand;
+    const track = getTrackFromStrand(strand);
 
     res.json({
       ...rows[0],
       school_year: academicInfo.school_year,
       current_term: academicInfo.current_term,
-      adviser_name: academicInfo.adviser_name,
-      track: finalTrack,
-      strand: finalStrand,
-      grade_level: academicInfo.grade_level || rows[0].grade_level
+      track: track,
+      strand: strand,
+      grade_level: rows[0].grade_level
     });
   } catch (err) {
     console.error("Profile fetch error:", err);
