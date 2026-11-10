@@ -83,10 +83,9 @@ async function getDashboardData(req, res, next) {
       console.error("Error fetching payments:", err.message);
     }
 
-    // Get total tuition fee from new assessment system
+    // Get total tuition fee from assessment system
     let totalTuition = 0;
     try {
-      // Try new assessment system first
       const [assessmentRows] = await db.query(`
         SELECT 
           COALESCE(sa.net_assessment, 0) as total_tuition
@@ -97,22 +96,11 @@ async function getDashboardData(req, res, next) {
         LIMIT 1
       `, [studentId]);
       
-      if (assessmentRows && assessmentRows[0] && assessmentRows[0].total_tuition > 0) {
-        totalTuition = assessmentRows[0].total_tuition;
-      } else {
-        // Fallback to old student_tuition table if assessment doesn't exist
-        const [tuitionRows] = await db.query(`
-          SELECT 
-            COALESCE(total_amount, 0) as total_tuition
-          FROM student_tuition
-          WHERE student_id = ?
-          LIMIT 1
-        `, [studentId]);
-        totalTuition = tuitionRows[0]?.total_tuition || 0;
-      }
+      totalTuition = assessmentRows[0]?.total_tuition || 0;
     } catch (err) {
-      // Tables might not exist yet
+      // Table might not exist yet or student has no assessment
       console.error("Error fetching tuition:", err.message);
+      totalTuition = 0;
     }
 
     // Get pending document requests count (documents not yet picked up)
