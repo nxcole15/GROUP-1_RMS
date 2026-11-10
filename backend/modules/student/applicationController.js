@@ -116,6 +116,8 @@ async function submitApplication(req, res, next) {
       student_status:          req.body.student_status || "new",
       existing_student_id:     req.body.existing_student_id?.trim() || null,
       pathway:                 req.body.pathway,
+      track:                   req.body.track || null,
+      strand:                  req.body.strand || null,
       grade_level:             parseInt(req.body.grade_level, 10),
       school_year:             req.body.school_year?.trim() || null,
       learning_modality:       req.body.learning_modality,
@@ -331,7 +333,14 @@ async function confirmStudentId(req, res, next) {
     const term = configRows[0]?.current_term || "Term 1";
 
     // Create student account with track and strand
-    // Fix: Save track and strand from enrollment application to prevent data loss
+    // Map track values to match teacher_schedules ENUM
+    let trackValue = app.track;
+    if (app.pathway === 'TVL-TechPro' || app.track === 'TECH-PRO' || app.track === 'TVL - Tech Pro') {
+      trackValue = 'TechPro Track';
+    } else if (app.track === 'Academic Track' || app.pathway === 'STEM' || app.pathway === 'ABM' || app.pathway === 'HUMSS') {
+      trackValue = 'Academic Track';
+    }
+
     await db.query(
       `INSERT INTO students
       (student_id, password, full_name, pathway, track, strand, grade_level, term, email, account_status, created_at)
@@ -341,7 +350,7 @@ async function confirmStudentId(req, res, next) {
         hashedPass,
         [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" "),
         app.pathway,     // Keep pathway for backward compatibility
-        app.track,       // Save track from enrollment application
+        trackValue,      // Use mapped track value
         app.strand,      // Save strand from enrollment application
         app.grade_level,
         term,
