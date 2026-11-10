@@ -2455,7 +2455,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
           ].filter(Boolean).join(" ") || app.student_name || app.email || "Unknown";
 
           // Format track and strand display
-          // In enrollment_applications: track = Track (e.g., "TECH-PRO" or "Academic Track"), strand = Strand (e.g., "ICT")
+          // In enrollment_applications: track = Track (e.g., "TVL-TechPro"), strand = Strand (e.g., "ICT")
           // We need to format it as "TVL-TechPro - ICT" or "Academic Track - STEM"
           const trackValue = app.track || "";
           const strandValue = app.strand || "";
@@ -2463,9 +2463,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
           // Format the display string
           let trackDisplay = "N/A";
           if (trackValue && strandValue) {
-            // Map TECH-PRO to TVL-TechPro for display
-            const displayTrack = trackValue === "TECH-PRO" ? "TVL-TechPro" : trackValue;
-            trackDisplay = `${displayTrack} - ${strandValue}`;
+            trackDisplay = `${trackValue} - ${strandValue}`;
           } else if (strandValue) {
             // Fallback: just show strand if track is missing
             trackDisplay = strandValue;
@@ -2969,7 +2967,9 @@ function EnrollmentPanel({ role }: { role?: string }) {
                       <td className="d-none d-sm-table-cell text-muted small">
                         {e.generatedStudentId || "—"}
                       </td>
-                      <td className="d-none d-lg-table-cell text-muted small">Grade {e.grade} - {e.track}</td>
+                      <td className="d-none d-lg-table-cell text-muted small">
+                        Grade {e.grade} - {e.track?.replace('TECH-PRO', 'TVL-TechPro') || '—'}
+                      </td>
                       <td className="d-none d-sm-table-cell text-muted small">{e.date}</td>
                       <td>
                         <span className={`badge ${
@@ -3097,8 +3097,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                     
                   </React.Fragment>
                 );
-              }))
-              }
+              })
+            )}
             </tbody>
           </table>
         </div>
@@ -3196,14 +3196,29 @@ function EnrollmentPanel({ role }: { role?: string }) {
                             .join(" ")}
                         </h5>
                         <div className="d-flex justify-content-center gap-2 flex-wrap">
-                          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
-                            {selectedApplication.pathway || "—"}
-                          </span>
-                          {selectedApplication.track && (
-                            <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
-                              {selectedApplication.track}
-                            </span>
-                          )}
+                          {/* Track and Strand Badge - Format: "TVL-TechPro - ICT" or "Academic Track - STEM" */}
+                          {(() => {
+                            const track = selectedApplication.track || "";
+                            const strand = selectedApplication.strand || "";
+                            
+                            if (track && strand) {
+                              // Map TECH-PRO to TVL-TechPro for display
+                              const displayTrack = track === "TECH-PRO" ? "TVL-TechPro" : track;
+                              return (
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                                  {displayTrack} - {strand}
+                                </span>
+                              );
+                            } else if (selectedApplication.pathway) {
+                              // Fallback to pathway if track/strand not available
+                              return (
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                                  {selectedApplication.pathway}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                           <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
                             Grade {selectedApplication.grade_level || "—"}
                           </span>
@@ -3212,7 +3227,6 @@ function EnrollmentPanel({ role }: { role?: string }) {
                           </span>
                         </div>
                       </div>
-
                       {/* Quick Info Cards */}
                       <div className="d-flex flex-column gap-3">
                         {[
