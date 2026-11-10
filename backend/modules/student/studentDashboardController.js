@@ -196,34 +196,18 @@ async function getDashboardData(req, res, next) {
  * Returns detailed student profile data from enrollment application
  */
 /**
- * Helper: Map pathway/strand to track
- * Academic track: STEM, ABM, HUMSS
- * TVL - TechPro track: ICT, Cookery
- * Sports track: specific sports strands
- * Arts track: specific arts strands
+ * GET /api/student/profile
+ * Returns detailed student profile data from enrollment application
+ * Uses enrollment_applications as source of truth for track and strand
  */
-function getTrackFromStrand(strand) {
-  const academicStrands = ['STEM', 'ABM', 'HUMSS'];
-  const techProStrands = ['ICT', 'Cookery'];
-  
-  if (academicStrands.includes(strand)) {
-    return 'Academic';
-  } else if (techProStrands.includes(strand)) {
-    return 'TVL - TechPro';
-  } else if (strand && strand.includes('Sports')) {
-    return 'Sports';
-  } else if (strand && strand.includes('Arts')) {
-    return 'Arts';
-  }
-  return 'Academic'; // default
-}
-
 async function getProfileData(req, res, next) {
   try {
     const studentId = req.student.student_id;
     
-    // Get detailed info from enrollment_applications and students table
-    // Note: pathway in students table is actually the strand
+    // Get detailed info from enrollment_applications (source of truth for track/strand)
+    // Note: In enrollment_applications:
+    //   - pathway field = Track (e.g., "Academic Track", "TVL - TechPro")  
+    //   - track field = Strand (e.g., "STEM", "ICT", "Cookery")
     const [rows] = await db.query(`
       SELECT 
         ea.date_of_birth,
@@ -234,7 +218,8 @@ async function getProfileData(req, res, next) {
         ea.guardian_name,
         ea.guardian_phone,
         ea.created_at as enrollment_date,
-        s.pathway as strand,
+        ea.pathway as track,
+        ea.track as strand,
         s.grade_level
       FROM students s
       LEFT JOIN enrollment_applications ea ON ea.generated_student_id = s.student_id
@@ -286,16 +271,10 @@ async function getProfileData(req, res, next) {
       });
     }
 
-    // The pathway field in students table is actually the strand
-    const strand = rows[0].strand;
-    const track = getTrackFromStrand(strand);
-
     res.json({
       ...rows[0],
       school_year: academicInfo.school_year,
       current_term: academicInfo.current_term,
-      track: track,
-      strand: strand,
       grade_level: rows[0].grade_level
     });
   } catch (err) {

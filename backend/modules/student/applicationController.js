@@ -331,6 +331,7 @@ async function confirmStudentId(req, res, next) {
     const term = configRows[0]?.current_term || "Term 1";
 
     // Create student account
+    // Note: We only store pathway in students table, track/strand will be queried from enrollment_applications
     await db.query(
       `INSERT INTO students
       (student_id, password, full_name, pathway, grade_level, term, email, account_status, created_at)
@@ -339,7 +340,7 @@ async function confirmStudentId(req, res, next) {
         studentId,
         hashedPass,
         [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" "),
-        app.pathway,
+        app.pathway,     // Keep pathway field (though track/strand come from enrollment_applications)
         app.grade_level,
         term,
         app.email,
