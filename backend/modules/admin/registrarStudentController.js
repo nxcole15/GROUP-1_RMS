@@ -22,6 +22,8 @@ async function getStudentsForManagement(req, res, next) {
         s.full_name,
         s.email,
         s.pathway,
+        s.track,
+        s.strand,
         s.grade_level,
         s.term,
         s.account_status,
@@ -33,8 +35,8 @@ async function getStudentsForManagement(req, res, next) {
         ea.nationality,
         ea.religion,
         ea.address,
-        ea.track,
-        ea.strand,
+        ea.track as ea_track,
+        ea.strand as ea_strand,
         ea.school_year,
         ea.learning_modality,
         ea.father_name,
@@ -52,7 +54,9 @@ async function getStudentsForManagement(req, res, next) {
         ea.last_name,
         ea.extension_name,
         ea.lrn,
-        ea.photo_url
+        ea.photo_url,
+        COALESCE(s.track, ea.track) as track,
+        COALESCE(s.strand, ea.strand) as strand
       FROM students s
       LEFT JOIN enrollment_applications ea ON (
         s.student_id = ea.generated_student_id 
@@ -74,13 +78,13 @@ async function getStudentsForManagement(req, res, next) {
     }
 
     if (track) {
-      query += ` AND ea.track = ?`;
-      params.push(track);
+      query += ` AND (s.track = ? OR ea.track = ?)`;
+      params.push(track, track);
     }
 
     if (strand) {
-      query += ` AND ea.strand = ?`;
-      params.push(strand);
+      query += ` AND (s.strand = ? OR ea.strand = ?)`;
+      params.push(strand, strand);
     }
 
     if (school_year) {
@@ -114,6 +118,8 @@ async function getStudentDetails(req, res, next) {
         s.full_name,
         s.email,
         s.pathway,
+        s.track,
+        s.strand,
         s.grade_level,
         s.term,
         s.account_status,
@@ -125,8 +131,8 @@ async function getStudentDetails(req, res, next) {
         ea.nationality,
         ea.religion,
         ea.address,
-        ea.track,
-        ea.strand,
+        COALESCE(s.track, ea.track) as track,
+        COALESCE(s.strand, ea.strand) as strand,
         ea.school_year,
         ea.learning_modality,
         ea.father_name,
@@ -312,7 +318,28 @@ async function updateStudentInfo(req, res, next) {
       });
     }
 
-    // For pathway, use track-strand combination or just strand
+    // Save track and strand directly to students table
+    if (track) {
+      studentUpdates.push("track = ?");
+      studentValues.push(track);
+      changes.push({
+        field: "track",
+        old_value: null,
+        new_value: track,
+      });
+    }
+
+    if (strand) {
+      studentUpdates.push("strand = ?");
+      studentValues.push(strand);
+      changes.push({
+        field: "strand",
+        old_value: null,
+        new_value: strand,
+      });
+    }
+
+    // For pathway, use track-strand combination or just strand for backward compatibility
     if (track && strand) {
       const pathway = track === "TECH-PRO" ? "TVL-TechPro" : strand;
       studentUpdates.push("pathway = ?");

@@ -17,6 +17,8 @@ async function getDashboardData(req, res, next) {
       student_id: req.student.student_id,
       full_name: req.student.full_name,
       pathway: null,
+      track: null,
+      strand: null,
       grade_level: null,
       term: null,
       email: null,
@@ -32,6 +34,8 @@ async function getDashboardData(req, res, next) {
           s.student_id,
           s.full_name,
           s.pathway,
+          s.track,
+          s.strand,
           s.grade_level,
           s.term,
           s.email,
@@ -181,21 +185,14 @@ async function getDashboardData(req, res, next) {
 
 /**
  * GET /api/student/profile
- * Returns detailed student profile data from enrollment application
- */
-/**
- * GET /api/student/profile
- * Returns detailed student profile data from enrollment application
- * Uses enrollment_applications as source of truth for track and strand
+ * Returns detailed student profile data
+ * Uses students table as primary source for track and strand
  */
 async function getProfileData(req, res, next) {
   try {
     const studentId = req.student.student_id;
     
-    // Get detailed info from enrollment_applications (source of truth for track/strand)
-    // Note: In enrollment_applications:
-    //   - pathway field = Track (e.g., "Academic Track", "TVL - TechPro")  
-    //   - track field = Strand (e.g., "STEM", "ICT", "Cookery")
+    // Get detailed info - use students table as primary source for track/strand
     const [rows] = await db.query(`
       SELECT 
         ea.date_of_birth,
@@ -206,11 +203,14 @@ async function getProfileData(req, res, next) {
         ea.guardian_name,
         ea.guardian_phone,
         ea.created_at as enrollment_date,
-        ea.pathway as track,
-        ea.track as strand,
+        COALESCE(s.track, ea.track, ea.pathway) as track,
+        COALESCE(s.strand, ea.strand, ea.track) as strand,
         s.grade_level
       FROM students s
-      LEFT JOIN enrollment_applications ea ON ea.generated_student_id = s.student_id
+      LEFT JOIN enrollment_applications ea ON (
+        ea.generated_student_id = s.student_id 
+        OR ea.official_student_id = s.student_id
+      )
       WHERE s.student_id = ?
       LIMIT 1
     `, [studentId]);
