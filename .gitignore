@@ -1,0 +1,7 @@
+# Ad-hoc SQL fix files in the repo root
+*.sql
+FIX_*.sql
+RUN_*.sql
+
+# Ad-hoc markdown notes (keep README.md)
+GRADE_SYSTEMS_EXPLAINED.md

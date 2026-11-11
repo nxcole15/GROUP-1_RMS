@@ -17,7 +17,7 @@
 const bcrypt          = require("bcryptjs");
 const db              = require("../../config/db");
 const ApplicationModel = require("./applicationModel");
-const { sendRequirementsEmail, sendCredentials, } = require("../../utils/mailer");
+const { sendRequirementsEmail, sendCredentials, sendRejectionEmail } = require("../../utils/mailer");
 const { cloudinary } = require("../../config/cloudinary");
 const NotificationService = require("../notifications/notificationService");
 
@@ -46,6 +46,49 @@ function generateTempPassword() {
  * ───────────────────────────────────────────────────────────── */
 async function submitApplication(req, res, next) {
   try {
+    // ✅ CHECK ENROLLMENT STATUS FIRST
+    const [configRows] = await db.query(
+      "SELECT enrollment_is_open, enrollment_start_date, enrollment_end_date, school_year FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
+    );
+    
+    if (!configRows[0]) {
+      return res.status(503).json({ 
+        error: "Enrollment system is not configured. Please contact the Registrar's Office." 
+      });
+    }
+
+    const config = configRows[0];
+    const now = new Date();
+
+    // Check if enrollment is manually closed
+    if (config.enrollment_is_open === 0) {
+      return res.status(403).json({ 
+        error: "Enrollment is currently closed. Please check back during the enrollment period or contact the Registrar's Office.",
+        enrollment_closed: true,
+        enrollment_status: "manually_closed"
+      });
+    }
+
+    // Check if enrollment period hasn't started yet
+    if (config.enrollment_start_date && now < new Date(config.enrollment_start_date)) {
+      return res.status(403).json({ 
+        error: `Enrollment has not yet opened. Enrollment begins on ${new Date(config.enrollment_start_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+        enrollment_closed: true,
+        enrollment_status: "not_yet_open",
+        start_date: config.enrollment_start_date
+      });
+    }
+
+    // Check if enrollment period has ended
+    if (config.enrollment_end_date && now > new Date(config.enrollment_end_date)) {
+      return res.status(403).json({ 
+        error: `Enrollment period has ended. The deadline was ${new Date(config.enrollment_end_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+        enrollment_closed: true,
+        enrollment_status: "deadline_passed",
+        end_date: config.enrollment_end_date
+      });
+    }
+
     // Store track and strand separately
     // Frontend sends: track="TECH-PRO", strand="Cookery" or track="Academic Track", strand="ABM"
     
@@ -99,6 +142,15 @@ async function submitApplication(req, res, next) {
     // Get photo URL if uploaded
     const photoUrl = req.file ? req.file.path : null;
 
+    // Get enrollment deadline for email
+    const dueDate = config.enrollment_end_date
+      ? new Date(config.enrollment_end_date).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "the announced deadline";
+
     const app = await ApplicationModel.create({
       first_name:              req.body.first_name?.trim(),
       last_name:               req.body.last_name?.trim(),
@@ -135,18 +187,7 @@ async function submitApplication(req, res, next) {
       photo_url:               photoUrl,
     });
 
-    const [configRows] = await db.query(
-      "SELECT enrollment_end_date FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
-      );
-
-      const dueDate = configRows[0]?.enrollment_end_date
-      ? new Date(configRows[0].enrollment_end_date).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "the announced deadline";
-
+    // Use the config already fetched above for the email deadline
       sendRequirementsEmail({
         to: req.body.email.trim().toLowerCase(),
         fullName,
@@ -187,7 +228,7 @@ async function listApplications(req, res, next) {
         status, created_at, generated_student_id, official_student_id,
         photo_url, lrn
       FROM enrollment_applications
-      WHERE status IN ('submitted','registrar_review','principal_review','approved','rejected')
+      WHERE status IN ('submitted','registrar_review','principal_review','pending_registrar','approved','rejected')
       ORDER BY created_at DESC
     `);
     res.json({ applications: apps });
@@ -222,7 +263,7 @@ async function forwardToPrincipal(req, res, next) {
     const id  = parseInt(req.params.id, 10);
     const app = await ApplicationModel.findById(id);
     if (!app) return res.status(404).json({ error: "Application not found." });
-    if (!["submitted","registrar_review"].includes(app.status)) {
+    if (!["submitted","registrar_review","pending_registrar"].includes(app.status)) {
       return res.status(409).json({ error: "Application is not in a forwardable state." });
     }
 
@@ -441,7 +482,126 @@ async function rejectApplication(req, res, next) {
       principal_reviewed_at: new Date(),
     });
 
+    // Send rejection email to applicant
+    const fullName = [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" ");
+    sendRejectionEmail({
+      to:              app.email,
+      fullName,
+      rejectionReason: rejection_reason.trim(),
+      schoolYear:      app.school_year,
+    }).catch(err => console.error("Rejection email failed:", err.message));
+
     res.json({ message: "Application rejected.", application: updated });
+  } catch (err) { next(err); }
+}
+
+/**
+ * GET /api/enrollment/status
+ * Check if enrollment is currently open
+ */
+async function checkEnrollmentStatus(req, res, next) {
+  try {
+    const [configRows] = await db.query(
+      "SELECT enrollment_is_open, enrollment_start_date, enrollment_end_date, school_year FROM enrollment_config WHERE status = 'active' ORDER BY id DESC LIMIT 1"
+    );
+    
+    if (!configRows[0]) {
+      return res.status(503).json({ 
+        is_open: false,
+        message: "Enrollment system is not configured.",
+        status: "not_configured"
+      });
+    }
+
+    const config = configRows[0];
+    const now = new Date();
+
+    // Check if manually closed
+    if (config.enrollment_is_open === 0) {
+      return res.json({ 
+        is_open: false,
+        message: "Enrollment is currently closed.",
+        status: "manually_closed",
+        school_year: config.school_year,
+        start_date: config.enrollment_start_date,
+        end_date: config.enrollment_end_date
+      });
+    }
+
+    // Check if not yet started
+    if (config.enrollment_start_date && now < new Date(config.enrollment_start_date)) {
+      return res.json({ 
+        is_open: false,
+        message: `Enrollment opens on ${new Date(config.enrollment_start_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+        status: "not_yet_open",
+        school_year: config.school_year,
+        start_date: config.enrollment_start_date,
+        end_date: config.enrollment_end_date
+      });
+    }
+
+    // Check if ended
+    if (config.enrollment_end_date && now > new Date(config.enrollment_end_date)) {
+      return res.json({ 
+        is_open: false,
+        message: `Enrollment period ended on ${new Date(config.enrollment_end_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+        status: "deadline_passed",
+        school_year: config.school_year,
+        start_date: config.enrollment_start_date,
+        end_date: config.enrollment_end_date
+      });
+    }
+
+    // Enrollment is open!
+    return res.json({ 
+      is_open: true,
+      message: "Enrollment is currently open.",
+      status: "open",
+      school_year: config.school_year,
+      start_date: config.enrollment_start_date,
+      end_date: config.enrollment_end_date
+    });
+
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/applications/:id/pending
+ * Principal marks an application as pending — sends it back to Registrar for re-review.
+ */
+async function markAsPending(req, res, next) {
+  try {
+    const id  = parseInt(req.params.id, 10);
+    const app = await ApplicationModel.findById(id);
+    if (!app) return res.status(404).json({ error: "Application not found." });
+    if (app.status !== "principal_review") {
+      return res.status(409).json({ error: "Only applications under principal review can be marked as pending." });
+    }
+
+    const pendingNote = req.body.pending_note?.trim() || "Requirements incomplete. Please review and resubmit.";
+
+    const updated = await ApplicationModel.updateStatus(id, "pending_registrar", {
+      reviewed_by_principal: req.admin.admin_id,
+      principal_reviewed_at: new Date(),
+      principal_note: pendingNote,
+    });
+
+    // Notify Registrar to re-review
+    const fullName = [app.first_name, app.middle_name, app.last_name, app.extension_name].filter(Boolean).join(" ");
+    await NotificationService.notifyRole({
+      role: 'registrar',
+      message: `Application for ${fullName} (${app.email}) has been marked as pending by the Principal. Requirements may be incomplete — please follow up and re-forward when ready.`,
+      type: 'enrollment_review',
+      reference_id: app.id,
+      reference_type: 'application',
+    }).catch(err => console.error('Notification error:', err));
+
+    res.json({
+      message: "Application marked as pending. Registrar has been notified to follow up on missing requirements.",
+      application: updated,
+    });
   } catch (err) { next(err); }
 }
 
@@ -454,4 +614,6 @@ module.exports = {
   approveApplication,
   confirmStudentId,
   rejectApplication,
+  checkEnrollmentStatus,
+  markAsPending,
 };

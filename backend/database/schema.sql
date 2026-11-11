@@ -300,7 +300,7 @@ CREATE TABLE IF NOT EXISTS enrollment_applications (
   years_attended          VARCHAR(30)  NULL,
 
   -- Workflow
-  status                  ENUM('submitted','registrar_review','principal_review','approved','rejected')
+  status                  ENUM('submitted','registrar_review','principal_review','pending_registrar','approved','rejected')
                           NOT NULL DEFAULT 'submitted',
   registrar_note          TEXT         NULL,
   principal_note          TEXT         NULL,

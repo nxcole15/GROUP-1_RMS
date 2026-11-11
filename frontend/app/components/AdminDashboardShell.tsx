@@ -2374,6 +2374,18 @@ function EnrollmentPanel({ role }: { role?: string }) {
     return `${startYear}-${endYear}`;
   };
 
+  // Enrollment period status (for overdue banner)
+  const [enrollmentPeriod, setEnrollmentPeriod] = useState<{
+    is_open: boolean; status: string; end_date?: string; school_year?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/applications/enrollment/status`)
+      .then(r => r.json())
+      .then(data => setEnrollmentPeriod(data))
+      .catch(() => {});
+  }, []);
+
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -2550,6 +2562,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                   ? "Principal Review"
                   : app.status === "rejected"
                     ? "Rejected"
+                  : app.status === "pending_registrar"
+                    ? "Pending (Registrar)"
                   : app.status === "submitted" || app.status === "registrar_review"
                     ? "Pending"
                     : "Other",
@@ -2613,6 +2627,21 @@ function EnrollmentPanel({ role }: { role?: string }) {
       setReviewChecklist(checklist);
       setReviewNote(
         (() => {
+          // If enrollment period has ended and this is a Registrar reviewing a still-pending app,
+          // pre-fill with the standard overdue rejection reason using the real configured deadline.
+          const appStatus = data.application?.status;
+          const isPending = ["submitted", "registrar_review", "pending_registrar"].includes(appStatus);
+          const isEnded = enrollmentPeriod && !enrollmentPeriod.is_open &&
+            (enrollmentPeriod.status === "deadline_passed" || enrollmentPeriod.status === "manually_closed");
+
+          if (role === "registrar" && isPending && isEnded && enrollmentPeriod?.end_date) {
+            const deadlineStr = new Date(enrollmentPeriod.end_date).toLocaleDateString("en-US", {
+              month: "long", day: "numeric", year: "numeric"
+            });
+            return `Enrollment period has ended (${deadlineStr}). Requirements were not submitted before the deadline. You may re-apply during the next enrollment period.`;
+          }
+
+          // Otherwise fall back to the saved registrar note
           try {
             const note = data.application?.registrar_note;
             if (!note) return "";
@@ -2750,6 +2779,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
         return "Confirmed";
       case "principal_review":
         return "Principal Review";
+      case "pending_registrar":
+        return "Pending (Registrar)";
       case "rejected":
         return "Rejected";
       case "submitted":
@@ -2761,7 +2792,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
   };
 
   const confirmed = enrollments.filter(e => e.status === "Confirmed");
-  const pending   = enrollments.filter(e => e.status === "Pending" || e.status === "Principal Review");
+  const pending   = enrollments.filter(e => e.status === "Pending" || e.status === "Principal Review" || e.status === "Pending (Registrar)");
+  const rejected  = enrollments.filter(e => e.status === "Rejected");
 
   // Filter and search logic
   const filteredEnrollments = enrollments.filter(enrollment => {
@@ -2796,7 +2828,142 @@ function EnrollmentPanel({ role }: { role?: string }) {
     <div className="d-flex flex-column gap-4">
       <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
         <div><h2 className="fw-black fs-4 text-dark mb-0">Enrollment</h2><p className="text-muted small mb-0">School Year {getCurrentSchoolYear()}</p></div>
-        <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2"> Enrollment period is open</span>
+        {enrollmentPeriod ? (
+          <span className={`badge px-3 py-2 ${enrollmentPeriod.is_open ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"}`}>
+            {enrollmentPeriod.is_open ? "🟢 Enrollment period is open" : "🔴 Enrollment period is closed"}
+          </span>
+        ) : (
+          <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2">
+            Checking enrollment status...
+          </span>
+        )}
+      </div>
+
+      {/* Overdue warning banner — shown when enrollment ended but apps still pending */}
+      {(() => {
+        const overdueCount = enrollments.filter(e =>
+          e.status === "Pending" || e.status === "Principal Review" || e.status === "Pending (Registrar)"
+        ).length;
+        const isEnded = enrollmentPeriod && !enrollmentPeriod.is_open &&
+          (enrollmentPeriod.status === "deadline_passed" || enrollmentPeriod.status === "manually_closed");
+
+        if (!isEnded || overdueCount === 0) return null;
+
+        const endDateStr = enrollmentPeriod?.end_date
+          ? new Date(enrollmentPeriod.end_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+          : null;
+
+        return (
+          <div className="alert alert-warning d-flex align-items-start gap-3 py-3 px-4 rounded-3 border border-warning" role="alert">
+            <span style={{ fontSize: 22, lineHeight: 1 }}>⚠️</span>
+            <div>
+              <strong className="d-block mb-1">
+                {overdueCount} application{overdueCount !== 1 ? "s" : ""} still pending — enrollment period has ended
+                {endDateStr ? ` (${endDateStr})` : ""}
+              </strong>
+              <span className="text-muted small">
+                These applications were not fully reviewed before enrollment closed. Please review and action each one so applicants can be informed of their status.
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Stats */}
+      <div className="row g-3">
+        {[
+          { 
+            label: "Total Enrolled", 
+            value: confirmed.length, 
+            icon: "students" as IconName,
+            gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
+            bgColor: "rgba(107, 114, 128, 0.1)",
+            textColor: "#4b5563"
+          },
+          { 
+            label: "Confirmed", 
+            value: confirmed.length, 
+            icon: "checkCircle" as IconName,
+            gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            bgColor: "rgba(16, 185, 129, 0.1)",
+            textColor: "#059669"
+          },
+          { 
+            label: "Pending Review", 
+            value: pending.length, 
+            icon: "clock" as IconName,
+            gradient: "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
+            bgColor: "rgba(156, 163, 175, 0.1)",
+            textColor: "#6b7280"
+          },
+          {
+            label: "Rejected",
+            value: rejected.length,
+            icon: "x" as IconName,
+            gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+            bgColor: "rgba(239, 68, 68, 0.1)",
+            textColor: "#dc2626"
+          },
+        ].map(s => (
+          <div key={s.label} className="col-6 col-md-3">
+            <div 
+              className="card border-0 shadow-sm rounded-3 overflow-hidden h-100"
+              style={{ 
+                background: "white",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                cursor: "default"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+              }}
+            >
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <div 
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      background: s.bgColor,
+                      color: s.textColor
+                    }}
+                  >
+                    <Icon name={s.icon} size={28} />
+                  </div>
+                  <div 
+                    className="fw-black" 
+                    style={{ 
+                      fontSize: "2.5rem",
+                      background: s.gradient,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      lineHeight: 1
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+                <div>
+                  <div className="fw-semibold text-dark mb-1" style={{ fontSize: "0.95rem" }}>
+                    {s.label}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    {s.label === "Total Enrolled" && "Successfully enrolled students"}
+                    {s.label === "Confirmed" && "Approved applications"}
+                    {s.label === "Pending Review" && "Awaiting approval"}
+                    {s.label === "Rejected" && "Did not meet requirements"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Search and Filters */}
@@ -2826,6 +2993,7 @@ function EnrollmentPanel({ role }: { role?: string }) {
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
                 <option value="Principal Review">Principal Review</option>
+                <option value="Pending (Registrar)">Pending (Registrar)</option>
                 <option value="Confirmed">Confirmed</option>
                 <option value="Rejected">Rejected</option>
               </select>
@@ -2883,94 +3051,6 @@ function EnrollmentPanel({ role }: { role?: string }) {
             Showing {filteredEnrollments.length} of {enrollments.length} application{enrollments.length !== 1 ? 's' : ''}
           </div>
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="row g-3">
-        {[
-          { 
-            label: "Total Enrolled", 
-            value: confirmed.length, 
-            icon: "students" as IconName,
-            gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
-            bgColor: "rgba(107, 114, 128, 0.1)",
-            textColor: "#4b5563"
-          },
-          { 
-            label: "Confirmed", 
-            value: confirmed.length, 
-            icon: "checkCircle" as IconName,
-            gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-            bgColor: "rgba(16, 185, 129, 0.1)",
-            textColor: "#059669"
-          },
-          { 
-            label: "Pending Review", 
-            value: pending.length, 
-            icon: "clock" as IconName,
-            gradient: "linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)",
-            bgColor: "rgba(156, 163, 175, 0.1)",
-            textColor: "#6b7280"
-          },
-        ].map(s => (
-          <div key={s.label} className="col-12 col-md-4">
-            <div 
-              className="card border-0 shadow-sm rounded-3 overflow-hidden h-100"
-              style={{ 
-                background: "white",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                cursor: "default"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
-              }}
-            >
-              <div className="card-body p-4">
-                <div className="d-flex align-items-center justify-content-between mb-3">
-                  <div 
-                    className="rounded-3 d-flex align-items-center justify-content-center"
-                    style={{
-                      width: 56,
-                      height: 56,
-                      background: s.bgColor,
-                      color: s.textColor
-                    }}
-                  >
-                    <Icon name={s.icon} size={28} />
-                  </div>
-                  <div 
-                    className="fw-black" 
-                    style={{ 
-                      fontSize: "2.5rem",
-                      background: s.gradient,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                      lineHeight: 1
-                    }}
-                  >
-                    {s.value}
-                  </div>
-                </div>
-                <div>
-                  <div className="fw-semibold text-dark mb-1" style={{ fontSize: "0.95rem" }}>
-                    {s.label}
-                  </div>
-                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                    {s.label === "Total Enrolled" && "Successfully enrolled students"}
-                    {s.label === "Confirmed" && "Approved applications"}
-                    {s.label === "Pending Review" && "Awaiting approval"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Table */}
@@ -3044,6 +3124,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                                 ? "bg-danger-subtle text-danger border border-danger-subtle"
                                 : e.status === "Principal Review"
                                   ? "bg-info-subtle text-info border border-info-subtle"
+                                : e.status === "Pending (Registrar)"
+                                  ? "bg-orange-subtle text-warning border border-warning"
                                 : "bg-warning-subtle text-warning border border-warning-subtle"
                         }`}>
                           {e.status === "Confirmed" && !e.generatedStudentId ? "ID Confirmation Needed" : e.status}
@@ -3073,8 +3155,8 @@ function EnrollmentPanel({ role }: { role?: string }) {
                             </button>
                           )}
 
-                          {/* Registrar: Can edit applications in Pending or Principal Review */}
-                          {role === "registrar" && (e.status === "Pending" || e.status === "Principal Review") && (
+                          {/* Registrar: Can edit applications in Pending, Principal Review, or Pending (Registrar) */}
+                          {role === "registrar" && (e.status === "Pending" || e.status === "Principal Review" || e.status === "Pending (Registrar)") && (
                             <button
                               onClick={() => openReviewModal(e)}
                               className="btn btn-outline-primary btn-sm"
@@ -3101,6 +3183,13 @@ function EnrollmentPanel({ role }: { role?: string }) {
                               Registrar Reviewing
                             </span>
                           )}
+
+                          {/* Principal: Show "Awaiting Re-submission" for pending_registrar applications */}
+                          {role === "principal" && e.status === "Pending (Registrar)" && (
+                            <span className="badge bg-warning-subtle text-warning border border-warning px-3 py-2" style={{ fontSize: 11 }}>
+                              ⏳ Awaiting Re-submission
+                            </span>
+                          )}
                           
                           {/* View button for confirmed applications */}
                           {e.status === "Confirmed" && (
@@ -3112,48 +3201,18 @@ function EnrollmentPanel({ role }: { role?: string }) {
                               View
                             </button>
                           )}
-                          
-                          {/* Reactivate button for rejected applications */}
-                          {(role === "principal" || role === "registrar" || role === "admin") && e.status === "Rejected" && (
+
+                          {/* View button for rejected applications — both roles can see the reason */}
+                          {e.status === "Rejected" && (
                             <button
-                              onClick={async () => {
-                                const token = localStorage.getItem("inform_token");
-                                if (!token || !e.generatedStudentId) return;
-
-                                try {
-                                  const response = await fetch(
-                                    `${API_BASE}/api/admin/students/${e.generatedStudentId}/reactivate`,
-                                    {
-                                      method: "PATCH",
-                                      headers: {
-                                        Authorization: `Bearer ${token}`,
-                                        "Content-Type": "application/json",
-                                      },
-                                      credentials: "include",
-                                    }
-                                  );
-
-                                  if (!response.ok) {
-                                    throw new Error("Reactivation failed");
-                                  }
-
-                                  setEnrollments(prev =>
-                                    prev.map(enrollment =>
-                                      enrollment.id === e.id
-                                        ? { ...enrollment, status: "Confirmed" }
-                                        : enrollment
-                                    )
-                                  );
-                                } catch (error) {
-                                  console.error("Reactivation error:", error);
-                                }
-                              }}
-                              className="btn btn-outline-success btn-sm"
+                              onClick={() => openReviewModal(e)}
+                              className="btn btn-outline-danger btn-sm"
                               style={{ fontSize: 11 }}
                             >
-                              Reactivate
+                              View Reason
                             </button>
                           )}
+                          
                         </div>
                       </td>
                     </tr>
@@ -3465,6 +3524,23 @@ function EnrollmentPanel({ role }: { role?: string }) {
                         </div>
                       </div>
 
+                      {/* Rejection Reason — visible to both Registrar and Principal when rejected */}
+                      {selectedApplication?.rejection_reason && normalizeApplicationStatus(selectedApplication?.status) === "Rejected" && (
+                        <div className="mb-3">
+                          <h6 className="fw-bold text-danger mb-3 d-flex align-items-center gap-2">
+                            <Icon name="x" size={18} />
+                            Rejection Reason
+                          </h6>
+                          <div className="card border-0 shadow-sm" style={{ borderLeft: "4px solid #dc2626" }}>
+                            <div className="card-body p-4" style={{ background: "#fef2f2", borderLeft: "4px solid #dc2626", borderRadius: "0.375rem" }}>
+                              <p className="mb-0 text-danger" style={{ fontSize: 14, lineHeight: 1.7 }}>
+                                {selectedApplication.rejection_reason}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   </div>
                 </div>
@@ -3505,6 +3581,37 @@ function EnrollmentPanel({ role }: { role?: string }) {
                         Reject Application
                       </button>
                       
+                      <button
+                        type="button"
+                        className="btn btn-warning px-4"
+                        onClick={async () => {
+                          const token = localStorage.getItem("inform_token");
+                          if (!token || !selectedApplication?.id) return;
+
+                          const res = await fetch(`${API_BASE}/api/applications/${selectedApplication.id}/pending`, {
+                            method: "PATCH",
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                              "Content-Type": "application/json",
+                            },
+                            credentials: "include",
+                            body: JSON.stringify({
+                              pending_note: reviewNote || "Requirements incomplete. Please follow up with the student and re-forward when complete.",
+                            }),
+                          });
+
+                          if (res.ok) {
+                            updateEnrollmentStatus(selectedApplication.id, "Pending (Registrar)");
+                            setReviewModalOpen(false);
+                            setSelectedApplication(null);
+                            setReviewChecklist({});
+                          }
+                        }}
+                      >
+                        <Icon name="clock" size={18} className="me-2" />
+                        Mark as Pending
+                      </button>
+
                       <button
                         type="button"
                         className="btn btn-success px-4"

@@ -227,4 +227,71 @@ async function sendRequirementsEmail({ to, fullName, dueDate }) {
   }
 }
 
-module.exports = { sendCredentials, sendRequirementsEmail };
+module.exports = { sendCredentials, sendRequirementsEmail, sendRejectionEmail };
+
+async function sendRejectionEmail({ to, fullName, rejectionReason, schoolYear }) {
+  const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
+
+  try {
+    await deliverEmail({
+      from,
+      to,
+      subject: "❌ CFEI Enrollment Application — Update on Your Application",
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f0f4ff;margin:0;padding:0;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#dc2626,#991b1b);padding:32px 24px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:22px;">Application Status Update</h1>
+      <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Cebu Far East Institute${schoolYear ? ` · SY ${schoolYear}` : ""}</p>
+    </div>
+    <!-- Body -->
+    <div style="padding:32px 24px;">
+      <p style="color:#334155;font-size:15px;margin:0 0 16px;">Dear <strong>${fullName}</strong>,</p>
+      <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;">
+        Thank you for your interest in enrolling at <strong>Cebu Far East Institute</strong>. 
+        After careful review of your enrollment application, we regret to inform you that your 
+        application has not been approved at this time.
+      </p>
+
+      <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:8px;padding:18px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 8px;font-size:13px;color:#991b1b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Reason for Rejection</p>
+        <p style="margin:0;font-size:14px;color:#7f1d1d;line-height:1.7;">${rejectionReason || "Your application did not meet the enrollment requirements."}</p>
+      </div>
+
+      <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:14px 18px;margin-bottom:24px;border-radius:4px;">
+        <p style="margin:0;font-size:13px;color:#1e40af;line-height:1.6;">
+          <strong>📞 Questions or Appeals?</strong><br/>
+          If you believe this decision was made in error or would like further clarification, 
+          please contact the Registrar's Office directly.
+        </p>
+      </div>
+
+      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+        <p style="margin:0 0 8px;font-size:13px;color:#64748b;font-weight:600;">📍 Registrar's Office</p>
+        <p style="margin:0;font-size:13px;color:#475569;line-height:1.8;">
+          Room 101, Admin Building<br/>
+          Monday – Friday · 8:00 AM – 5:00 PM<br/>
+          Email: registrar@cfei.edu.ph
+        </p>
+      </div>
+
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.6;text-align:center;">
+        This is an automated message. Please do not reply to this email directly.
+      </p>
+    </div>
+    <!-- Footer -->
+    <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="color:#94a3b8;font-size:11px;margin:0;">© ${new Date().getFullYear()} Cebu Far East Institute · INFORM System</p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+    console.log(`✅ Rejection email sent to ${to}`);
+  } catch (error) {
+    console.error(`❌ Failed to send rejection email to ${to}:`, error.message);
+  }
+}
