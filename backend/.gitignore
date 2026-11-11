@@ -38,7 +38,14 @@ yarn-error.log*
 .env*
 !.env.example
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ad-hoc SQL fix files in the backend root (keep database/ folder)
+/*.sql
+/FIX_*.sql
+/VERIFY_*.sql
+/CHECK_*.sql
+/create-correct-admins.sql
+/reset-admin-passwords.sql

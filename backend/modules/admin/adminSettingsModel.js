@@ -233,15 +233,19 @@ const AdminSettingsModel = {
       )
     );
 
-    // Notify all admins
-    const [admins] = await db.query('SELECT admin_id FROM admins');
-    const adminPromises = admins.map(admin =>
-      db.query(
+    // Notify all admins — use each admin's actual role.
+    // The staff_notifications.role column is ENUM('teacher','registrar','principal').
+    // Map any role that falls outside those three to 'principal' as the safest fallback.
+    const VALID_NOTIF_ROLES = ['teacher', 'registrar', 'principal'];
+    const [admins] = await db.query('SELECT admin_id, role FROM admins WHERE is_archived = 0');
+    const adminPromises = admins.map(admin => {
+      const notifRole = VALID_NOTIF_ROLES.includes(admin.role) ? admin.role : 'principal';
+      return db.query(
         `INSERT INTO staff_notifications (recipient, role, title, message, type, is_read, created_at)
-         VALUES (?, 'admin', ?, ?, ?, 0, NOW())`,
-        [admin.admin_id, title, message, type]
-      )
-    );
+         VALUES (?, ?, ?, ?, ?, 0, NOW())`,
+        [admin.admin_id, notifRole, title, message, type]
+      );
+    });
 
     await Promise.all([...teacherPromises, ...adminPromises]);
     return teachers.length + admins.length;

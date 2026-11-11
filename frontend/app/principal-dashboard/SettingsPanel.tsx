@@ -34,6 +34,80 @@ type SchoolYear = {
   term3_completed_at: string | null;
 };
 
+// Quick Enrollment Toggle Component
+function QuickEnrollmentToggle({ config, onToggle }: { config: SchoolYear; onToggle: () => void }) {
+  const [loading, setLoading] = useState(false);
+
+  // Effective status: open flag AND within date range
+  const now = new Date();
+  const pastEndDate = !!(config.enrollment_end_date && now > new Date(config.enrollment_end_date));
+  const beforeStartDate = !!(config.enrollment_start_date && now < new Date(config.enrollment_start_date));
+  const effectivelyOpen = !!config.enrollment_is_open && !pastEndDate && !beforeStartDate;
+  
+  const handleQuickToggle = async (newStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${newStatus ? 'OPEN' : 'CLOSE'} enrollment?`)) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("inform_token");
+      const res = await fetch(`${API_BASE}/api/admin/settings/enrollment-config`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          school_year_id: config.id,
+          start_date: config.enrollment_start_date?.split('T')[0],
+          end_date: config.enrollment_end_date?.split('T')[0],
+          open_now: newStatus
+        })
+      });
+      
+      if (res.ok) {
+        refreshAcademicConfig();
+        alert(`Enrollment ${newStatus ? 'opened' : 'closed'} successfully!`);
+        onToggle();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to toggle enrollment");
+      }
+    } catch (err) {
+      alert("Error toggling enrollment");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="d-flex align-items-center justify-content-between">
+      <div>
+        <small className="text-muted d-block mb-1">Quick Actions</small>
+        <small className="text-muted">Manually control enrollment status</small>
+      </div>
+      <div className="btn-group btn-group-sm">
+        <button
+          className={`btn ${effectivelyOpen ? "btn-success" : "btn-outline-success"}`}
+          onClick={() => handleQuickToggle(true)}
+          disabled={loading || effectivelyOpen}
+        >
+          {effectivelyOpen ? "✓ Open" : "Open Now"}
+        </button>
+        <button
+          className={`btn ${!effectivelyOpen ? "btn-danger" : "btn-outline-danger"}`}
+          onClick={() => handleQuickToggle(false)}
+          disabled={loading || !effectivelyOpen}
+        >
+          {!effectivelyOpen ? "✓ Closed" : "Close Now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPanel() {
   const [activeConfig, setActiveConfig] = useState<SchoolYear | null>(null);
   const [schoolYears, setSchoolYears] = useState<SchoolYear[]>([]);
@@ -89,6 +163,16 @@ export function SettingsPanel() {
     return new Date(dateStr).toLocaleDateString("en-US", { 
       month: "short", day: "numeric", year: "numeric" 
     });
+  };
+
+  // Compute the real effective enrollment status based on the toggle AND the date range.
+  // enrollment_is_open=1 but past the end date → effectively closed.
+  const getEffectiveEnrollmentStatus = (config: SchoolYear): boolean => {
+    if (!config.enrollment_is_open) return false;
+    const now = new Date();
+    if (config.enrollment_end_date && now > new Date(config.enrollment_end_date)) return false;
+    if (config.enrollment_start_date && now < new Date(config.enrollment_start_date)) return false;
+    return true;
   };
   
   if (loading) {
@@ -182,22 +266,32 @@ export function SettingsPanel() {
           </div>
           
           {activeConfig && (
-            <div className="row g-3">
-              <div className="col-md-4">
-                <small className="text-muted d-block mb-1">Status</small>
-                <span className={`badge px-3 py-2 ${activeConfig.enrollment_is_open ? "bg-success" : "bg-secondary"}`}>
-                  {activeConfig.enrollment_is_open ? "Open" : "Closed"}
-                </span>
+            <>
+              <div className="row g-3">
+                <div className="col-md-4">
+                  <small className="text-muted d-block mb-1">Status</small>
+                  <span className={`badge px-3 py-2 ${getEffectiveEnrollmentStatus(activeConfig) ? "bg-success" : "bg-secondary"}`}>
+                    {getEffectiveEnrollmentStatus(activeConfig) ? "Open" : "Closed"}
+                  </span>
+                </div>
+                <div className="col-md-4">
+                  <small className="text-muted d-block mb-1">Start Date</small>
+                  <strong>{formatDate(activeConfig.enrollment_start_date)}</strong>
+                </div>
+                <div className="col-md-4">
+                  <small className="text-muted d-block mb-1">End Date</small>
+                  <strong>{formatDate(activeConfig.enrollment_end_date)}</strong>
+                </div>
               </div>
-              <div className="col-md-4">
-                <small className="text-muted d-block mb-1">Start Date</small>
-                <strong>{formatDate(activeConfig.enrollment_start_date)}</strong>
+              
+              {/* Quick Toggle Section */}
+              <div className="mt-3 pt-3 border-top">
+                <QuickEnrollmentToggle 
+                  config={activeConfig} 
+                  onToggle={fetchData}
+                />
               </div>
-              <div className="col-md-4">
-                <small className="text-muted d-block mb-1">End Date</small>
-                <strong>{formatDate(activeConfig.enrollment_end_date)}</strong>
-              </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -243,7 +337,13 @@ export function SettingsPanel() {
                     </td>
                     <td>
                       <span className={`badge ${year.enrollment_is_open ? "bg-success" : "bg-secondary"}`}>
-                        {year.enrollment_is_open ? "Open" : "Closed"}
+                        {(() => {
+                          const now = new Date();
+                          const open = !!year.enrollment_is_open
+                            && !(year.enrollment_end_date && now > new Date(year.enrollment_end_date))
+                            && !(year.enrollment_start_date && now < new Date(year.enrollment_start_date));
+                          return open ? "Open" : "Closed";
+                        })()}
                       </span>
                     </td>
                     <td>
@@ -390,8 +490,20 @@ function AddSchoolYearModal({ onClose }: { onClose: () => void }) {
 
 // Configure Enrollment Modal
 function ConfigEnrollmentModal({ config, onClose }: { config: SchoolYear; onClose: () => void }) {
-  const [startDate, setStartDate] = useState(config.enrollment_start_date?.split('T')[0] || "");
-  const [endDate, setEndDate] = useState(config.enrollment_end_date?.split('T')[0] || "");
+  // Helper function to convert database date to input format (YYYY-MM-DD)
+  const formatDateForInput = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    // Handle ISO datetime strings (e.g., "2026-06-01T00:00:00.000Z")
+    // and plain date strings (e.g., "2026-06-01")
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(formatDateForInput(config.enrollment_start_date));
+  const [endDate, setEndDate] = useState(formatDateForInput(config.enrollment_end_date));
   const [openNow, setOpenNow] = useState(config.enrollment_is_open === 1);
   const [loading, setLoading] = useState(false);
   
@@ -421,7 +533,8 @@ function ConfigEnrollmentModal({ config, onClose }: { config: SchoolYear; onClos
         alert("Enrollment configuration updated!");
         onClose();
       } else {
-        alert("Failed to update enrollment config");
+        const data = await res.json();
+        alert(data.error || "Failed to update enrollment config");
       }
     } catch (err) {
       alert("Error updating config");
@@ -440,40 +553,72 @@ function ConfigEnrollmentModal({ config, onClose }: { config: SchoolYear; onClos
           </div>
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
-              <div className="alert alert-info">
+              <div className="alert alert-info mb-3">
                 <strong>School Year:</strong> {config.school_year}
               </div>
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Start Date *</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  required
-                />
+              
+              {/* Enrollment Period Dates */}
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">📅 Enrollment Period</h6>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Start Date *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                      required
+                    />
+                    <small className="text-muted">When enrollment opens</small>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">End Date *</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      required
+                    />
+                    <small className="text-muted">Requirements deadline</small>
+                  </div>
+                </div>
               </div>
+              
+              {/* Enrollment Status Toggle */}
               <div className="mb-3">
-                <label className="form-label fw-semibold">End Date *</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="openNow"
-                  checked={openNow}
-                  onChange={e => setOpenNow(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="openNow">
-                  Open enrollment immediately
-                </label>
+                <h6 className="fw-bold mb-3">🎯 Enrollment Status</h6>
+                <div className="card border-0" style={{ background: openNow ? "#f0fdf4" : "#fef2f2" }}>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center justify-content-between">
+                      <div>
+                        <div className="fw-semibold mb-1">
+                          {openNow ? "🟢 Enrollment is Open" : "🔴 Enrollment is Closed"}
+                        </div>
+                        <small className="text-muted">
+                          {openNow 
+                            ? "Students can submit enrollment applications" 
+                            : "Students cannot submit applications"
+                          }
+                        </small>
+                      </div>
+                      <div className="form-check form-switch">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          id="openNow"
+                          checked={openNow}
+                          onChange={e => setOpenNow(e.target.checked)}
+                          style={{ width: "3rem", height: "1.5rem", cursor: "pointer" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <small className="text-muted mt-2 d-block">
+                  💡 <strong>Tip:</strong> Use this toggle to manually open or close enrollment regardless of dates (useful for emergencies or special cases)
+                </small>
               </div>
             </div>
             <div className="modal-footer border-0">

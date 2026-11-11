@@ -84,6 +84,17 @@ export default function EnrollmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [editingSection, setEditingSection] = useState<string | null>(null);
+  
+  // ✅ Enrollment status check
+  const [checkingEnrollment, setCheckingEnrollment] = useState(true);
+  const [enrollmentStatus, setEnrollmentStatus] = useState<{
+    is_open: boolean;
+    message: string;
+    status: string;
+    school_year?: string;
+    start_date?: string;
+    end_date?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     lrn: "",
@@ -107,6 +118,27 @@ export default function EnrollmentPage() {
     getAcademicConfig().then(config => {
       setFormData(prev => ({ ...prev, schoolYear: config.school_year }));
     });
+  }, []);
+
+  // ✅ CHECK ENROLLMENT STATUS ON PAGE LOAD
+  useEffect(() => {
+    async function checkEnrollmentStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/applications/enrollment/status`);
+        const data = await res.json();
+        setEnrollmentStatus(data);
+        setCheckingEnrollment(false);
+      } catch (error) {
+        console.error("Failed to check enrollment status:", error);
+        setEnrollmentStatus({
+          is_open: false,
+          message: "Unable to check enrollment status. Please try again later.",
+          status: "error"
+        });
+        setCheckingEnrollment(false);
+      }
+    }
+    checkEnrollmentStatus();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -224,6 +256,13 @@ export default function EnrollmentPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        // ✅ Check if enrollment was closed during submission
+        if (data.enrollment_closed) {
+          setSubmitError(`${data.error} The page will reload to show current enrollment status.`);
+          // Reload page to show enrollment closed message
+          setTimeout(() => window.location.reload(), 3000);
+          return;
+        }
         setSubmitError(data.error || "Submission failed. Please try again.");
         return;
       }
@@ -245,6 +284,119 @@ export default function EnrollmentPage() {
     backgroundSize: "400% 400%",
     animation: "animatedGradient 15s ease infinite",
   };
+
+  const formatDate = (dateStr: string | undefined | null) => {
+    if (!dateStr) return "Not set";
+    return new Date(dateStr).toLocaleDateString("en-US", { 
+      month: "long", day: "numeric", year: "numeric" 
+    });
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // LOADING STATE
+  // ══════════════════════════════════════════════════════════
+  if (checkingEnrollment) {
+    return (
+      <div className="d-flex flex-column align-items-center justify-content-center px-3 py-5" style={bg}>
+        <div className="spinner-border text-light" role="status" style={{ width: "3rem", height: "3rem" }}>
+          <span className="visually-hidden">Checking enrollment status...</span>
+        </div>
+        <p className="text-white mt-3">Checking enrollment status...</p>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ENROLLMENT CLOSED STATE
+  // ══════════════════════════════════════════════════════════
+  if (!enrollmentStatus?.is_open) {
+    const getStatusIcon = () => {
+      if (enrollmentStatus?.status === "not_yet_open") return "⏰";
+      if (enrollmentStatus?.status === "deadline_passed") return "📅";
+      return "🔴";
+    };
+
+    const getStatusTitle = () => {
+      if (enrollmentStatus?.status === "not_yet_open") return "Enrollment Not Yet Open";
+      if (enrollmentStatus?.status === "deadline_passed") return "Enrollment Period Has Ended";
+      return "Enrollment is Currently Closed";
+    };
+
+    const getStatusColor = () => {
+      if (enrollmentStatus?.status === "not_yet_open") return "#f59e0b";
+      if (enrollmentStatus?.status === "deadline_passed") return "#dc2626";
+      return "#dc2626";
+    };
+
+    return (
+      <div className="d-flex flex-column align-items-center justify-content-center px-3 py-5" style={bg}>
+        <div className="card border-0 shadow-lg rounded-3 overflow-hidden" style={{ maxWidth: 600, width: "100%" }}>
+          <div className="p-4 text-white text-center" style={{ background: `linear-gradient(135deg,${getStatusColor()},#b91c1c)` }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>{getStatusIcon()}</div>
+            <h2 className="fw-black fs-4 mb-1">{getStatusTitle()}</h2>
+            <p className="text-white-50 small mb-0">{enrollmentStatus?.message}</p>
+          </div>
+
+          <div className="card-body p-4">
+            {/* Enrollment Period Information */}
+            {enrollmentStatus?.school_year && (
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">📋 Enrollment Period Information</h6>
+                <div className="row g-3">
+                  <div className="col-md-12">
+                    <div className="p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                      <small className="text-muted d-block mb-1">School Year</small>
+                      <strong>{enrollmentStatus.school_year}</strong>
+                    </div>
+                  </div>
+                  {enrollmentStatus.start_date && (
+                    <div className="col-md-6">
+                      <div className="p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                        <small className="text-muted d-block mb-1">Start Date</small>
+                        <strong>{formatDate(enrollmentStatus.start_date)}</strong>
+                      </div>
+                    </div>
+                  )}
+                  {enrollmentStatus.end_date && (
+                    <div className="col-md-6">
+                      <div className="p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                        <small className="text-muted d-block mb-1">End Date</small>
+                        <strong>{formatDate(enrollmentStatus.end_date)}</strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Contact Information */}
+            <div className="alert alert-info">
+              <h6 className="fw-bold mb-2">📞 Need Assistance?</h6>
+              <p className="mb-2 small">
+                For enrollment inquiries, please contact the Registrar's Office:
+              </p>
+              <div className="d-flex flex-column gap-1 small">
+                <div><strong>Email:</strong> registrar@cfei.edu.ph</div>
+                <div><strong>Phone:</strong> (032) 123-4567</div>
+                <div><strong>Office Hours:</strong> Monday - Friday, 8:00 AM - 5:00 PM</div>
+              </div>
+            </div>
+
+            {enrollmentStatus?.status === "not_yet_open" && (
+              <div className="alert alert-warning">
+                <strong>🕒 Coming Soon!</strong> Enrollment will open on {formatDate(enrollmentStatus.start_date)}. 
+                Please check back during the enrollment period.
+              </div>
+            )}
+
+            <Link href="/" className="btn btn-primary w-100 rounded-2 fw-bold">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ══════════════════════════════════════════════════════════
   // STEP 5 — Success
