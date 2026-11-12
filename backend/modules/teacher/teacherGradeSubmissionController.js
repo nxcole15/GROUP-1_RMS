@@ -23,13 +23,12 @@ async function getStudentsWithGradesForClass(req, res, next) {
       });
     }
 
-    // Query explanation:
-    // 1. Find all teacher_schedules for this teacher with matching subject+strand+term
-    // 2. Find all students enrolled in those schedules
-    // 3. Left join with grades table to get existing grades
-    // 4. Include submission window status
+    // Query:
+    // Find all students enrolled in ANY schedule for this teacher+subject+strand+term.
+    // Use GROUP BY to collapse multiple schedule rows for the same student into one.
+    // Pick the most relevant grade (approved > submitted > draft > null) using MAX on status priority.
     const [students] = await pool.query(`
-      SELECT DISTINCT
+      SELECT
         s.student_id,
         s.id as internal_id,
         s.full_name,
@@ -38,26 +37,101 @@ async function getStudentsWithGradesForClass(req, res, next) {
         s.strand,
         s.grade_level,
         s.email,
-        ea.photo_url,
-        g.id as grade_id,
-        g.percentage,
-        g.submission_status,
-        g.submitted_at,
-        g.return_reason,
-        g.updated_at
+        MAX(ea.photo_url) as photo_url,
+        -- Pick the best grade for this student across all schedule slots for this subject
+        (
+          SELECT g2.id FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as grade_id,
+        (
+          SELECT g2.percentage FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as percentage,
+        (
+          SELECT g2.submission_status FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as submission_status,
+        (
+          SELECT g2.submitted_at FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as submitted_at,
+        (
+          SELECT g2.return_reason FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as return_reason,
+        (
+          SELECT g2.updated_at FROM grades g2
+          INNER JOIN teacher_schedules ts2 ON g2.teacher_schedule_id = ts2.id
+          INNER JOIN teachers t2 ON ts2.teacher_id = t2.id
+          WHERE t2.id = ?
+            AND ts2.subject_name = ?
+            AND ts2.strand = ?
+            AND ts2.term = ?
+            AND g2.student_internal_id = s.id
+          ORDER BY FIELD(g2.submission_status, 'approved', 'submitted', 'draft', 'returned') ASC
+          LIMIT 1
+        ) as updated_at
       FROM students s
       INNER JOIN student_schedule_enrollments sse ON s.id = sse.student_internal_id
       INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
       INNER JOIN teachers t ON ts.teacher_id = t.id
       LEFT JOIN enrollment_applications ea ON s.student_id = ea.generated_student_id
-      LEFT JOIN grades g ON g.teacher_schedule_id = ts.id
-        AND g.student_internal_id = s.id
       WHERE t.id = ?
         AND ts.subject_name = ?
         AND ts.strand = ?
         AND ts.term = ?
+      GROUP BY s.id, s.student_id, s.full_name, s.pathway, s.track, s.strand, s.grade_level, s.email
       ORDER BY s.full_name ASC
-    `, [teacherDbId, subject_name, strand, term]);
+    `, [
+      // 8 correlated subqueries × 4 params each = 32, plus the main WHERE 4
+      teacherDbId, subject_name, strand, term,  // grade_id subquery
+      teacherDbId, subject_name, strand, term,  // percentage subquery
+      teacherDbId, subject_name, strand, term,  // submission_status subquery
+      teacherDbId, subject_name, strand, term,  // submitted_at subquery
+      teacherDbId, subject_name, strand, term,  // return_reason subquery
+      teacherDbId, subject_name, strand, term,  // updated_at subquery
+      teacherDbId, subject_name, strand, term   // main WHERE
+    ]);
 
     // Get submission batch status
     const [batchResult] = await pool.query(`
@@ -458,11 +532,13 @@ async function submitGradesBatch(req, res, next) {
 
       const scheduleIds = schedules.map(s => s.id);
 
+      // Fetch one grade per student (the best status one) across all schedule slots
       [grades] = await conn.query(
-        `SELECT id, student_internal_id, teacher_schedule_id, percentage 
-         FROM grades 
-         WHERE teacher_schedule_id IN (?) 
-           AND submission_status IN ('draft', 'returned')`,
+        `SELECT g.id, g.student_internal_id, g.teacher_schedule_id, g.percentage
+         FROM grades g
+         WHERE g.teacher_schedule_id IN (?)
+           AND g.submission_status IN ('draft', 'returned')
+         GROUP BY g.student_internal_id`,
         [scheduleIds]
       );
     } else {
