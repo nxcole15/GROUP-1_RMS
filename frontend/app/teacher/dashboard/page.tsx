@@ -755,7 +755,10 @@ function SubjectsPanel({ subjects: propSubjects }: { subjects?: typeof subjects 
 }
 
 /* -- Students Panel -- */
-function StudentsPanel({ students: propStudents }: { students?: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}> } = {}) {
+function StudentsPanel({ students: propStudents, subjects: propSubjects }: { 
+  students?: Array<{id: string; name: string; pathway: string; grade: number; status: string; photo_url?: string | null; subject?: string; term?: string; track_strand?: string}>;
+  subjects?: Array<{id: number; name: string; track?: string; strand?: string; term?: string; enrolled_count: number}>;
+} = {}) {
   // State for search and filters
   const [search, setSearch] = useState("");
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
@@ -763,6 +766,13 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   const [selectedTerm, setSelectedTerm] = useState<string>("all");
   
   const displayStudents = propStudents ?? students;
+  const displaySubjects = propSubjects ?? [];
+
+  // --- Stats derived from data ---
+  const uniqueStudentCount = new Set(displayStudents.map(s => s.id)).size;
+  const totalClasses       = displaySubjects.length;
+  const totalEnrollments   = displaySubjects.reduce((sum, s) => sum + (s.enrolled_count || 0), 0);
+  const uniqueTracks       = new Set(displaySubjects.map(s => s.track).filter(Boolean)).size;
   
   // Get unique class combinations (Subject - Track & Strand)
   const uniqueClasses = Array.from(
@@ -772,18 +782,58 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
         .map(s => `${s.subject} - ${s.track_strand}`)
     )
   ) as string[];
-  
-  // Filter logic - chain multiple conditions
-  const filtered = displayStudents.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase());
-    
-    // Match by subject and track_strand combination
-    const studentClass = s.subject && s.track_strand ? `${s.subject} - ${s.track_strand}` : "";
-    const matchesClass = selectedClass === "all" || studentClass === selectedClass;
-    
-    const matchesTerm = selectedTerm === "all" || s.term === selectedTerm;
-    return matchesSearch && matchesClass && matchesTerm;
-  });
+
+  // When no specific class is selected, collapse multiple enrollments of the same
+  // student into a single row that lists all their subjects/terms as arrays.
+  // When a class IS selected, keep the per-enrollment rows so each subject is distinct.
+  type MergedStudent = typeof displayStudents[number] & {
+    subjects?: string[];
+    terms?: string[];
+  };
+
+  const baseFiltered: MergedStudent[] = (() => {
+    // First apply search + term filter on the raw rows
+    const preFiltered = displayStudents.filter(s => {
+      const matchesSearch =
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.id.toLowerCase().includes(search.toLowerCase());
+      const studentClass =
+        s.subject && s.track_strand ? `${s.subject} - ${s.track_strand}` : "";
+      const matchesClass =
+        selectedClass === "all" || studentClass === selectedClass;
+      const matchesTerm = selectedTerm === "all" || s.term === selectedTerm;
+      return matchesSearch && matchesClass && matchesTerm;
+    });
+
+    if (selectedClass !== "all") {
+      // Specific class selected — one row per enrollment
+      return preFiltered;
+    }
+
+    // "All Classes" — collapse duplicates into one row per student
+    const map = new Map<string, MergedStudent>();
+    for (const s of preFiltered) {
+      if (map.has(s.id)) {
+        const existing = map.get(s.id)!;
+        // Accumulate subjects and terms without duplicates
+        if (s.subject && !existing.subjects?.includes(s.subject)) {
+          existing.subjects = [...(existing.subjects ?? (existing.subject ? [existing.subject] : [])), s.subject];
+        }
+        if (s.term && !existing.terms?.includes(s.term)) {
+          existing.terms = [...(existing.terms ?? (existing.term ? [existing.term] : [])), s.term];
+        }
+      } else {
+        map.set(s.id, {
+          ...s,
+          subjects: s.subject ? [s.subject] : [],
+          terms: s.term ? [s.term] : [],
+        });
+      }
+    }
+    return Array.from(map.values());
+  })();
+
+  const filtered = baseFiltered;
   
   const handleImageError = (studentId: string) => {
     setImageErrors(prev => new Set(prev).add(studentId));
@@ -799,26 +849,81 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
   
   return (
     <div className="d-flex flex-column gap-4">
-      {/* Header - Enhanced - Fixed white box */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
-        <div className="card-body p-4">
-          <div className="d-flex align-items-center gap-3">
-            <div className="bg-white bg-opacity-25 rounded-3 p-3">
-              <Icon name="students" size={32} />
-            </div>
-            <div className="flex-grow-1 text-white">
-              <h2 className="fw-bold mb-1 fs-3">My Students</h2>
-              <p className="mb-0 opacity-75">Managing {filtered.length} of {displayStudents.length} enrolled students</p>
-            </div>
-            {/* Total count badge - Fixed */}
-            <div className="d-none d-md-block">
-              <div className="text-center px-4 py-3 rounded-3" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
-                <div className="text-white fw-bold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>{displayStudents.length}</div>
-                <div className="text-white opacity-75 small mt-1">Students</div>
+      {/* Stats Cards Row */}
+      <div className="row g-3">
+        {[
+          {
+            label: "Total Students",
+            value: uniqueStudentCount,
+            icon: "students" as IconName,
+            gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            bgColor: "rgba(102, 126, 234, 0.1)",
+            textColor: "#667eea",
+            sub: "Unique enrolled students",
+          },
+          {
+            label: "Total Classes",
+            value: totalClasses,
+            icon: "book" as IconName,
+            gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            bgColor: "rgba(16, 185, 129, 0.1)",
+            textColor: "#059669",
+            sub: "Assigned subject schedules",
+          },
+          {
+            label: "Active Enrollments",
+            value: totalEnrollments,
+            icon: "checkCircle" as IconName,
+            gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+            bgColor: "rgba(245, 158, 11, 0.1)",
+            textColor: "#d97706",
+            sub: "Total class-student slots",
+          },
+          {
+            label: "Tracks Covered",
+            value: uniqueTracks || 1,
+            icon: "chart" as IconName,
+            gradient: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+            bgColor: "rgba(59, 130, 246, 0.1)",
+            textColor: "#1d4ed8",
+            sub: "Distinct academic tracks",
+          },
+        ].map(stat => (
+          <div key={stat.label} className="col-6 col-md-3">
+            <div
+              className="card border-0 shadow-sm rounded-3 overflow-hidden h-100"
+              style={{ background: "white", transition: "transform 0.2s ease, box-shadow 0.2s ease" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.15)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)"; }}
+            >
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center"
+                    style={{ width: 56, height: 56, background: stat.bgColor, color: stat.textColor }}
+                  >
+                    <Icon name={stat.icon} size={28} />
+                  </div>
+                  <div
+                    className="fw-black"
+                    style={{
+                      fontSize: "2.5rem",
+                      background: stat.gradient,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {stat.value}
+                  </div>
+                </div>
+                <div className="fw-semibold text-dark mb-1" style={{ fontSize: "0.95rem" }}>{stat.label}</div>
+                <div className="text-muted" style={{ fontSize: "0.75rem" }}>{stat.sub}</div>
               </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
       
       {/* Search & Filters Card */}
@@ -959,13 +1064,47 @@ function StudentsPanel({ students: propStudents }: { students?: Array<{id: strin
                             {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                         )}
-                        <span className="fw-semibold text-dark">{s.name}</span>
+                        <div>
+                          <div className="fw-semibold text-dark">{s.name}</div>
+                          {/* Show enrollment count badge when viewing "All Classes" and student has multiple subjects */}
+                          {selectedClass === "all" && s.subjects && s.subjects.length > 1 && (
+                            <span className="badge bg-secondary bg-opacity-10 text-secondary small mt-1" style={{ fontSize: "0.7rem" }}>
+                              {s.subjects.length} subjects
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="d-none d-sm-table-cell"><span className="text-muted small">{s.id}</span></td>
-                    <td className="d-none d-md-table-cell"><span className="text-muted small">{s.subject || "-"}</span></td>
-                    <td className="d-none d-lg-table-cell"><span className="text-muted small">{s.track_strand || s.pathway}</span></td>
-                    <td className="d-none d-lg-table-cell"><span className="text-muted small">{s.term || "-"}</span></td>
+                    <td className="d-none d-md-table-cell">
+                      {/* In "All Classes" view, show all subjects as pills */}
+                      {selectedClass === "all" && s.subjects && s.subjects.length > 1 ? (
+                        <div className="d-flex flex-wrap gap-1">
+                          {s.subjects.map(subj => (
+                            <span key={subj} className="badge rounded-pill text-white small" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", fontSize: "0.72rem" }}>
+                              {subj}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted small">{s.subject || "-"}</span>
+                      )}
+                    </td>
+                    <td className="d-none d-lg-table-cell"><span className="text-muted small">{s.pathway}</span></td>
+                    <td className="d-none d-lg-table-cell">
+                      {/* In "All Classes" view, show all terms as pills */}
+                      {selectedClass === "all" && s.terms && s.terms.length > 1 ? (
+                        <div className="d-flex flex-wrap gap-1">
+                          {s.terms.map(term => (
+                            <span key={term} className="badge rounded-pill bg-warning bg-opacity-75 text-dark small" style={{ fontSize: "0.72rem" }}>
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted small">{s.term || "-"}</span>
+                      )}
+                    </td>
                     <td><span className={`badge fw-semibold ${s.status === "Active" ? "bg-success" : "bg-secondary"} text-white px-3 py-2`}>{s.status}</span></td>
                   </tr>
                 ))
@@ -984,6 +1123,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   // Subject/Class selection
   const [subjects, setSubjects] = useState<Array<{
     subject_name: string;
+    track: string;
     strand: string;
     term: string;
     total_students: number;
@@ -994,6 +1134,7 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<string>("Term 1"); // Default to Term 1
+  const [selectedGradeLevel, setSelectedGradeLevel] = useState<number | null>(null);
   
   // Students and grades
   const [students, setStudents] = useState<Array<{
@@ -1001,6 +1142,8 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
     full_name: string;
     photo_url: string | null;
     pathway: string;
+    track: string | null;
+    strand: string | null;
     grade_level: number;
     percentage: number | null;
     submission_status: string | null;
@@ -1482,8 +1625,9 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
     : 0;
 
   const filteredStudents = students.filter(s =>
-    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.student_id.toLowerCase().includes(search.toLowerCase())
+    (s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    s.student_id.toLowerCase().includes(search.toLowerCase())) &&
+    (selectedGradeLevel === null || s.grade_level === selectedGradeLevel)
   );
 
   const canSubmit = gradedStudents.length === students.length && students.length > 0;
@@ -1500,341 +1644,444 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
 
   // ========== RENDER ==========
   return (
-    <div className="d-flex flex-column gap-4">
-      {/* Header */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
-        <div className="card-body p-4 text-white">
-          <div className="d-flex align-items-center gap-3 mb-2">
-            <div className="bg-white bg-opacity-25 rounded-3 p-3">
-              <Icon name="chart" size={28} />
-            </div>
-            <div>
-              <h2 className="fw-bold mb-1 fs-3">Grade Management</h2>
-              <p className="mb-0 opacity-75">Submit and manage student grades (internal record)</p>
-            </div>
-          </div>
+    <div className="d-flex flex-column gap-3">
+
+      {/* ── Page Header ── */}
+      <div className="d-flex align-items-center justify-content-between">
+        <div>
+          <h4 className="fw-bold mb-0" style={{ color: '#1e293b' }}>Grade Management</h4>
+          <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+            Submit and manage student grades &mdash; records are internal and not visible to students.
+          </p>
         </div>
-      </div>
-
-      {/* Status Alerts Section */}
-      <div className="d-flex flex-column gap-3">
-        {/* Submission Window Status */}
-        {!isWindowOpen && (
-          <div className="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
-            <div style={{ marginTop: 2 }}>
-              <Icon name="alert" size={22} />
-            </div>
-            <div className="flex-grow-1">
-              <h6 className="alert-heading fw-bold mb-1">Grade Submission Closed for {selectedTerm}</h6>
-              <p className="mb-0 small">Contact the principal to open the submission window.</p>
-            </div>
-          </div>
-        )}
-
-        {isWindowOpen && submissionWindow && (
-          <div className="alert alert-success border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
-            <div style={{ marginTop: 2 }}>
-              <Icon name="checkCircle" size={22} />
-            </div>
-            <div className="flex-grow-1">
-              <h6 className="alert-heading fw-bold mb-1">Grade Submission Open for {selectedTerm}</h6>
-              <p className="mb-0 small">
-                {submissionWindow.days_remaining > 0 
-                  ? `${submissionWindow.days_remaining} days remaining until ${new Date(submissionWindow.end_date).toLocaleDateString()}`
-                  : 'Closes today!'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Info Note */}
-        <div className="alert alert-info border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
-          <div style={{ marginTop: 2 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <div className="flex-grow-1">
-            <p className="mb-0 small">
-              <strong>Note:</strong> Submitted grades are recorded internally and not visible to students. 
-              Students must submit grade requests to receive their grades.
-            </p>
-          </div>
-        </div>
-
-        {/* Already Approved Status */}
-        {selectedSubject && allApproved && (
-          <div className="alert alert-success border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
-            <div style={{ marginTop: 2 }}>
-              <Icon name="checkCircle" size={22} />
-            </div>
-            <div className="flex-grow-1">
-              <h6 className="alert-heading fw-bold mb-1">Grades Already Submitted & Approved</h6>
-              <p className="mb-0 small">
-                All grades for this class have been submitted and approved. No further action needed.
-              </p>
-            </div>
-          </div>
+        {/* Window status pill */}
+        {isWindowOpen ? (
+          <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: '#dcfce7', color: '#16a34a', fontSize: '0.8rem' }}>
+            <span className="me-1" style={{ fontSize: '0.6rem' }}>●</span> Submission Open
+          </span>
+        ) : (
+          <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.8rem' }}>
+            <span className="me-1" style={{ fontSize: '0.6rem' }}>●</span> Submission Closed
+          </span>
         )}
       </div>
 
-      {/* Class Selector & Term Filter */}
+      {/* ── Status Banners ── */}
+      {!isWindowOpen && (
+        <div className="d-flex align-items-center gap-3 rounded-3 px-4 py-3"
+          style={{ background: '#fff1f2', border: '1px solid #fecdd3' }}>
+          <Icon name="alert" size={18} style={{ color: '#e11d48', flexShrink: 0 }} />
+          <div>
+            <span className="fw-semibold" style={{ color: '#be123c', fontSize: '0.875rem' }}>
+              Grade submission is closed for {selectedTerm}.
+            </span>
+            <span className="text-muted ms-2" style={{ fontSize: '0.8rem' }}>
+              Contact the principal to open the submission window.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isWindowOpen && submissionWindow && (
+        <div className="d-flex align-items-center gap-3 rounded-3 px-4 py-3"
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <Icon name="checkCircle" size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+          <div>
+            <span className="fw-semibold" style={{ color: '#15803d', fontSize: '0.875rem' }}>
+              Submission window is open for {selectedTerm}.
+            </span>
+            <span className="text-muted ms-2" style={{ fontSize: '0.8rem' }}>
+              {submissionWindow.days_remaining > 0
+                ? `${submissionWindow.days_remaining} day${submissionWindow.days_remaining !== 1 ? 's' : ''} remaining — closes ${new Date(submissionWindow.end_date).toLocaleDateString()}.`
+                : 'Window closes today!'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {selectedSubject && allApproved && (
+        <div className="d-flex align-items-center gap-3 rounded-3 px-4 py-3"
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <Icon name="checkCircle" size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+          <span className="fw-semibold" style={{ color: '#15803d', fontSize: '0.875rem' }}>
+            All grades for this class have been submitted and approved.
+          </span>
+        </div>
+      )}
+
+      {/* ── Selectors Card ── */}
       <div className="card border-0 shadow-sm rounded-3">
         <div className="card-body p-4">
-          {/* Term Filter - Right-aligned */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <label className="form-label fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                <Icon name="calendar" size={18} />
-                <span>Select Term</span>
+          <div className="row g-3 align-items-end">
+
+            {/* Term selector */}
+            <div className="col-12 col-md-auto">
+              <label className="form-label fw-semibold text-secondary mb-2" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Term
               </label>
+              <div className="btn-group" role="group">
+                {["Term 1", "Term 2", "Term 3"].map(term => (
+                  <button
+                    key={term}
+                    type="button"
+                    className={`btn fw-semibold ${selectedTerm === term ? 'btn-primary' : 'btn-outline-secondary'}`}
+                    onClick={() => {
+                      setSelectedTerm(term);
+                      setSelectedSubject(null);
+                      setSelectedGradeLevel(null);
+                      setSubmissionWindow(null);
+                    }}
+                    style={{ fontSize: '0.875rem', padding: '8px 18px' }}
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="btn-group shadow-sm" role="group">
-              {["Term 1", "Term 2", "Term 3"].map(term => (
-                <button
-                  key={term}
-                  type="button"
-                  className={`btn ${selectedTerm === term ? 'btn-primary' : 'btn-outline-secondary'} fw-semibold px-4`}
-                  onClick={() => {
-                    setSelectedTerm(term);
-                    setSelectedSubject(null);
-                    setSubmissionWindow(null); // Reset submission window when changing terms
-                  }}
-                  style={{ padding: '10px 24px', fontSize: '0.9rem' }}
+
+            {/* Class selector */}
+            <div className="col-12 col-md">
+              <label className="form-label fw-semibold text-secondary mb-2" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Class
+              </label>
+              <select
+                value={selectedSubject || ""}
+                onChange={e => { setSelectedSubject(e.target.value); setSelectedGradeLevel(null); }}
+                className="form-select"
+                disabled={loading}
+                style={{ fontSize: '0.9rem', padding: '9px 14px', borderRadius: '0.5rem' }}
+              >
+                <option value="">— Select a class —</option>
+                {(() => {
+                  const termSubjects = subjects.filter(s => s.term === selectedTerm);
+                  const grouped: Record<string, typeof termSubjects> = {};
+                  termSubjects.forEach(subj => {
+                    const track = subj.track || 'Other / Cross-Strand';
+                    if (!grouped[track]) grouped[track] = [];
+                    grouped[track].push(subj);
+                  });
+
+                  if (Object.keys(grouped).length === 0) return null;
+
+                  return Object.entries(grouped).map(([track, items]) => (
+                    <optgroup key={track} label={track}>
+                      {items.map(subj => (
+                        <option
+                          key={`${subj.subject_name}|${subj.strand}`}
+                          value={`${subj.subject_name}|${subj.strand}`}
+                        >
+                          {subj.subject_name}
+                          {subj.strand && subj.strand !== 'All Strands' ? ` · ${subj.strand}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ));
+                })()}
+              </select>
+              {subjects.filter(s => s.term === selectedTerm).length === 0 && (
+                <p className="text-muted mb-0 mt-2" style={{ fontSize: '0.8rem' }}>
+                  No classes assigned for {selectedTerm}.
+                </p>
+              )}
+            </div>
+
+            {/* Grade Level filter */}
+            {selectedSubject && students.length > 0 && (
+              <div className="col-12 col-md-auto">
+                <label className="form-label fw-semibold text-secondary mb-2" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Grade Level
+                </label>
+                <select
+                  className="form-select"
+                  value={selectedGradeLevel ?? ""}
+                  onChange={e => setSelectedGradeLevel(e.target.value === "" ? null : Number(e.target.value))}
+                  style={{ fontSize: '0.9rem', padding: '9px 14px', borderRadius: '0.5rem', minWidth: 140 }}
                 >
-                  {term}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <hr className="my-4" style={{ opacity: 0.1 }} />
-
-          {/* Class Selector */}
-          <div>
-            <label className="form-label fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-              <Icon name="book" size={18} />
-              <span>Select Class</span>
-            </label>
-            <select
-              value={selectedSubject || ""}
-              onChange={e => setSelectedSubject(e.target.value)}
-              className="form-select form-select-lg shadow-sm"
-              disabled={loading}
-              style={{ fontSize: '1rem', padding: '14px 18px', borderRadius: '0.5rem' }}
-            >
-              <option value="">-- Select a class --</option>
-              {subjects.filter(s => s.term === selectedTerm).map(subj => (
-                <option key={`${subj.subject_name}|${subj.strand}`} value={`${subj.subject_name}|${subj.strand}`}>
-                  {subj.subject_name} - {subj.strand}
-                </option>
-              ))}
-            </select>
-            {subjects.filter(s => s.term === selectedTerm).length === 0 && (
-              <div className="alert alert-info d-flex align-items-center gap-2 mt-3 mb-0">
-                <Icon name="alert" size={16} />
-                <span className="small">No classes assigned for {selectedTerm}</span>
+                  <option value="">All Levels</option>
+                  {[11, 12].map(gl => {
+                    const hasStudents = students.some(s => s.grade_level === gl);
+                    return (
+                      <option key={gl} value={gl} disabled={!hasStudents}>
+                        Grade {gl}{!hasStudents ? ' (none)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
             )}
+
           </div>
         </div>
       </div>
 
-      {/* Progress Card */}
-      {selectedSubject && (
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
-            <div className="d-flex justify-content-between align-items-start mb-3">
-              <div className="text-white">
-                <h3 className="fw-bold mb-1 fs-5">{selectedSubject.split("|")[0]}</h3>
-                <p className="mb-0 opacity-75" style={{ fontSize: '0.9rem' }}>
-                  {selectedSubject.split("|")[1]} · {selectedTerm}
-                </p>
-              </div>
-              {lastAutoSave && timeSinceAutoSave !== null && (
-                <span className="badge bg-white text-primary fw-semibold px-3 py-2">
-                   Auto-saved {timeSinceAutoSave}s ago
-                </span>
-              )}
-            </div>
-
-            {/* Progress Bar */}
-            <div className="mb-4">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <span className="small fw-bold text-white">Submission Progress</span>
-                <span className="small text-white opacity-75">
-                  {gradedStudents.length} of {students.length} students ({progressPercentage}%)
-                </span>
-              </div>
-              <div className="progress" style={{ height: 14, background: 'rgba(255,255,255,0.2)' }}>
-                <div
-                  className="progress-bar bg-white"
-                  style={{ width: `${progressPercentage}%` }}
-                  role="progressbar"
-                />
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="row g-3">
-              <div className="col-6">
-                <div className="card border-0 bg-white bg-opacity-25 text-white">
-                  <div className="card-body p-3">
-                    <div className="small opacity-75 mb-1">Class Average</div>
-                    <div className="fw-bold fs-3">{classAverage}%</div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="card border-0 bg-white bg-opacity-25 text-white">
-                  <div className="card-body p-3">
-                    <div className="small opacity-75 mb-1">Total Students</div>
-                    <div className="fw-bold fs-3">{students.length}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar */}
-      {selectedSubject && students.length > 0 && (
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-3">
-            <div className="input-group input-group-lg">
-              <span className="input-group-text bg-light border-end-0">
-                <Icon name="search" size={20} />
-              </span>
-              <input
-                type="text"
-                className="form-control bg-light border-start-0 border-end-0"
-                placeholder="Search students by name or ID..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ fontSize: '1rem' }}
-              />
-              {search && (
-                <button
-                  className="btn bg-light border-start-0"
-                  onClick={() => setSearch('')}
-                  title="Clear search"
-                >
-                  <Icon name="close" size={18} />
-                </button>
-              )}
-            </div>
-            {search && filteredStudents.length > 0 && (
-              <div className="text-muted small mt-2">
-                Found {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Students Table */}
+      {/* ── Class Overview ── */}
       {selectedSubject && (
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="card-body p-4" style={{ background: '#f8fafc' }}>
+            <div className="row align-items-center g-3">
+
+              {/* Subject info */}
+              <div className="col-md-5">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>
+                    <Icon name="book" size={20} style={{ color: '#fff' }} />
+                  </div>
+                  <div>
+                    <h5 className="fw-bold mb-0" style={{ color: '#1e293b', fontSize: '1rem' }}>
+                      {selectedSubject.split("|")[0]}
+                    </h5>
+                    <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                      {currentSubjectData?.track ? `${currentSubjectData.track} · ` : ''}{selectedSubject.split("|")[1]} &nbsp;·&nbsp; {selectedTerm}
+                    </span>
+                    {lastAutoSave && timeSinceAutoSave !== null && (
+                      <span className="ms-2 badge rounded-pill fw-normal"
+                        style={{ background: '#ede9fe', color: '#7c3aed', fontSize: '0.73rem' }}>
+                        Auto-saved {timeSinceAutoSave}s ago
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="col-md-7">
+                <div className="row g-3">
+                  <div className="col-4">
+                    <div className="text-center">
+                      <div className="fw-bold" style={{ fontSize: '1.4rem', color: '#1e293b' }}>
+                        {students.length}
+                      </div>
+                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>Students</div>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="text-center">
+                      <div className="fw-bold" style={{ fontSize: '1.4rem', color: '#16a34a' }}>
+                        {gradedStudents.length}
+                      </div>
+                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>Graded</div>
+                    </div>
+                  </div>
+                  <div className="col-4">
+                    <div className="text-center">
+                      <div className="fw-bold" style={{ fontSize: '1.4rem', color: '#2563eb' }}>
+                        {classAverage}%
+                      </div>
+                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>Class Avg</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-3">
+                  <div className="d-flex justify-content-between mb-1">
+                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>Submission progress</span>
+                    <span className="fw-semibold" style={{ fontSize: '0.75rem', color: '#475569' }}>
+                      {progressPercentage}%
+                    </span>
+                  </div>
+                  <div className="rounded-pill overflow-hidden" style={{ height: 8, background: '#e2e8f0' }}>
+                    <div
+                      className="h-100 rounded-pill"
+                      style={{
+                        width: `${progressPercentage}%`,
+                        background: progressPercentage === 100
+                          ? '#16a34a'
+                          : 'linear-gradient(90deg, #667eea, #764ba2)',
+                        transition: 'width 0.4s ease'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Students Table Card ── */}
+      {selectedSubject && (
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+
+          {/* Table toolbar */}
+          {students.length > 0 && (
+            <div className="px-4 py-3 d-flex align-items-center gap-3"
+              style={{ borderBottom: '1px solid #f1f5f9', background: '#fff' }}>
+              <div className="input-group" style={{ maxWidth: 320 }}>
+                <span className="input-group-text bg-white border-end-0 text-muted" style={{ borderRadius: '0.5rem 0 0 0.5rem' }}>
+                  <Icon name="search" size={16} />
+                </span>
+                <input
+                  type="text"
+                  className="form-control border-start-0 ps-1"
+                  placeholder="Search by name or ID…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ fontSize: '0.875rem', borderRadius: '0 0.5rem 0.5rem 0' }}
+                />
+                {search && (
+                  <button
+                    className="btn btn-link text-muted p-0 ms-2"
+                    onClick={() => setSearch('')}
+                    title="Clear"
+                    style={{ fontSize: '0.8rem', textDecoration: 'none' }}
+                  >
+                    <Icon name="close" size={15} />
+                  </button>
+                )}
+              </div>
+              {search && (
+                <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                  {filteredStudents.length} result{filteredStudents.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Table */}
           <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <table className="table table-hover align-middle mb-0">
+              <thead style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                 <tr>
-                  <th className="ps-4 py-3 small fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Student</th>
-                  <th className="py-3 small fw-bold text-uppercase d-none d-md-table-cell" style={{ letterSpacing: "0.08em" }}>Student ID</th>
-                  <th className="py-3 small fw-bold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing: "0.08em" }}>Track/Strand</th>
-                  <th className="py-3 small fw-bold text-uppercase" style={{ letterSpacing: "0.08em" }}>Grade (%)</th>
-                  <th className="py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 100 }}>Status</th>
-                  <th className="pe-4 py-3 small fw-bold text-uppercase text-center" style={{ letterSpacing: "0.08em", width: 120 }}>Action</th>
+                  <th className="ps-4 py-3 fw-semibold text-secondary" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Student</th>
+                  <th className="py-3 fw-semibold text-secondary d-none d-md-table-cell" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Student ID</th>
+                  <th className="py-3 fw-semibold text-secondary d-none d-lg-table-cell" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Track / Strand</th>
+                  <th className="py-3 fw-semibold text-secondary d-none d-lg-table-cell" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Grade Level</th>
+                  <th className="py-3 fw-semibold text-secondary" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', width: 160 }}>Grade (%)</th>
+                  <th className="py-3 fw-semibold text-secondary text-center" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', width: 110 }}>Status</th>
+                  <th className="pe-4 py-3 fw-semibold text-secondary text-center" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', width: 140 }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-4">
+                    <td colSpan={7} className="text-center py-5">
                       <div className="spinner-border spinner-border-sm text-primary me-2" />
-                      <span className="text-muted small">Loading students...</span>
+                      <span className="text-muted" style={{ fontSize: '0.875rem' }}>Loading students…</span>
                     </td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-4 text-muted small">
-                      {search ? `No students found matching "${search}"` : 'No students enrolled in this class'}
+                    <td colSpan={7} className="text-center py-5 text-muted" style={{ fontSize: '0.875rem' }}>
+                      {search ? `No students found matching "${search}"` : 'No students enrolled in this class.'}
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map(student => {
+                  filteredStudents.map((student, idx) => {
                     const hasGrade = editedGrades[student.student_id] && editedGrades[student.student_id] !== '';
                     const gradeValue = editedGrades[student.student_id] || '';
                     const isValid = gradeValue === '' || (!isNaN(parseFloat(gradeValue)) && parseFloat(gradeValue) >= 0 && parseFloat(gradeValue) <= 100);
 
                     return (
-                      <tr key={student.student_id}>
-                        <td className="ps-4">
-                          <div className="d-flex align-items-center gap-2">
+                      <tr key={student.student_id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+
+                        {/* Student name + avatar */}
+                        <td className="ps-4 py-3">
+                          <div className="d-flex align-items-center gap-3">
                             {student.photo_url && !imageErrors.has(student.student_id) ? (
                               <img
                                 src={student.photo_url}
                                 alt={student.full_name}
-                                className="rounded-circle"
-                                style={{ width: 32, height: 32, objectFit: 'cover' }}
+                                className="rounded-circle flex-shrink-0"
+                                style={{ width: 36, height: 36, objectFit: 'cover', border: '2px solid #e2e8f0' }}
                                 onError={() => handleImageError(student.student_id)}
                               />
                             ) : (
                               <div
-                                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                                style={{ width: 32, height: 32, fontSize: '0.75rem' }}
+                                className="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center fw-bold text-white"
+                                style={{
+                                  width: 36, height: 36, fontSize: '0.75rem',
+                                  background: 'linear-gradient(135deg, #667eea, #764ba2)'
+                                }}
                               >
                                 {student.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                               </div>
                             )}
-                            <span className="small fw-medium">{student.full_name}</span>
+                            <span className="fw-medium" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
+                              {student.full_name}
+                            </span>
                           </div>
                         </td>
-                        <td className="d-none d-md-table-cell small text-muted">{student.student_id}</td>
-                        <td className="d-none d-lg-table-cell small text-muted">{student.pathway}</td>
-                        <td>
+
+                        {/* Student ID */}
+                        <td className="d-none d-md-table-cell py-3 text-muted" style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                          {student.student_id}
+                        </td>
+
+                        {/* Track / Strand */}
+                        <td className="d-none d-lg-table-cell py-3">
+                          {student.track && student.strand ? (
+                            <div>
+                              <div className="fw-medium" style={{ fontSize: '0.8rem', color: '#334155' }}>{student.track}</div>
+                              <div className="text-muted" style={{ fontSize: '0.74rem' }}>{student.strand}</div>
+                            </div>
+                          ) : student.track ? (
+                            <span style={{ fontSize: '0.8rem', color: '#334155' }}>{student.track}</span>
+                          ) : student.pathway ? (
+                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{student.pathway}</span>
+                          ) : (
+                            <span className="text-muted fst-italic" style={{ fontSize: '0.8rem' }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Grade Level */}
+                        <td className="d-none d-lg-table-cell py-3 text-muted" style={{ fontSize: '0.8rem' }}>
+                          {student.grade_level ? (
+                            <span className="badge rounded-pill fw-normal px-2"
+                              style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '0.78rem' }}>
+                              Grade {student.grade_level}
+                            </span>
+                          ) : '—'}
+                        </td>
+
+                        {/* Grade input */}
+                        <td className="py-3">
                           <div className="d-flex align-items-center gap-2">
                             <input
                               type="number"
-                              className={`form-control ${!isValid ? 'is-invalid border-danger' : hasGrade && isValid ? 'border-success' : ''}`}
-                              style={{ 
-                                width: 120, 
+                              className={`form-control form-control-sm ${!isValid ? 'is-invalid' : hasGrade && isValid ? 'border-success' : ''}`}
+                              style={{
+                                width: 100,
                                 fontWeight: hasGrade ? '600' : 'normal',
-                                fontSize: '0.95rem'
+                                fontSize: '0.9rem',
+                                borderRadius: '0.4rem'
                               }}
                               value={gradeValue}
                               onChange={e => handleGradeChange(student.student_id, e.target.value)}
-                              placeholder="0-100"
+                              placeholder="0–100"
                               min="0"
                               max="100"
                               step="0.01"
                               disabled={!isWindowOpen || student.submission_status === 'approved'}
                             />
                             {hasGrade && isValid && (
-                              <span className="badge bg-success-subtle text-success px-2">✓</span>
+                              <span style={{ color: '#16a34a', fontSize: '1rem' }}>✓</span>
                             )}
                           </div>
                         </td>
-                        <td className="text-center">
+
+                        {/* Status badge */}
+                        <td className="py-3 text-center">
                           {student.submission_status === 'approved' ? (
-                            <span className="badge bg-success text-white fw-semibold">Approved</span>
+                            <span className="badge rounded-pill px-3 py-1 fw-semibold" style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.76rem' }}>Approved</span>
                           ) : hasGrade && isValid ? (
-                            <span className="badge bg-info text-white fw-semibold">Ready</span>
+                            <span className="badge rounded-pill px-3 py-1 fw-semibold" style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.76rem' }}>Ready</span>
                           ) : !isValid && gradeValue !== '' ? (
-                            <span className="badge bg-danger text-white fw-semibold">Invalid</span>
+                            <span className="badge rounded-pill px-3 py-1 fw-semibold" style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.76rem' }}>Invalid</span>
                           ) : (
-                            <span className="badge bg-secondary text-white fw-semibold">Pending</span>
+                            <span className="badge rounded-pill px-3 py-1 fw-semibold" style={{ background: '#f1f5f9', color: '#64748b', fontSize: '0.76rem' }}>Pending</span>
                           )}
                         </td>
-                        <td className="pe-4 text-center">
+
+                        {/* Action */}
+                        <td className="pe-4 py-3 text-center">
                           {student.submission_status === 'approved' && (() => {
                             const approvedReq = getApprovedRequest(student.student_id);
                             const hasActive = hasActiveEditRequest(student.student_id);
-                            
+
                             if (approvedReq) {
-                              // Has approved request - show Apply button
                               return (
                                 <button
                                   className="btn btn-sm btn-success"
@@ -1844,25 +2091,25 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                                     setShowApplyModal(true);
                                   }}
                                   title="Apply approved grade correction"
+                                  style={{ fontSize: '0.78rem' }}
                                 >
-                                  <Icon name="checkCircle" size={14} className="me-1" />
-                                  Apply Correction
+                                  <Icon name="checkCircle" size={13} className="me-1" />
+                                  Apply
                                 </button>
                               );
                             } else if (hasActive) {
-                              // Has pending request
                               return (
                                 <button
                                   className="btn btn-sm btn-outline-secondary"
                                   disabled
                                   title="Request already submitted"
+                                  style={{ fontSize: '0.78rem' }}
                                 >
-                                  <Icon name="clock" size={14} className="me-1" />
+                                  <Icon name="clock" size={13} className="me-1" />
                                   Pending
                                 </button>
                               );
                             } else {
-                              // No request - show Request Edit button
                               return (
                                 <button
                                   className="btn btn-sm btn-outline-primary"
@@ -1873,14 +2120,16 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
                                     setShowEditRequestModal(true);
                                   }}
                                   title="Request to edit this grade"
+                                  style={{ fontSize: '0.78rem' }}
                                 >
-                                  <Icon name="send" size={14} className="me-1" />
+                                  <Icon name="send" size={13} className="me-1" />
                                   Request Edit
                                 </button>
                               );
                             }
                           })()}
                         </td>
+
                       </tr>
                     );
                   })
@@ -1891,56 +2140,53 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* ── Action Buttons ── */}
       {selectedSubject && students.length > 0 && isWindowOpen && !allApproved && (
-        <div className="d-flex gap-2 justify-content-end">
-          <button
-            className="btn btn-outline-secondary"
-            onClick={() => {
-              setEditedGrades({});
-              loadStudents();
-            }}
-            disabled={saving || submitting}
-          >
-            Cancel Changes
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={saveAllDrafts}
-            disabled={saving || submitting || Object.keys(editedGrades).length === 0}
-          >
-            {saving ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" />
-                Saving...
-              </>
-            ) : (
-              <>
-                💾 Save All Drafts
-              </>
-            )}
-          </button>
-          <button
-            className="btn btn-success"
-            onClick={() => setShowConfirmModal(true)}
-            disabled={!canSubmit || saving || submitting || allApproved}
-            title={allApproved ? "Grades already submitted and approved" : ""}
-          >
-            {submitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" />
-                Submitting...
-              </>
-            ) : allApproved ? (
-              <>
-                ✅ Already Submitted
-              </>
-            ) : (
-              <>
-                📤 Submit All Grades
-              </>
-            )}
-          </button>
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body px-4 py-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <p className="mb-0 text-muted" style={{ fontSize: '0.8rem' }}>
+              {Object.keys(editedGrades).length > 0
+                ? `${Object.keys(editedGrades).length} grade${Object.keys(editedGrades).length !== 1 ? 's' : ''} entered — save drafts or submit when ready.`
+                : 'Enter grades above, then save or submit.'}
+            </p>
+            <div className="d-flex gap-2 flex-wrap">
+              <button
+                className="btn btn-outline-secondary btn-sm px-3"
+                onClick={() => { setEditedGrades({}); loadStudents(); }}
+                disabled={saving || submitting}
+                style={{ fontSize: '0.875rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-sm px-3"
+                onClick={saveAllDrafts}
+                disabled={saving || submitting || Object.keys(editedGrades).length === 0}
+                style={{ fontSize: '0.875rem' }}
+              >
+                {saving ? (
+                  <><span className="spinner-border spinner-border-sm me-1" /> Saving…</>
+                ) : (
+                  <>💾 Save Drafts</>
+                )}
+              </button>
+              <button
+                className="btn btn-success btn-sm px-3"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={!canSubmit || saving || submitting || allApproved}
+                title={allApproved ? "Grades already submitted and approved" : ""}
+                style={{ fontSize: '0.875rem' }}
+              >
+                {submitting ? (
+                  <><span className="spinner-border spinner-border-sm me-1" /> Submitting…</>
+                ) : allApproved ? (
+                  <>✅ Already Submitted</>
+                ) : (
+                  <>📤 Submit All Grades</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2391,79 +2637,68 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
   // Lock check (tracked but not displayed currently)
 
   return (
-    <div className="d-flex flex-column gap-4">
+    <div className="d-flex flex-column gap-3">
+
       {/* Toast */}
       {toast && (
-        <div className="position-fixed bottom-0 end-0 m-4 alert alert-success shadow-lg rounded-3 py-3 px-4 d-flex align-items-center gap-3"
-          style={{ zIndex: 9999, fontSize: 14, minWidth: 300, animation: "fadeInUp 0.3s ease" }}>
-          <Icon name="checkCircle" size={20} />
+        <div className="position-fixed bottom-0 end-0 m-4 rounded-3 px-4 py-3 d-flex align-items-center gap-3 shadow-lg"
+          style={{ zIndex: 9999, fontSize: '0.875rem', minWidth: 300, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}>
+          <Icon name="checkCircle" size={18} />
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Header - Enhanced */}
-      <div className="card border-0 shadow-sm rounded-3" style={{ background: "linear-gradient(135deg, #374151 0%, #4b5563 100%)" }}>
-        <div className="card-body p-4">
-          <div className="d-flex align-items-center gap-3">
-            <div className="bg-white bg-opacity-25 rounded-3 p-3">
-              <Icon name="requests" size={32} />
-            </div>
-            <div className="flex-grow-1 text-white">
-              <h2 className="fw-bold mb-1 fs-3">Grade Requests</h2>
-              <p className="mb-0 opacity-75">Manage student grade requests from all terms</p>
-            </div>
-            {/* Total count badge - Fixed */}
-            <div className="d-none d-md-block">
-              <div className="text-center px-4 py-3 rounded-3" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)" }}>
-                <div className="text-white fw-bold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>{requests.length}</div>
-                <div className="text-white opacity-75 small mt-1">Total</div>
-              </div>
-            </div>
-          </div>
+      {/* Page Header */}
+      <div className="d-flex align-items-center justify-content-between">
+        <div>
+          <h4 className="fw-bold mb-0" style={{ color: '#1e293b' }}>Grade Requests</h4>
+          <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+            Manage student grade requests from all terms
+          </p>
         </div>
+        <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '0.8rem' }}>
+          {requests.length} Total
+        </span>
       </div>
 
-      {/* Lock banner - Enhanced */}
+      {/* Lock Banner */}
       {isGradeLocked && (
-        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-3 mb-0" role="alert">
-          <div style={{ marginTop: 4 }}>
-            <Icon name="lock" size={24} />
-          </div>
-          <div className="flex-grow-1">
-            <h6 className="alert-heading fw-bold mb-1">Actions Locked</h6>
-            <p className="mb-0 small">
-              {activeTerm} deadline has passed. Visit the <strong>Registrar's Office</strong> to restore access.
-            </p>
+        <div className="d-flex align-items-center gap-3 rounded-3 px-4 py-3"
+          style={{ background: '#fff1f2', border: '1px solid #fecdd3' }}>
+          <Icon name="lock" size={18} style={{ color: '#e11d48', flexShrink: 0 }} />
+          <div>
+            <span className="fw-semibold" style={{ color: '#be123c', fontSize: '0.875rem' }}>
+              Actions are locked for {activeTerm}.
+            </span>
+            <span className="text-muted ms-2" style={{ fontSize: '0.8rem' }}>
+              Visit the <strong>Registrar&apos;s Office</strong> to restore access.
+            </span>
           </div>
         </div>
       )}
 
-      {/* Pipeline workflow - Enhanced */}
-      <div className="card border-0 shadow-lg rounded-3 overflow-hidden">
+      {/* Workflow Pipeline */}
+      <div className="card border-0 shadow-sm rounded-3">
         <div className="card-body p-4">
-          <div className="d-flex align-items-center gap-2 mb-4">
-            <Icon name="activity" size={20} className="text-primary" />
-            <h3 className="fw-bold mb-0">Grade Request Workflow</h3>
-          </div>
-          <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto pb-2">
+          <p className="fw-semibold text-secondary mb-3" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Workflow Progress
+          </p>
+          <div className="d-flex align-items-center gap-2 overflow-auto pb-1">
             {[
-              { label: "Student Requested",    count: newRequests.length,     gradient: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", icon: "bell" },
-              { label: "Teacher Calculating",  count: inProgress.length,      gradient: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", icon: "chart" },
-              { label: "Principal Review",     count: pendingAdmin.length,    gradient: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", icon: "user" },
-              { label: "Principal Verified",   count: verifiedByAdmin.length, gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)", icon: "checkCircle" },
-              { label: "Released to Student",  count: released.length,        gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)", icon: "check" },
+              { label: "Student\nRequested",   count: newRequests.length,     bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+              { label: "Teacher\nCalculating", count: inProgress.length,      bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
+              { label: "Principal\nReview",    count: pendingAdmin.length,    bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+              { label: "Principal\nVerified",  count: verifiedByAdmin.length, bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+              { label: "Released to\nStudent", count: released.length,        bg: '#f0fdf4', color: '#14532d', border: '#86efac' },
             ].map((step, i, arr) => (
-              <div key={i} className="d-flex align-items-center gap-3 flex-shrink-0">
-                <div className="text-center" style={{ minWidth: 110 }}>
-                  <div className="rounded-3 d-flex flex-column align-items-center justify-content-center text-white p-3 shadow-sm mx-auto mb-2"
-                    style={{ background: step.gradient, minHeight: 90 }}>
-                    <Icon name={step.icon as IconName} size={24} className="mb-2" />
-                    <div className="fw-bold fs-3">{step.count}</div>
-                  </div>
-                  <div className="small fw-semibold text-dark" style={{ lineHeight: 1.3 }}>{step.label}</div>
+              <div key={i} className="d-flex align-items-center gap-2 flex-shrink-0">
+                <div className="rounded-3 px-3 py-2 text-center flex-shrink-0"
+                  style={{ background: step.bg, border: `1px solid ${step.border}`, minWidth: 100 }}>
+                  <div className="fw-bold" style={{ fontSize: '1.6rem', color: step.color, lineHeight: 1 }}>{step.count}</div>
+                  <div style={{ fontSize: '0.72rem', color: step.color, whiteSpace: 'pre-line', marginTop: 4, lineHeight: 1.3 }}>{step.label}</div>
                 </div>
                 {i < arr.length - 1 && (
-                  <div style={{ marginTop: -30 }}><Icon name="arrowRight" size={20} className="text-muted flex-shrink-0" /></div>
+                  <span className="text-muted flex-shrink-0" style={{ fontSize: '0.9rem' }}>&rarr;</span>
                 )}
               </div>
             ))}
@@ -2471,179 +2706,267 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       </div>
 
-      {/* STEP 1 – New student requests - Enhanced */}
+      {/* STEP 1 - New Requests */}
       {newRequests.length > 0 && (
-        <div>
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <div className="rounded-circle bg-warning bg-opacity-25 p-2">
-              <Icon name="bell" size={18} className="text-warning" />
-            </div>
-            <h3 className="fw-bold mb-0">New Student Requests - Action Required</h3>
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#fff7ed', borderBottom: '1px solid #fed7aa' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#c2410c' }}>
+              Action Required — New Student Requests ({newRequests.length})
+            </span>
           </div>
-          <div className="d-flex flex-column gap-3">
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {newRequests.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3 border-start border-5 border-warning">
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div className="flex-grow-1">
-                      <div className="fw-bold text-dark fs-6 mb-2">{req.student_name || req.full_name}</div>
-                      <div className="d-flex flex-wrap gap-2 align-items-center">
-                        <span className="badge bg-light text-dark border px-3 py-2">
-                          <Icon name="book" size={12} className="me-1" />
-                          {req.subject_code || req.subject_name}
-                        </span>
-                        <span className="badge bg-light text-dark border px-3 py-2">
-                          <Icon name="calendar" size={12} className="me-1" />
-                          {req.term}
-                        </span>
-                        <span className="badge bg-light text-dark border px-3 py-2">
-                          <Icon name="clock" size={12} className="me-1" />
-                          {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}
-                        </span>
-                      </div>
+              <div key={req.id} className="bg-white px-4 py-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                      {req.student_name || req.full_name}
                     </div>
-                    <span className="badge bg-warning text-white px-3 py-2 fw-semibold">{statusLabel(req.status)}</span>
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.subject_code || req.subject_name}
+                      </span>
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.term}
+                      </span>
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
                   </div>
-                  {isGradeLocked
-                    ? <div className="alert alert-danger py-2 text-center small mb-0">🔒 Locked - visit Registrar's Office</div>
-                    : <div className="d-flex gap-2">
-                        <button onClick={() => acceptRequest(req.id)} className="btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2">
-                          <Icon name="check" size={18} />
-                          Accept & Calculate
-                        </button>
-                        <button onClick={() => rejectRequest(req.id)} className="btn btn-outline-danger d-flex align-items-center gap-2">
-                          <Icon name="x" size={18} />
-                          Reject
-                        </button>
-                      </div>
-                  }
+                  <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                    style={{ background: '#fff7ed', color: '#c2410c', fontSize: '0.74rem' }}>
+                    {statusLabel(req.status)}
+                  </span>
                 </div>
+                {isGradeLocked ? (
+                  <div className="rounded-3 px-3 py-2 text-center"
+                    style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8rem', color: '#be123c' }}>
+                    Locked — visit the Registrar&apos;s Office
+                  </div>
+                ) : (
+                  <div className="d-flex gap-2">
+                    <button onClick={() => acceptRequest(req.id)}
+                      className="btn btn-sm btn-success flex-grow-1"
+                      style={{ fontSize: '0.875rem' }}>
+                      Accept &amp; Calculate
+                    </button>
+                    <button onClick={() => rejectRequest(req.id)}
+                      className="btn btn-sm btn-outline-danger"
+                      style={{ fontSize: '0.875rem' }}>
+                      Reject
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* STEP 2 � Teacher calculating, enter grade form */}
+      {/* STEP 2 - Teacher Calculating */}
       {inProgress.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3">Enter &amp; Submit Grades to Principal</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#475569' }}>
+              Enter &amp; Submit Grades to Principal ({inProgress.length})
+            </span>
+          </div>
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {inProgress.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3" style={{ border: "1.5px solid #bfdbfe" }}>
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div className="flex-grow-1">
-                      <div className="fw-bold text-dark mb-1">{req.student_name || req.full_name}</div>
-                      <div className="text-muted small">{req.subject_code || req.subject_name}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>{activeTerm}</div>
+              <div key={req.id} className="bg-white px-4 py-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                      {req.student_name || req.full_name}
                     </div>
-                    <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
-                  </div>
-                  <div className="row g-2 mb-3">
-                    <div className="col-4">
-                      <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 10 }}>Score (0�100)</label>
-                      <input type="number" min={0} max={100}
-                        value={grading[req.id]?.score ?? ""}
-                        onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], score: e.target.value, remarks: prev[req.id]?.remarks ?? "" } }))}
-                        className="form-control form-control-sm rounded-3"
-                        placeholder="e.g. 91" />
-                    </div>
-                    <div className="col-8">
-                      <label className="form-label fw-semibold text-uppercase mb-1" style={{ fontSize: 10 }}>Remarks (optional)</label>
-                      <input type="text"
-                        value={grading[req.id]?.remarks ?? ""}
-                        onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], remarks: e.target.value, score: prev[req.id]?.score ?? "" } }))}
-                        className="form-control form-control-sm rounded-3"
-                        placeholder="e.g. Excellent performance" />
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.subject_code || req.subject_name}
+                      </span>
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {activeTerm}
+                      </span>
                     </div>
                   </div>
-                  {grading[req.id]?.score && !isNaN(Number(grading[req.id].score)) && (
-                    <div className="mb-3 p-2 rounded-3 bg-success-subtle text-success small fw-semibold">
-                      Computed grade: <strong>
-                        {(() => { const s = Number(grading[req.id].score); return s >= 97 ? "A+" : s >= 93 ? "A" : s >= 90 ? "A-" : s >= 87 ? "B+" : s >= 83 ? "B" : s >= 80 ? "B-" : s >= 77 ? "C+" : s >= 73 ? "C" : s >= 70 ? "C-" : s >= 65 ? "D" : "F"; })()}
-                      </strong> ({grading[req.id].score}%)
-                    </div>
-                  )}
-                  {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small" style={{ background: "#f3f4f6", border: "1px dashed #d1d5db", color: "#4b5563" }}>Locked - visit Registrar's Office</div>
-                    : <button onClick={() => submitToAdmin(req.id)} className="btn btn-primary btn-sm w-100">Submit to Principal for Verification</button>
-                  }
+                  <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                    style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.74rem' }}>
+                    {statusLabel(req.status)}
+                  </span>
                 </div>
+                <div className="row g-2 mb-3">
+                  <div className="col-sm-4">
+                    <label className="form-label fw-semibold text-secondary mb-1" style={{ fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Score (0-100)
+                    </label>
+                    <input type="number" min={0} max={100}
+                      value={grading[req.id]?.score ?? ""}
+                      onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], score: e.target.value, remarks: prev[req.id]?.remarks ?? "" } }))}
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 91"
+                      style={{ borderRadius: '0.4rem' }} />
+                  </div>
+                  <div className="col-sm-8">
+                    <label className="form-label fw-semibold text-secondary mb-1" style={{ fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Remarks (optional)
+                    </label>
+                    <input type="text"
+                      value={grading[req.id]?.remarks ?? ""}
+                      onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], remarks: e.target.value, score: prev[req.id]?.score ?? "" } }))}
+                      className="form-control form-control-sm"
+                      placeholder="e.g. Excellent performance"
+                      style={{ borderRadius: '0.4rem' }} />
+                  </div>
+                </div>
+                {grading[req.id]?.score && !isNaN(Number(grading[req.id].score)) && (
+                  <div className="rounded-3 px-3 py-2 mb-3 d-flex align-items-center gap-2"
+                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.8rem', color: '#15803d' }}>
+                    <Icon name="checkCircle" size={15} />
+                    Computed grade: <strong className="ms-1">
+                      {(() => { const s = Number(grading[req.id].score); return s >= 97 ? "A+" : s >= 93 ? "A" : s >= 90 ? "A-" : s >= 87 ? "B+" : s >= 83 ? "B" : s >= 80 ? "B-" : s >= 77 ? "C+" : s >= 73 ? "C" : s >= 70 ? "C-" : s >= 65 ? "D" : "F"; })()}
+                    </strong>
+                    <span className="ms-1 text-muted">({grading[req.id].score}%)</span>
+                  </div>
+                )}
+                {isGradeLocked ? (
+                  <div className="rounded-3 px-3 py-2 text-center"
+                    style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', fontSize: '0.8rem', color: '#64748b' }}>
+                    Locked — visit the Registrar&apos;s Office
+                  </div>
+                ) : (
+                  <button onClick={() => submitToAdmin(req.id)}
+                    className="btn btn-sm btn-primary w-100"
+                    style={{ fontSize: '0.875rem' }}>
+                    Submit to Principal for Verification
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* STEP 3 � Waiting for admin */}
+      {/* STEP 3 - Awaiting Principal */}
       {pendingAdmin.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3">Awaiting Principal Verification</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#f5f3ff', borderBottom: '1px solid #ddd6fe' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#8b5cf6', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#6d28d9' }}>
+              Awaiting Principal Verification ({pendingAdmin.length})
+            </span>
+          </div>
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {pendingAdmin.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-85">
-                <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-primary" style={{ width: 40, height: 40 }}><Icon name="requests" size={20} /></div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.full_name} · {req.subject_title}</div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Submitted: {req.submittedToAdminAt}</div>
-                  </div>
-                  <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
+              <div key={req.id} className="bg-white px-4 py-3 d-flex align-items-center gap-3">
+                <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: 36, height: 36, background: '#f5f3ff' }}>
+                  <Icon name="requests" size={18} style={{ color: '#8b5cf6' }} />
                 </div>
+                <div className="flex-grow-1">
+                  <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
+                    {req.full_name} · {req.subject_title}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                    Score: {req.score}% ({req.letterGrade}) · Submitted: {req.submittedToAdminAt}
+                  </div>
+                </div>
+                <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                  style={{ background: '#f5f3ff', color: '#6d28d9', fontSize: '0.74rem' }}>
+                  {statusLabel(req.status)}
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* STEP 4 � Admin verified, teacher must release */}
+      {/* STEP 4 - Principal Verified */}
       {verifiedByAdmin.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3">Principal Verified - Release to Student</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#15803d' }}>
+              Principal Verified — Release to Student ({verifiedByAdmin.length})
+            </span>
+          </div>
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {verifiedByAdmin.map(req => (
-              <div key={req.id} className="card border-0 rounded-3" style={{ border: "1.5px solid #bbf7d0" }}>
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
-                    <div>
-                      <div className="fw-bold text-dark small">{req.full_name} · {req.subject_title}</div>
-                      <div className="text-muted" style={{ fontSize: 11 }}>Score: {req.score}% ({req.letterGrade}) · Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}</div>
-                      {req.adminNote && <div className="text-muted fst-italic" style={{ fontSize: 11 }}>Admin note: {req.adminNote}</div>}
+              <div key={req.id} className="bg-white px-4 py-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                      {req.full_name} · {req.subject_title}
                     </div>
-                    <span className={`badge ${statusBadgeClass(req.status)}`} style={{ fontSize: 10 }}>{statusLabel(req.status)}</span>
+                    <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                      Score: {req.score}% ({req.letterGrade}) · Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}
+                    </div>
+                    {req.adminNote && (
+                      <div className="text-muted fst-italic mt-1" style={{ fontSize: '0.76rem' }}>
+                        Note: {req.adminNote}
+                      </div>
+                    )}
                   </div>
-                  {isGradeLocked
-                    ? <div className="rounded-3 p-2 text-center small" style={{ background: "#f3f4f6", border: "1px dashed #d1d5db", color: "#4b5563" }}>Locked - visit Registrar's Office</div>
-                    : <button onClick={() => releaseToStudent(req.id)} className="btn btn-success btn-sm w-100">Release Grade to Student</button>
-                  }
+                  <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                    style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.74rem' }}>
+                    {statusLabel(req.status)}
+                  </span>
                 </div>
+                {isGradeLocked ? (
+                  <div className="rounded-3 px-3 py-2 text-center"
+                    style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', fontSize: '0.8rem', color: '#64748b' }}>
+                    Locked — visit the Registrar&apos;s Office
+                  </div>
+                ) : (
+                  <button onClick={() => releaseToStudent(req.id)}
+                    className="btn btn-sm btn-success w-100"
+                    style={{ fontSize: '0.875rem' }}>
+                    Release Grade to Student
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* STEP 5 � Released */}
+      {/* STEP 5 - Released */}
       {released.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3">🎓 Released to Students</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#14532d' }}>
+              Released to Students ({released.length})
+            </span>
+          </div>
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {released.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
-                <div className="card-body p-3 d-flex align-items-center gap-3">
-                  <div className="rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0 text-success" style={{ width: 40, height: 40 }}><Icon name="checkCircle" size={20} /></div>
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small text-dark">{req.student_name || req.full_name}</div>
-                    <div className="text-muted" style={{ fontSize: 12 }}>
-                      {req.subject_name} {req.strand && `- ${req.strand}`}
-                    </div>
-                    <div className="text-muted" style={{ fontSize: 11 }}>
-                      Final Grade: {req.letterGrade} ({req.score}%) – Released: {req.releasedAt}
-                    </div>
-                  </div>
-                  <span className="badge bg-success text-white" style={{ fontSize: 10 }}><Icon name="check" size={12} className="me-1" /> Released</span>
+              <div key={req.id} className="bg-white px-4 py-3 d-flex align-items-center gap-3">
+                <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: 36, height: 36, background: '#dcfce7' }}>
+                  <Icon name="checkCircle" size={18} style={{ color: '#16a34a' }} />
                 </div>
+                <div className="flex-grow-1">
+                  <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
+                    {req.student_name || req.full_name}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                    {req.subject_name}{req.strand ? ` · ${req.strand}` : ''}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: '0.76rem' }}>
+                    Final Grade: {req.letterGrade} ({req.score}%) · Released: {req.releasedAt}
+                  </div>
+                </div>
+                <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                  style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.74rem' }}>
+                  Released
+                </span>
               </div>
             ))}
           </div>
@@ -2652,24 +2975,46 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
 
       {/* Rejected */}
       {rejected.length > 0 && (
-        <div>
-          <h3 className="fw-bold small text-dark mb-3">? Rejected</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div className="px-4 py-3 d-flex align-items-center gap-2"
+            style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+            <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#be123c' }}>
+              Rejected ({rejected.length})
+            </span>
+          </div>
+          <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {rejected.map(req => (
-              <div key={req.id} className="card border-0 shadow-sm rounded-3 opacity-75">
-                <div className="card-body p-3 d-flex align-items-center justify-content-between">
-                  <div><div className="fw-bold small text-dark">{req.full_name} · {req.subject_title}</div><div className="text-muted" style={{ fontSize: 11 }}>Rejected by {req.rejectedBy}</div></div>
-                  <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: 10 }}>? Rejected</span>
+              <div key={req.id} className="bg-white px-4 py-3 d-flex align-items-center gap-3">
+                <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: 36, height: 36, background: '#fee2e2' }}>
+                  <Icon name="x" size={16} style={{ color: '#dc2626' }} />
                 </div>
+                <div className="flex-grow-1">
+                  <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
+                    {req.full_name} · {req.subject_title}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>Rejected by {req.rejectedBy}</div>
+                </div>
+                <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                  style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.74rem' }}>
+                  Rejected
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Empty State */}
       {requests.length === 0 && (
-        <div className="card border-0 shadow-sm rounded-3"><div className="card-body p-4 text-center text-muted small">No grade requests at this time.</div></div>
+        <div className="card border-0 shadow-sm rounded-3">
+          <div className="card-body py-5 text-center text-muted" style={{ fontSize: '0.875rem' }}>
+            No grade requests at this time.
+          </div>
+        </div>
       )}
+
     </div>
   );
 }
@@ -3480,7 +3825,7 @@ export default function TeacherDashboardPage() {
     id: number; code?: string; name: string; units?: number; max_capacity?: number; enrolled_count: number; strand?: string; track?: string; term?: string;
   }[]>([]);
   const [apiStudents, setApiStudents] = useState<{
-    student_id: string; full_name: string; email: string; pathway: string | null; grade_level: number | null; photo_url: string | null; track: string | null; strand: string | null; subject_name?: string; term?: string; track_strand?: string;
+    student_id: string; full_name: string; email: string; pathway: string | null; grade_level: number | null; photo_url: string | null; track: string | null; strand: string | null; student_track?: string | null; student_strand?: string | null; subject_name?: string; term?: string; track_strand?: string;
   }[]>([]);
   const [apiActivity, setApiActivity] = useState<{
     type: string; created_at: string; student_name: string; subject_name: string; value?: number; document_type?: string;
@@ -3532,15 +3877,18 @@ export default function TeacherDashboardPage() {
   function renderPanel() {
     switch (panel) {
       case "schedule":      return <SchedulePanel />;
-      case "students":      return <StudentsPanel students={apiStudents.length ? apiStudents.map(s => {
-        // Build pathway string from track/strand
-        let pathwayDisplay = s.track || "Academic Track";
-        if (s.strand) {
-          pathwayDisplay = `${s.track} - ${s.strand}`;
-        }
+      case "students":      return <StudentsPanel 
+        students={apiStudents.length ? apiStudents.map(s => {
+        // pathway: student's own track/strand for the Track & Strand display column
+        const studentTrack = s.student_track || s.track || "Academic Track";
+        const studentStrand = s.student_strand || s.strand || "";
+        let pathwayDisplay = studentStrand
+          ? `${studentTrack} - ${studentStrand}`
+          : studentTrack;
         
-        // Build track_strand string
-        const trackStrand = (s.track && s.strand) ? `${s.track} - ${s.strand}` : (s.track || s.strand || "");
+        // track_strand: the SCHEDULE's track/strand — used for class grouping in dropdown
+        // s.track_strand comes from CONCAT(ts.track, ' - ', ts.strand) in the backend
+        const trackStrand = s.track_strand || (s.track ? `${s.track} - ${s.strand || ""}` : "");
         
         return {
           id: s.student_id, 
@@ -3553,7 +3901,9 @@ export default function TeacherDashboardPage() {
           term: s.term,
           track_strand: trackStrand
         };
-      }) : undefined} />;
+      }) : undefined}
+        subjects={apiSubjects}
+      />;
       case "grades":        return <GradesPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "requests":      return <RequestsPanel isGradeLocked={isGradeLocked} activeTerm={activeTerm} />;
       case "notifications": return <NotificationsPanel notifs={notifs} setNotifs={setNotifs} />;

@@ -34,6 +34,8 @@ async function getStudentsWithGradesForClass(req, res, next) {
         s.id as internal_id,
         s.full_name,
         s.pathway,
+        s.track,
+        s.strand,
         s.grade_level,
         s.email,
         ea.photo_url,
@@ -803,6 +805,7 @@ async function getTeacherSubjectsForGrades(req, res, next) {
     const [subjects] = await pool.query(`
       SELECT 
         ts.subject_name,
+        ts.track,
         ts.strand,
         ts.term,
         -- Count total students across all sections of this subject+strand+term
@@ -825,7 +828,7 @@ async function getTeacherSubjectsForGrades(req, res, next) {
         AND b.strand = ts.strand
         AND b.term = ts.term
       WHERE t.teacher_id = ?
-      GROUP BY ts.subject_name, ts.strand, ts.term
+      GROUP BY ts.subject_name, ts.track, ts.strand, ts.term
       ORDER BY ts.term, ts.subject_name, ts.strand
     `, [teacherId]);
 
