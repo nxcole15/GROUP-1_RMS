@@ -231,6 +231,7 @@ async function getSubmissionDetails(req, res, next) {
 /**
  * Approve a grade submission batch
  * Changes all grades from submitted to approved
+ * Supports both old system (subject_id) and new system (teacher_schedule_id via subject_name+strand)
  */
 async function approveSubmission(req, res, next) {
   const conn = await pool.getConnection();
@@ -242,9 +243,9 @@ async function approveSubmission(req, res, next) {
     const adminId = req.admin?.admin_id;
     const { notes } = req.body;
 
-    // Get batch info
+    // Get batch info — include subject_name and strand for new-system lookup
     const [batch] = await conn.query(
-      `SELECT teacher_id, subject_id, term, status, total_students 
+      `SELECT teacher_id, subject_id, subject_name, strand, term, status, total_students 
        FROM grade_submission_batches 
        WHERE id = ?`,
       [batch_id]
@@ -262,6 +263,8 @@ async function approveSubmission(req, res, next) {
       });
     }
 
+    const useNewSystem = !!(batch[0].subject_name && batch[0].strand);
+
     // Update batch status
     await conn.query(
       `UPDATE grade_submission_batches 
@@ -274,38 +277,83 @@ async function approveSubmission(req, res, next) {
       [adminId, notes || null, batch_id]
     );
 
-    // Update all grades in this batch
-    await conn.query(
-      `UPDATE grades 
-       SET submission_status = 'approved',
-           approved_by = ?,
-           approved_at = NOW(),
-           updated_at = NOW()
-       WHERE teacher_id = ? 
-         AND subject_id = ? 
-         AND term = ?
-         AND submission_status = 'submitted'`,
-      [adminId, batch[0].teacher_id, batch[0].subject_id, batch[0].term]
-    );
+    // Update all grades in this batch — handle both systems
+    if (useNewSystem) {
+      // New system: grades linked via teacher_schedule_id
+      await conn.query(
+        `UPDATE grades g
+         INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         SET g.submission_status = 'approved',
+             g.approved_by = ?,
+             g.approved_at = NOW(),
+             g.updated_at = NOW()
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?
+           AND g.submission_status = 'submitted'`,
+        [adminId, batch[0].teacher_id, batch[0].subject_name, batch[0].strand, batch[0].term]
+      );
+    } else {
+      // Old system: grades linked via subject_id
+      await conn.query(
+        `UPDATE grades 
+         SET submission_status = 'approved',
+             approved_by = ?,
+             approved_at = NOW(),
+             updated_at = NOW()
+         WHERE teacher_id = ? 
+           AND subject_id = ? 
+           AND term = ?
+           AND submission_status = 'submitted'`,
+        [adminId, batch[0].teacher_id, batch[0].subject_id, batch[0].term]
+      );
+    }
 
-    // Get all grade IDs for audit log
-    const [gradeIds] = await conn.query(
-      `SELECT id, student_id, percentage 
-       FROM grades 
-       WHERE teacher_id = ? 
-         AND subject_id = ? 
-         AND term = ?`,
-      [batch[0].teacher_id, batch[0].subject_id, batch[0].term]
-    );
+    // Get all updated grade IDs for audit log
+    let gradeIds;
+    if (useNewSystem) {
+      [gradeIds] = await conn.query(
+        `SELECT g.id, s.student_id, g.percentage 
+         FROM grades g
+         INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         INNER JOIN students s ON g.student_internal_id = s.id
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?`,
+        [batch[0].teacher_id, batch[0].subject_name, batch[0].strand, batch[0].term]
+      );
+    } else {
+      [gradeIds] = await conn.query(
+        `SELECT id, student_id, percentage 
+         FROM grades 
+         WHERE teacher_id = ? 
+           AND subject_id = ? 
+           AND term = ?`,
+        [batch[0].teacher_id, batch[0].subject_id, batch[0].term]
+      );
+    }
 
     // Log approval for each grade
     for (const grade of gradeIds) {
-      await conn.query(
-        `INSERT INTO grade_audit_log 
-         (grade_id, student_id, subject_id, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
-         VALUES (?, ?, ?, ?, 'approved', ?, 'submitted', 'approved', 'admin', ?, ?, NOW())`,
-        [grade.id, grade.student_id, batch[0].subject_id, batch[0].term, grade.percentage, adminId, notes || null]
-      );
+      if (useNewSystem) {
+        await conn.query(
+          `INSERT INTO grade_audit_log 
+           (grade_id, student_id, subject_name, strand, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, 'approved', ?, 'submitted', 'approved', 'admin', ?, ?, NOW())`,
+          [grade.id, grade.student_id, batch[0].subject_name, batch[0].strand, batch[0].term, grade.percentage, adminId, notes || null]
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO grade_audit_log 
+           (grade_id, student_id, subject_id, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
+           VALUES (?, ?, ?, ?, 'approved', ?, 'submitted', 'approved', 'admin', ?, ?, NOW())`,
+          [grade.id, grade.student_id, batch[0].subject_id, batch[0].term, grade.percentage, adminId, notes || null]
+        );
+      }
     }
 
     await conn.commit();
@@ -328,6 +376,7 @@ async function approveSubmission(req, res, next) {
 /**
  * Return a grade submission batch to teacher for revision
  * Changes status back to 'returned' with reason
+ * Supports both old system (subject_id) and new system (teacher_schedule_id via subject_name+strand)
  */
 async function returnSubmission(req, res, next) {
   const conn = await pool.getConnection();
@@ -346,9 +395,9 @@ async function returnSubmission(req, res, next) {
       });
     }
 
-    // Get batch info
+    // Get batch info — include subject_name and strand for new-system lookup
     const [batch] = await conn.query(
-      `SELECT teacher_id, subject_id, term, status 
+      `SELECT teacher_id, subject_id, subject_name, strand, term, status 
        FROM grade_submission_batches 
        WHERE id = ?`,
       [batch_id]
@@ -366,6 +415,8 @@ async function returnSubmission(req, res, next) {
       });
     }
 
+    const useNewSystem = !!(batch[0].subject_name && batch[0].strand);
+
     // Update batch status
     await conn.query(
       `UPDATE grade_submission_batches 
@@ -376,37 +427,78 @@ async function returnSubmission(req, res, next) {
       [return_reason, batch_id]
     );
 
-    // Update all grades in this batch
-    await conn.query(
-      `UPDATE grades 
-       SET submission_status = 'returned',
-           return_reason = ?,
-           updated_at = NOW()
-       WHERE teacher_id = ? 
-         AND subject_id = ? 
-         AND term = ?
-         AND submission_status = 'submitted'`,
-      [return_reason, batch[0].teacher_id, batch[0].subject_id, batch[0].term]
-    );
+    // Update all grades in this batch — handle both systems
+    if (useNewSystem) {
+      await conn.query(
+        `UPDATE grades g
+         INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         SET g.submission_status = 'returned',
+             g.updated_at = NOW()
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?
+           AND g.submission_status = 'submitted'`,
+        [batch[0].teacher_id, batch[0].subject_name, batch[0].strand, batch[0].term]
+      );
+    } else {
+      await conn.query(
+        `UPDATE grades 
+         SET submission_status = 'returned',
+             return_reason = ?,
+             updated_at = NOW()
+         WHERE teacher_id = ? 
+           AND subject_id = ? 
+           AND term = ?
+           AND submission_status = 'submitted'`,
+        [return_reason, batch[0].teacher_id, batch[0].subject_id, batch[0].term]
+      );
+    }
 
-    // Get all grade IDs for audit log
-    const [gradeIds] = await conn.query(
-      `SELECT id, student_id, percentage 
-       FROM grades 
-       WHERE teacher_id = ? 
-         AND subject_id = ? 
-         AND term = ?`,
-      [batch[0].teacher_id, batch[0].subject_id, batch[0].term]
-    );
+    // Get grade IDs for audit log
+    let gradeIds;
+    if (useNewSystem) {
+      [gradeIds] = await conn.query(
+        `SELECT g.id, s.student_id, g.percentage 
+         FROM grades g
+         INNER JOIN teacher_schedules ts ON g.teacher_schedule_id = ts.id
+         INNER JOIN teachers t ON ts.teacher_id = t.id
+         INNER JOIN students s ON g.student_internal_id = s.id
+         WHERE t.id = ?
+           AND ts.subject_name = ?
+           AND ts.strand = ?
+           AND ts.term = ?`,
+        [batch[0].teacher_id, batch[0].subject_name, batch[0].strand, batch[0].term]
+      );
+    } else {
+      [gradeIds] = await conn.query(
+        `SELECT id, student_id, percentage 
+         FROM grades 
+         WHERE teacher_id = ? 
+           AND subject_id = ? 
+           AND term = ?`,
+        [batch[0].teacher_id, batch[0].subject_id, batch[0].term]
+      );
+    }
 
     // Log return for each grade
     for (const grade of gradeIds) {
-      await conn.query(
-        `INSERT INTO grade_audit_log 
-         (grade_id, student_id, subject_id, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
-         VALUES (?, ?, ?, ?, 'returned', ?, 'submitted', 'returned', 'admin', ?, ?, NOW())`,
-        [grade.id, grade.student_id, batch[0].subject_id, batch[0].term, grade.percentage, adminId, return_reason]
-      );
+      if (useNewSystem) {
+        await conn.query(
+          `INSERT INTO grade_audit_log 
+           (grade_id, student_id, subject_name, strand, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, 'returned', ?, 'submitted', 'returned', 'admin', ?, ?, NOW())`,
+          [grade.id, grade.student_id, batch[0].subject_name, batch[0].strand, batch[0].term, grade.percentage, adminId, return_reason]
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO grade_audit_log 
+           (grade_id, student_id, subject_id, term, action, new_percentage, old_status, new_status, changed_by_type, changed_by_id, notes, created_at)
+           VALUES (?, ?, ?, ?, 'returned', ?, 'submitted', 'returned', 'admin', ?, ?, NOW())`,
+          [grade.id, grade.student_id, batch[0].subject_id, batch[0].term, grade.percentage, adminId, return_reason]
+        );
+      }
     }
 
     await conn.commit();
@@ -451,7 +543,7 @@ async function getGradeSubmissionStats(req, res, next) {
       GROUP BY status
     `, params);
 
-    // Get recent submissions
+    // Get recent submissions — use LEFT JOIN so new-system batches (subject_id=NULL) still appear
     const [recentSubmissions] = await pool.query(`
       SELECT 
         b.id,
@@ -459,11 +551,11 @@ async function getGradeSubmissionStats(req, res, next) {
         b.status,
         b.submitted_at,
         t.full_name as teacher_name,
-        s.name as subject_name,
+        COALESCE(b.subject_name, s.subject_name, 'Unknown Subject') as subject_name,
         b.total_students
       FROM grade_submission_batches b
       INNER JOIN teachers t ON b.teacher_id = t.id
-      INNER JOIN subjects s ON b.subject_id = s.id
+      LEFT JOIN teacher_schedules s ON b.subject_id = s.id
       ${termFilter}
       ORDER BY b.submitted_at DESC
       LIMIT 10

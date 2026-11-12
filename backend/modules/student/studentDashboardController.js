@@ -129,13 +129,12 @@ async function getDashboardData(req, res, next) {
       const [rows] = await db.query(`
         SELECT 
           gr.id,
-          COALESCE(ts.subject_name, sub.name) AS subject_name,
+          COALESCE(ts.subject_name, 'Unknown Subject') AS subject_name,
           COALESCE(ts.strand, 'N/A') AS strand,
           gr.score as percentage,
           gr.term,
           gr.updated_at as created_at
         FROM grade_requests gr
-        LEFT JOIN subjects sub ON sub.id = gr.subject_id
         LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
         WHERE gr.student_id = ?
           AND gr.status = 'released_to_student'

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,11 +17,11 @@ type IconName =
   | "file" | "chart" | "send" | "refresh" | "alert" | "book" | "user"
   | "shield" | "activity" | "lock" | "unlock" | "arrowRight" | "search";
 
-function Icon({ name, size = 18, className }: { name: IconName; size?: number; className?: string }) {
+function Icon({ name, size = 18, className, style }: { name: IconName; size?: number; className?: string; style?: React.CSSProperties }) {
   const props = {
     width: size, height: size, fill: "none", viewBox: "0 0 24 24",
     stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const, className, "aria-hidden": true as const,
+    strokeLinejoin: "round" as const, className, style, "aria-hidden": true as const,
   };
   switch (name) {
     case "overview":      return <svg {...props}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
@@ -2475,25 +2476,26 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
     id: number;
     status: string;
     student_id: string;
+    student_display_id?: string;
+    student_internal_id?: number;
     full_name: string;
     student_name?: string;
     student_track?: string;
+    student_strand?: string;
+    grade_level?: number;
     strand?: string;
-    subject_code: string;
-    subject_name: string;
-    subject_title: string;
+    subject_code?: string;
+    subject_name?: string;
     term: string;
-    current_grade?: string;
-    requestedAt?: string;
     created_at?: string;
+    updated_at?: string;
     score?: number;
-    letterGrade?: string;
-    submittedToAdminAt?: string;
-    adminVerifiedBy?: string;
-    adminVerifiedAt?: string;
-    adminNote?: string;
-    releasedAt?: string;
-    rejectedBy?: string;
+    remarks?: string;
+    principal_note?: string;
+    rejection_reason?: string;
+    rejected_by?: string;
+    existing_grade?: number | null;
+    existing_grade_status?: string | null;
   }>>([]);
   const [grading, setGrading] = useState<Record<number, { score: string; remarks: string }>>({});
   const [toast, setToast] = useState<string | null>(null);
@@ -2582,6 +2584,31 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
       showToast("Grade submitted to Principal for review");
     } catch (err) {
       console.error(`[SUBMIT] Exception:`, err);
+      showToast("Network error - please try again");
+    }
+  }
+
+  // Forward a request that has a pre-existing submitted grade directly to the principal
+  async function forwardExistingGradeToAdmin(id: number, existingGrade: number) {
+    if (isGradeLocked) return;
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/grade-requests/teacher/${id}/submit`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ score: existingGrade, remarks: "Forwarded from submitted class grades." }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        showToast(err?.error || "Failed to forward grade");
+        return;
+      }
+      await reload();
+      showToast("Grade forwarded to Principal for review");
+    } catch {
       showToast("Network error - please try again");
     }
   }
@@ -2717,51 +2744,75 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
             </span>
           </div>
           <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
-            {newRequests.map(req => (
-              <div key={req.id} className="bg-white px-4 py-3">
-                <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                  <div className="flex-grow-1">
-                    <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
-                      {req.student_name || req.full_name}
+            {newRequests.map(req => {
+              const hasSubmittedGrade = req.existing_grade != null;
+              return (
+                <div key={req.id} className="bg-white px-4 py-3">
+                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+                    <div className="flex-grow-1">
+                      <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                        {req.student_name || req.full_name}
+                      </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.subject_code || req.subject_name}
+                        </span>
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.term}
+                        </span>
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="d-flex flex-wrap gap-2">
-                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
-                        {req.subject_code || req.subject_name}
-                      </span>
-                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
-                        {req.term}
-                      </span>
-                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
-                        {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'N/A'}
-                      </span>
-                    </div>
+                    <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                      style={{ background: '#fff7ed', color: '#c2410c', fontSize: '0.74rem' }}>
+                      {statusLabel(req.status)}
+                    </span>
                   </div>
-                  <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
-                    style={{ background: '#fff7ed', color: '#c2410c', fontSize: '0.74rem' }}>
-                    {statusLabel(req.status)}
-                  </span>
+
+                  {/* Show pre-existing grade if teacher already submitted grades for this class */}
+                  {hasSubmittedGrade && (
+                    <div className="rounded-3 px-3 py-2 mb-3 d-flex align-items-center gap-2"
+                      style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.82rem', color: '#15803d' }}>
+                      <Icon name="checkCircle" size={15} />
+                      <span>Grade on record: <strong>{req.existing_grade}%</strong>
+                      </span>
+                      <span className="ms-auto text-muted" style={{ fontSize: '0.75rem' }}>From submitted class grades</span>
+                    </div>
+                  )}
+
+                  {isGradeLocked ? (
+                    <div className="rounded-3 px-3 py-2 text-center"
+                      style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8rem', color: '#be123c' }}>
+                      Locked — visit the Registrar&apos;s Office
+                    </div>
+                  ) : hasSubmittedGrade ? (
+                    /* Grade already on record — teacher reviews and manually forwards */
+                    <button
+                      onClick={() => forwardExistingGradeToAdmin(req.id, Number(req.existing_grade))}
+                      className="btn btn-sm btn-primary w-100"
+                      style={{ fontSize: '0.875rem' }}>
+                      Confirm &amp; Forward to Principal
+                    </button>
+                  ) : (
+                    /* No existing grade — teacher needs to Accept & Calculate manually */
+                    <div className="d-flex gap-2">
+                      <button onClick={() => acceptRequest(req.id)}
+                        className="btn btn-sm btn-success flex-grow-1"
+                        style={{ fontSize: '0.875rem' }}>
+                        Accept &amp; Calculate
+                      </button>
+                      <button onClick={() => rejectRequest(req.id)}
+                        className="btn btn-sm btn-outline-danger"
+                        style={{ fontSize: '0.875rem' }}>
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {isGradeLocked ? (
-                  <div className="rounded-3 px-3 py-2 text-center"
-                    style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8rem', color: '#be123c' }}>
-                    Locked — visit the Registrar&apos;s Office
-                  </div>
-                ) : (
-                  <div className="d-flex gap-2">
-                    <button onClick={() => acceptRequest(req.id)}
-                      className="btn btn-sm btn-success flex-grow-1"
-                      style={{ fontSize: '0.875rem' }}>
-                      Accept &amp; Calculate
-                    </button>
-                    <button onClick={() => rejectRequest(req.id)}
-                      className="btn btn-sm btn-outline-danger"
-                      style={{ fontSize: '0.875rem' }}>
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -2786,10 +2837,25 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                     </div>
                     <div className="d-flex flex-wrap gap-2">
                       <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
-                        {req.subject_code || req.subject_name}
+                        {req.subject_name || '—'}
                       </span>
+                      {req.strand && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.strand}
+                        </span>
+                      )}
+                      {req.student_track && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.student_track}
+                        </span>
+                      )}
+                      {req.grade_level && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          Grade {req.grade_level}
+                        </span>
+                      )}
                       <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
-                        {activeTerm}
+                        {req.term}
                       </span>
                     </div>
                   </div>
@@ -2826,10 +2892,7 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                   <div className="rounded-3 px-3 py-2 mb-3 d-flex align-items-center gap-2"
                     style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.8rem', color: '#15803d' }}>
                     <Icon name="checkCircle" size={15} />
-                    Computed grade: <strong className="ms-1">
-                      {(() => { const s = Number(grading[req.id].score); return s >= 97 ? "A+" : s >= 93 ? "A" : s >= 90 ? "A-" : s >= 87 ? "B+" : s >= 83 ? "B" : s >= 80 ? "B-" : s >= 77 ? "C+" : s >= 73 ? "C" : s >= 70 ? "C-" : s >= 65 ? "D" : "F"; })()}
-                    </strong>
-                    <span className="ms-1 text-muted">({grading[req.id].score}%)</span>
+                    Computed grade: <strong className="ms-1">{grading[req.id].score}</strong>
                   </div>
                 )}
                 {isGradeLocked ? (
@@ -2869,10 +2932,34 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 </div>
                 <div className="flex-grow-1">
                   <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
-                    {req.full_name} · {req.subject_title}
+                    {req.student_name || req.full_name}
                   </div>
-                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>
-                    Score: {req.score}% ({req.letterGrade}) · Submitted: {req.submittedToAdminAt}
+                  <div className="d-flex flex-wrap gap-2 mt-1">
+                    <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                      {req.subject_name || '—'}
+                    </span>
+                    {req.strand && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.strand}
+                      </span>
+                    )}
+                    {req.student_track && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.student_track}
+                      </span>
+                    )}
+                    {req.grade_level && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        Grade {req.grade_level}
+                      </span>
+                    )}
+                    <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                      {req.term}
+                    </span>
+                  </div>
+                  <div className="text-muted mt-1" style={{ fontSize: '0.78rem' }}>
+                    Score: <strong>{req.score}%</strong>
+                    {req.updated_at && <> · Submitted: {new Date(req.updated_at).toLocaleDateString()}</>}
                   </div>
                 </div>
                 <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
@@ -2901,14 +2988,38 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                 <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
                   <div className="flex-grow-1">
                     <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
-                      {req.full_name} · {req.subject_title}
+                      {req.student_name || req.full_name}
                     </div>
-                    <div className="text-muted" style={{ fontSize: '0.78rem' }}>
-                      Score: {req.score}% ({req.letterGrade}) · Verified by {req.adminVerifiedBy} on {req.adminVerifiedAt}
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.subject_name || '—'}
+                      </span>
+                      {req.strand && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.strand}
+                        </span>
+                      )}
+                      {req.student_track && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.student_track}
+                        </span>
+                      )}
+                      {req.grade_level && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          Grade {req.grade_level}
+                        </span>
+                      )}
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.term}
+                      </span>
                     </div>
-                    {req.adminNote && (
+                    <div className="text-muted mt-1" style={{ fontSize: '0.78rem' }}>
+                      Score: <strong>{req.score}%</strong>
+                      {req.updated_at && <> · Approved: {new Date(req.updated_at).toLocaleDateString()}</>}
+                    </div>
+                    {req.principal_note && (
                       <div className="text-muted fst-italic mt-1" style={{ fontSize: '0.76rem' }}>
-                        Note: {req.adminNote}
+                        Note: {req.principal_note}
                       </div>
                     )}
                   </div>
@@ -2956,11 +3067,32 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
                   <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
                     {req.student_name || req.full_name}
                   </div>
-                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>
-                    {req.subject_name}{req.strand ? ` · ${req.strand}` : ''}
+                  <div className="d-flex flex-wrap gap-2 mt-1">
+                    <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                      {req.subject_name || '—'}
+                    </span>
+                    {req.strand && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.strand}
+                      </span>
+                    )}
+                    {req.student_track && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.student_track}
+                      </span>
+                    )}
+                    {req.grade_level && (
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        Grade {req.grade_level}
+                      </span>
+                    )}
+                    <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                      {req.term}
+                    </span>
                   </div>
-                  <div className="text-muted" style={{ fontSize: '0.76rem' }}>
-                    Final Grade: {req.letterGrade} ({req.score}%) · Released: {req.releasedAt}
+                  <div className="text-muted mt-1" style={{ fontSize: '0.76rem' }}>
+                    Final Grade: <strong>{req.score}%</strong>
+                    {req.updated_at && <> · Released: {new Date(req.updated_at).toLocaleDateString()}</>}
                   </div>
                 </div>
                 <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
@@ -2973,33 +3105,107 @@ function RequestsPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; 
         </div>
       )}
 
-      {/* Rejected */}
+      {/* Rejected — Teacher must correct grade and resubmit to principal */}
       {rejected.length > 0 && (
         <div className="card border-0 shadow-sm rounded-3 overflow-hidden">
           <div className="px-4 py-3 d-flex align-items-center gap-2"
             style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
             <span className="fw-semibold" style={{ fontSize: '0.875rem', color: '#be123c' }}>
-              Rejected ({rejected.length})
+              Rejected — Correction Required ({rejected.length})
             </span>
           </div>
           <div className="d-flex flex-column" style={{ gap: '1px', background: '#f1f5f9' }}>
             {rejected.map(req => (
-              <div key={req.id} className="bg-white px-4 py-3 d-flex align-items-center gap-3">
-                <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                  style={{ width: 36, height: 36, background: '#fee2e2' }}>
-                  <Icon name="x" size={16} style={{ color: '#dc2626' }} />
-                </div>
-                <div className="flex-grow-1">
-                  <div className="fw-semibold" style={{ fontSize: '0.875rem', color: '#1e293b' }}>
-                    {req.full_name} · {req.subject_title}
+              <div key={req.id} className="bg-white px-4 py-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                      {req.student_name || req.full_name}
+                    </div>
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.subject_name || '—'}
+                      </span>
+                      {req.strand && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.strand}
+                        </span>
+                      )}
+                      {req.student_track && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          {req.student_track}
+                        </span>
+                      )}
+                      {req.grade_level && (
+                        <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                          Grade {req.grade_level}
+                        </span>
+                      )}
+                      <span className="badge rounded-pill fw-normal px-2" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.76rem' }}>
+                        {req.term}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-muted" style={{ fontSize: '0.78rem' }}>Rejected by {req.rejectedBy}</div>
+                  <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
+                    style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.74rem' }}>
+                    Rejected
+                  </span>
                 </div>
-                <span className="badge rounded-pill px-2 py-1 fw-semibold flex-shrink-0"
-                  style={{ background: '#fee2e2', color: '#dc2626', fontSize: '0.74rem' }}>
-                  Rejected
-                </span>
+
+                {/* Show previous score and rejection reason */}
+                {req.score != null && (
+                  <div className="rounded-3 px-3 py-2 mb-2 d-flex align-items-center gap-2"
+                    style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8rem', color: '#be123c' }}>
+                    <span>Previous score: <strong>{req.score}%</strong></span>
+                    {req.rejection_reason && (
+                      <span className="ms-2 text-muted">· Reason: {req.rejection_reason}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Input to correct grade */}
+                {!isGradeLocked && (
+                  <>
+                    <div className="row g-2 mb-2">
+                      <div className="col-sm-4">
+                        <label className="form-label fw-semibold text-secondary mb-1" style={{ fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Corrected Score (0-100)
+                        </label>
+                        <input type="number" min={0} max={100}
+                          value={grading[req.id]?.score ?? ""}
+                          onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], score: e.target.value, remarks: prev[req.id]?.remarks ?? "" } }))}
+                          className="form-control form-control-sm"
+                          placeholder={req.score != null ? String(req.score) : "e.g. 88"}
+                          style={{ borderRadius: '0.4rem' }} />
+                      </div>
+                      <div className="col-sm-8">
+                        <label className="form-label fw-semibold text-secondary mb-1" style={{ fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Remarks (optional)
+                        </label>
+                        <input type="text"
+                          value={grading[req.id]?.remarks ?? ""}
+                          onChange={e => setGrading(prev => ({ ...prev, [req.id]: { ...prev[req.id], remarks: e.target.value, score: prev[req.id]?.score ?? "" } }))}
+                          className="form-control form-control-sm"
+                          placeholder="Explain the correction"
+                          style={{ borderRadius: '0.4rem' }} />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => submitToAdmin(req.id)}
+                      disabled={!grading[req.id]?.score || isNaN(Number(grading[req.id]?.score))}
+                      className="btn btn-sm btn-warning w-100"
+                      style={{ fontSize: '0.875rem' }}>
+                      Resubmit Corrected Grade to Principal
+                    </button>
+                  </>
+                )}
+                {isGradeLocked && (
+                  <div className="rounded-3 px-3 py-2 text-center"
+                    style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8rem', color: '#be123c' }}>
+                    Locked — visit the Registrar&apos;s Office
+                  </div>
+                )}
               </div>
             ))}
           </div>

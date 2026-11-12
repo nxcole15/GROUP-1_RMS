@@ -54,27 +54,15 @@ async function studentSubmitRequest(req, res, next) {
       return res.status(403).json({ error: `Grade requests are currently closed for ${term}.` });
     }
 
-    // Get teacher for this subject/schedule
-    // Try NEW system first (teacher_schedules)
+    // Get teacher for this subject — NEW scheduling system only
     const [scheduleRows] = await db.query(
       "SELECT teacher_id, subject_name FROM teacher_schedules WHERE id = ? LIMIT 1", [subject_id]
     );
-    
-    let teacher_id, subject_name;
-    
-    if (scheduleRows[0]) {
-      // NEW system
-      teacher_id = scheduleRows[0].teacher_id;
-      subject_name = scheduleRows[0].subject_name;
-    } else {
-      // Fallback to OLD system (subjects table)
-      const [subRows] = await db.query(
-        "SELECT teacher_id, name FROM subjects WHERE id = ? LIMIT 1", [subject_id]
-      );
-      if (!subRows[0]) return res.status(404).json({ error: "Subject not found." });
-      teacher_id = subRows[0].teacher_id;
-      subject_name = subRows[0].name;
+    if (!scheduleRows[0]) {
+      return res.status(404).json({ error: "Subject not found." });
     }
+    const teacher_id  = scheduleRows[0].teacher_id;
+    const subject_name = scheduleRows[0].subject_name;
 
     // Check for duplicate
     const [existing] = await db.query(
@@ -85,8 +73,7 @@ async function studentSubmitRequest(req, res, next) {
     if (existing[0]) return res.status(409).json({ error: "You already have a pending request for this subject in this term." });
 
     const request = await GradeRequestModel.create({
-      student_id, subject_id,
-      teacher_id, term
+      student_id, subject_id, teacher_id, term
     });
 
     // Notify the teacher
@@ -176,7 +163,7 @@ async function teacherSubmitGrade(req, res, next) {
 
     const request = await GradeRequestModel.findById(id);
     if (!request) return res.status(404).json({ error: "Request not found." });
-    if (request.status !== "student_requested" && request.status !== "teacher_calculating") {
+    if (request.status !== "student_requested" && request.status !== "teacher_calculating" && request.status !== "rejected") {
       return res.status(409).json({ error: "This request cannot be updated at this stage." });
     }
 
@@ -307,10 +294,10 @@ async function principalApprove(req, res, next) {
 
     // Get principal name
     const [principalRow] = await db.query(
-      `SELECT name FROM admins WHERE admin_id = ? LIMIT 1`,
+      `SELECT full_name FROM admins WHERE admin_id = ? LIMIT 1`,
       [req.admin.admin_id]
     );
-    const principalName = principalRow[0]?.name || 'Principal';
+    const principalName = principalRow[0]?.full_name || 'Principal';
 
     // Notify student that grade was approved
     await NotificationService.notifyGradeApproved({
@@ -351,10 +338,10 @@ async function principalReject(req, res, next) {
 
     // Get principal name
     const [principalRow] = await db.query(
-      `SELECT name FROM admins WHERE admin_id = ? LIMIT 1`,
+      `SELECT full_name FROM admins WHERE admin_id = ? LIMIT 1`,
       [req.admin.admin_id]
     );
-    const rejectedBy = principalRow[0]?.name || 'Principal';
+    const rejectedBy = principalRow[0]?.full_name || 'Principal';
 
     // Get teacher_id for notification
     const [teacherRow] = await db.query(`SELECT teacher_id FROM teachers WHERE id = ? LIMIT 1`, [request.teacher_id]);
