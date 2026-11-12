@@ -809,27 +809,27 @@ async function setGradeSubmissionSchedule(req, res, next) {
     const isCurrentlyOpen = now >= start && now <= end ? 1 : 0;
 
     await db.query(`
-      UPDATE grade_submission_config
-      SET 
-        is_open = ?,
-        start_date = ?,
-        end_date = ?,
+      INSERT INTO grade_submission_config (term, is_open, start_date, end_date, manual_override, opened_at, opened_by, last_modified_by, last_modified_at, notes)
+      VALUES (?, ?, ?, ?, 'none', ?, ?, ?, NOW(), ?)
+      ON DUPLICATE KEY UPDATE
+        is_open = VALUES(is_open),
+        start_date = VALUES(start_date),
+        end_date = VALUES(end_date),
         manual_override = 'none',
-        opened_at = ?,
-        opened_by = ?,
-        last_modified_by = ?,
+        opened_at = VALUES(opened_at),
+        opened_by = VALUES(opened_by),
+        last_modified_by = VALUES(last_modified_by),
         last_modified_at = NOW(),
-        notes = ?
-      WHERE term = ?
+        notes = VALUES(notes)
     `, [
-      isCurrentlyOpen, 
-      startMysql, 
-      endMysql, 
+      term,
+      isCurrentlyOpen,
+      startMysql,
+      endMysql,
       isCurrentlyOpen ? new Date() : null,
       isCurrentlyOpen ? req.admin.admin_id : null,
-      req.admin.admin_id, 
-      notes || null, 
-      term
+      req.admin.admin_id,
+      notes || null
     ]);
 
     res.json({ message: "Grade submission schedule set successfully." });
@@ -852,8 +852,9 @@ async function openGradeSubmissionNow(req, res, next) {
     }
 
     await db.query(`
-      UPDATE grade_submission_config
-      SET 
+      INSERT INTO grade_submission_config (term, is_open, manual_override, opened_at, opened_by, last_modified_by, last_modified_at, notes)
+      VALUES (?, 1, 'open', NOW(), ?, ?, NOW(), ?)
+      ON DUPLICATE KEY UPDATE
         is_open = 1,
         manual_override = 'open',
         opened_at = NOW(),
@@ -865,8 +866,8 @@ async function openGradeSubmissionNow(req, res, next) {
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
-      WHERE term = ?
-    `, [req.admin.admin_id, req.admin.admin_id, notes || 'Manually opened', term]);
+    `, [term, req.admin.admin_id, req.admin.admin_id, notes || 'Manually opened',
+        req.admin.admin_id, req.admin.admin_id, notes || 'Manually opened']);
 
     res.json({ message: `Grade submission for ${term} opened successfully.` });
   } catch (err) {
@@ -888,8 +889,9 @@ async function closeGradeSubmissionNow(req, res, next) {
     }
 
     await db.query(`
-      UPDATE grade_submission_config
-      SET 
+      INSERT INTO grade_submission_config (term, is_open, manual_override, closed_at, closed_by, last_modified_by, last_modified_at, notes)
+      VALUES (?, 0, 'closed', NOW(), ?, ?, NOW(), ?)
+      ON DUPLICATE KEY UPDATE
         is_open = 0,
         manual_override = 'closed',
         closed_at = NOW(),
@@ -901,8 +903,8 @@ async function closeGradeSubmissionNow(req, res, next) {
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = ?
-      WHERE term = ?
-    `, [req.admin.admin_id, req.admin.admin_id, notes || 'Manually closed', term]);
+    `, [term, req.admin.admin_id, req.admin.admin_id, notes || 'Manually closed',
+        req.admin.admin_id, req.admin.admin_id, notes || 'Manually closed']);
 
     res.json({ message: `Grade submission for ${term} closed successfully.` });
   } catch (err) {
@@ -923,8 +925,9 @@ async function clearGradeSubmissionSchedule(req, res, next) {
     }
 
     await db.query(`
-      UPDATE grade_submission_config
-      SET 
+      INSERT INTO grade_submission_config (term, is_open, manual_override, last_modified_by, last_modified_at)
+      VALUES (?, 0, 'none', ?, NOW())
+      ON DUPLICATE KEY UPDATE
         is_open = 0,
         start_date = NULL,
         end_date = NULL,
@@ -932,8 +935,7 @@ async function clearGradeSubmissionSchedule(req, res, next) {
         last_modified_by = ?,
         last_modified_at = NOW(),
         notes = NULL
-      WHERE term = ?
-    `, [req.admin.admin_id, term]);
+    `, [term, req.admin.admin_id, req.admin.admin_id]);
 
     res.json({ message: `Grade submission schedule for ${term} cleared successfully.` });
   } catch (err) {
