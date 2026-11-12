@@ -532,13 +532,18 @@ async function submitGradesBatch(req, res, next) {
 
       const scheduleIds = schedules.map(s => s.id);
 
-      // Fetch one grade per student (the best status one) across all schedule slots
+      // Fetch one grade per student (pick the one with the lowest id) across all schedule slots.
+      // Using a subquery to satisfy only_full_group_by strict mode on Railway MySQL.
       [grades] = await conn.query(
         `SELECT g.id, g.student_internal_id, g.teacher_schedule_id, g.percentage
          FROM grades g
-         WHERE g.teacher_schedule_id IN (?)
-           AND g.submission_status IN ('draft', 'returned')
-         GROUP BY g.student_internal_id`,
+         INNER JOIN (
+           SELECT MIN(id) as min_id
+           FROM grades
+           WHERE teacher_schedule_id IN (?)
+             AND submission_status IN ('draft', 'returned')
+           GROUP BY student_internal_id
+         ) deduped ON g.id = deduped.min_id`,
         [scheduleIds]
       );
     } else {
