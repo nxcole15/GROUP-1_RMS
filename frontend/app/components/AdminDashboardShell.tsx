@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
+import { API_BASE, getAcademicConfig, useInactivityTimeout, type AcademicConfig } from "../lib/auth";
 import { DocumentWorkflowPanel } from "../admin/documents-workflow-panel";
 import { SettingsPanel } from "../principal-dashboard/SettingsPanel";
 import { GuidePanel } from "./GuidePanel";
@@ -8736,9 +8736,9 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
     getAcademicConfig().then(config => setAcademicConfig(config));
   }, []);
 
-  // Route protection � only runs when used as standalone page (not wrapped)
+  // Route protection — only runs when used as standalone page (not wrapped)
   useEffect(() => {
-    if (hideBanner) return; // wrapped by principal/registrar � they handle auth
+    if (hideBanner) return; // wrapped by principal/registrar — they handle auth
     const token = localStorage.getItem("inform_admin_token") || localStorage.getItem("inform_token");
     const role  = localStorage.getItem("inform_role");
     const adminRoles = ["registrar", "principal", "accounting", "teacher_coordinator"];
@@ -8746,6 +8746,11 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       window.location.replace("/login");
     }
   }, [hideBanner]);
+
+  // Inactivity timeout: 15 minutes
+  useEffect(() => {
+    return useInactivityTimeout(true) ?? undefined;
+  }, []);
   const [notifs, setNotifs] = useState(() => {
     // Load base notifications + any registrar inquiries from localStorage
     const base = [...adminNotifications];

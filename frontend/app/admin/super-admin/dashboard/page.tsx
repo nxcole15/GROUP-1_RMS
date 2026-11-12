@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useInactivityTimeout } from "../../../lib/auth";
 import { GuidePanel, FeaturesPanel, QuickReferencePanel, TroubleshootingPanel } from "../../../components/GuidePanel";
 
 type AdminRecord = {
@@ -81,6 +82,11 @@ export default function SuperAdminDashboardPage() {
 
     loadAdmins();
   }, [router]);
+
+  // Inactivity timeout: 15 minutes
+  useEffect(() => {
+    return useInactivityTimeout(true) ?? undefined;
+  }, []);
 
   async function loadAdmins() {
     try {

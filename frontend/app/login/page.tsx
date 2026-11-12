@@ -32,10 +32,14 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [lockoutMinutes, setLockoutMinutes] = useState(0); // countdown in minutes
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<"email" | "code" | "reset" | "success">("email");
   const [forgotPasswordForm, setForgotPasswordForm] = useState({ email: "", userId: "", code: "", newPassword: "", confirmPassword: "" });
-  const [generatedCode, setGeneratedCode] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState("");
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
 
@@ -61,6 +65,22 @@ function LoginContent() {
     }
   }, [searchParams]);
 
+  // Lockout countdown — ticks every minute, re-enables form when it hits 0
+  useEffect(() => {
+    if (lockoutMinutes <= 0) return;
+    const timer = setInterval(() => {
+      setLockoutMinutes(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setError("");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 60000); // every 1 minute
+    return () => clearInterval(timer);
+  }, [lockoutMinutes]);
+
   const detectedRole = detectRole(form.identifier);
   const normalizedId = normalizeId(form.identifier);
 
@@ -68,6 +88,7 @@ function LoginContent() {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
     setError("");
+    if (name === "identifier") setLockoutMinutes(0);
   }
 
 async function handleSubmit(e: React.FormEvent) {
@@ -92,10 +113,14 @@ async function handleSubmit(e: React.FormEvent) {
 
       if (!res.ok) {
         setError(data.error || "Invalid credentials. Please try again.");
+        if (data.locked) {
+          // Extract minutes from error message e.g. "Account locked for 5 minutes."
+          const match = data.error?.match(/(\d+)\s*minute/);
+          if (match) setLockoutMinutes(parseInt(match[1]));
+        }
         setLoading(false);
         return;
       }
-
       localStorage.setItem("inform_token", data.token);
       localStorage.setItem("inform_role", data.role);
       localStorage.setItem("inform_user", JSON.stringify(
@@ -127,39 +152,48 @@ async function handleSubmit(e: React.FormEvent) {
     }
   }
 
-  function handleForgotPasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleForgotPasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setForgotPasswordError("");
     setForgotPasswordSuccess("");
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
     if (forgotPasswordStep === "email") {
       if (!forgotPasswordForm.email || !forgotPasswordForm.userId) {
         setForgotPasswordError("Please enter both your email and User ID.");
         return;
       }
-      const normalizedUserId = normalizeId(forgotPasswordForm.userId);
-      if (!normalizedUserId) {
-        setForgotPasswordError("Please enter a valid User ID.");
-        return;
+      setSendingCode(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: forgotPasswordForm.email, userId: forgotPasswordForm.userId }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setForgotPasswordError(data.error || "Something went wrong. Please try again.");
+          return;
+        }
+        setForgotPasswordSuccess(`A verification code has been sent to ${forgotPasswordForm.email}`);
+        setTimeout(() => {
+          setForgotPasswordStep("code");
+          setForgotPasswordSuccess("");
+        }, 2000);
+      } catch {
+        setForgotPasswordError("Could not connect to server. Please try again.");
+      } finally {
+        setSendingCode(false);
       }
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedCode(code);
-      setForgotPasswordSuccess(`A verification code has been sent to ${forgotPasswordForm.email}`);
-      setTimeout(() => {
-        setForgotPasswordStep("code");
-        setForgotPasswordSuccess("");
-      }, 2000);
 
     } else if (forgotPasswordStep === "code") {
       if (!forgotPasswordForm.code) {
         setForgotPasswordError("Please enter the verification code.");
         return;
       }
-      if (forgotPasswordForm.code !== generatedCode) {
-        setForgotPasswordError("Invalid verification code. Please try again.");
-        return;
-      }
-      setForgotPasswordSuccess("Code verified! You can now reset your password.");
+      // Code verification happens server-side during reset; just advance the step
+      setForgotPasswordSuccess("Code accepted. You can now set a new password.");
       setTimeout(() => {
         setForgotPasswordStep("reset");
         setForgotPasswordSuccess("");
@@ -178,7 +212,29 @@ async function handleSubmit(e: React.FormEvent) {
         setForgotPasswordError("Passwords do not match. Please try again.");
         return;
       }
-      setForgotPasswordStep("success");
+      setResettingPassword(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: forgotPasswordForm.email,
+            userId: forgotPasswordForm.userId,
+            code: forgotPasswordForm.code,
+            newPassword: forgotPasswordForm.newPassword,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setForgotPasswordError(data.error || "Failed to reset password. Please try again.");
+          return;
+        }
+        setForgotPasswordStep("success");
+      } catch {
+        setForgotPasswordError("Could not connect to server. Please try again.");
+      } finally {
+        setResettingPassword(false);
+      }
     }
   }
 
@@ -186,9 +242,10 @@ async function handleSubmit(e: React.FormEvent) {
     setShowForgotPassword(false);
     setForgotPasswordStep("email");
     setForgotPasswordForm({ email: "", userId: "", code: "", newPassword: "", confirmPassword: "" });
-    setGeneratedCode("");
     setForgotPasswordError("");
     setForgotPasswordSuccess("");
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   }
 
   return (
@@ -239,7 +296,7 @@ async function handleSubmit(e: React.FormEvent) {
                       name="identifier"
                       value={form.identifier}
                       onChange={handleChange}
-                      placeholder="Enter user ID"
+                      placeholder="Student ID / Faculty ID"
                       autoComplete="username"
                       className="form-control form-control-lg"
                       style={{ borderColor: "#f97316" }}
@@ -279,8 +336,13 @@ async function handleSubmit(e: React.FormEvent) {
                   </div>
 
                   {error && (
-                    <div className="alert py-3 px-4 rounded-3 mb-4" style={{ background: "#fff7ed", borderColor: "#dc2626", color: "#dc2626" }}>
-                      {error}
+                    <div className="alert py-3 px-4 rounded-3 mb-4" style={{ background: lockoutMinutes > 0 ? "#fef2f2" : "#fff7ed", borderColor: "#dc2626", color: "#dc2626", border: "1px solid" }}>
+                      {lockoutMinutes > 0 ? (
+                        <div className="d-flex flex-column gap-1">
+                          <span className="fw-semibold">Account locked.</span>
+                          <span>Try again in <strong>{lockoutMinutes} minute{lockoutMinutes !== 1 ? "s" : ""}</strong>.</span>
+                        </div>
+                      ) : error}
                     </div>
                   )}
 
@@ -292,16 +354,16 @@ async function handleSubmit(e: React.FormEvent) {
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || lockoutMinutes > 0}
                     className="btn btn-lg w-100 fw-semibold py-3"
-                    style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}
+                    style={{ background: lockoutMinutes > 0 ? "#9ca3af" : "linear-gradient(135deg, #dc2626, #f97316)", color: "white", cursor: lockoutMinutes > 0 ? "not-allowed" : "pointer" }}
                   >
                     {loading ? (
                       <span className="d-inline-flex align-items-center gap-2">
                         <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
                         Signing in...
                       </span>
-                    ) : "Continue"}
+                    ) : lockoutMinutes > 0 ? `Locked — ${lockoutMinutes} minute${lockoutMinutes !== 1 ? "s" : ""} remaining` : "Continue"}
                   </button>
                 </form>
               </div>
@@ -339,11 +401,18 @@ async function handleSubmit(e: React.FormEvent) {
                   </div>
                   <div className="mb-4">
                     <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>User ID</label>
-                    <input type="text" value={forgotPasswordForm.userId} onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, userId: e.target.value.toUpperCase() })} placeholder="e.g. 202400001, T001, R001" className="form-control form-control-lg" style={{ borderColor: "#f97316" }} required />
+                    <input type="text" value={forgotPasswordForm.userId} onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, userId: e.target.value.toUpperCase() })} placeholder="Student ID / Faculty ID" className="form-control form-control-lg" style={{ borderColor: "#f97316" }} required />
                   </div>
                   {forgotPasswordError && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#fef2f2", borderColor: "#dc2626", color: "#dc2626" }}>{forgotPasswordError}</div>}
                   {forgotPasswordSuccess && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#f0fdf4", borderColor: "#10b981", color: "#059669" }}>{forgotPasswordSuccess}</div>}
-                  <button type="submit" className="btn btn-lg w-100 fw-semibold py-3" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Send Verification Code</button>
+                  <button type="submit" className="btn btn-lg w-100 fw-semibold py-3" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }} disabled={sendingCode}>
+                    {sendingCode ? (
+                      <span className="d-inline-flex align-items-center gap-2">
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                        Sending...
+                      </span>
+                    ) : "Send Verification Code"}
+                  </button>
                 </form>
               )}
 
@@ -367,16 +436,73 @@ async function handleSubmit(e: React.FormEvent) {
                   <p className="text-muted mb-4">Create a new password for your account.</p>
                   <div className="mb-3">
                     <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>New Password</label>
-                    <input type="password" value={forgotPasswordForm.newPassword} onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, newPassword: e.target.value })} placeholder="••••••••" className="form-control form-control-lg" style={{ borderColor: "#f97316" }} minLength={6} required />
+                    <div className="position-relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={forgotPasswordForm.newPassword}
+                        onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, newPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="form-control form-control-lg pe-5"
+                        style={{ borderColor: "#f97316" }}
+                        minLength={6}
+                        required
+                      />
+                      <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3 p-0" style={{ color: "#dc2626" }} aria-label={showNewPassword ? "Hide password" : "Show password"}>
+                        {showNewPassword ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                     <div className="form-text">Password must be at least 6 characters long.</div>
                   </div>
                   <div className="mb-4">
                     <label className="form-label fw-semibold" style={{ color: "#dc2626" }}>Confirm New Password</label>
-                    <input type="password" value={forgotPasswordForm.confirmPassword} onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, confirmPassword: e.target.value })} placeholder="••••••••" className="form-control form-control-lg" style={{ borderColor: "#f97316" }} minLength={6} required />
+                    <div className="position-relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={forgotPasswordForm.confirmPassword}
+                        onChange={(e) => setForgotPasswordForm({ ...forgotPasswordForm, confirmPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="form-control form-control-lg pe-5"
+                        style={{ borderColor: "#f97316" }}
+                        minLength={6}
+                        required
+                      />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3 p-0" style={{ color: "#dc2626" }} aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
+                        {showConfirmPassword ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </div>
                   {forgotPasswordError && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#fef2f2", borderColor: "#dc2626", color: "#dc2626" }}>{forgotPasswordError}</div>}
                   {forgotPasswordSuccess && <div className="alert py-2 px-3 rounded-3 mb-3" style={{ background: "#f0fdf4", borderColor: "#10b981", color: "#059669" }}>{forgotPasswordSuccess}</div>}
-                  <button type="submit" className="btn btn-lg w-100 fw-semibold py-3" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }}>Reset Password</button>
+                  <button type="submit" className="btn btn-lg w-100 fw-semibold py-3" style={{ background: "linear-gradient(135deg, #dc2626, #f97316)", color: "white" }} disabled={resettingPassword}>
+                    {resettingPassword ? (
+                      <span className="d-inline-flex align-items-center gap-2">
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                        Resetting...
+                      </span>
+                    ) : "Reset Password"}
+                  </button>
                 </form>
               )}
 

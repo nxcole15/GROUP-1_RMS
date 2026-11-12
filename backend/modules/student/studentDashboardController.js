@@ -202,6 +202,7 @@ async function getProfileData(req, res, next) {
         ea.guardian_name,
         ea.guardian_phone,
         ea.created_at as enrollment_date,
+        ea.learning_modality,
         COALESCE(s.track, ea.track, ea.pathway) as track,
         COALESCE(s.strand, ea.strand, ea.track) as strand,
         s.grade_level
@@ -250,6 +251,7 @@ async function getProfileData(req, res, next) {
         guardian_name: null,
         guardian_phone: null,
         enrollment_date: null,
+        learning_modality: null,
         school_year: academicInfo.school_year,
         current_term: academicInfo.current_term,
         track: null,

@@ -16,7 +16,7 @@ const ApplicationModel = {
       "father_name","father_occupation","mother_name","mother_occupation",
       "guardian_name","guardian_relation","guardian_phone",
       "previous_school","previous_school_address","years_attended",
-      "generated_student_id","temp_password","credentials_sent_at",
+      "generated_student_id","credentials_sent_at",
       "photo_url",
     ];
     const values = fields.map(f => data[f] ?? null);
@@ -71,7 +71,7 @@ const ApplicationModel = {
       "registrar_note","principal_note","rejection_reason",
       "reviewed_by_registrar","reviewed_by_principal",
       "registrar_reviewed_at","principal_reviewed_at","forwarded_to_principal_at",
-      "generated_student_id","temp_password","credentials_sent_at",
+      "generated_student_id","credentials_sent_at",
       "official_student_id","student_id_confirmed_by","student_id_confirmed_at",
     ];
     const fields = ["status = ?", "updated_at = NOW()"];

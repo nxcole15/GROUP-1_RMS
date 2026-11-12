@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { getAcademicConfig, type AcademicConfig } from "../../lib/auth";
+import { getAcademicConfig, useInactivityTimeout, type AcademicConfig } from "../../lib/auth";
 import { GuidePanel } from "../../components/GuidePanel";
 
 type PaymentRecord = {
@@ -154,6 +154,11 @@ export default function AccountingDashboardPage() {
       }
     }
   }, [router]);
+
+  // Inactivity timeout: 15 minutes
+  useEffect(() => {
+    return useInactivityTimeout(true) ?? undefined;
+  }, []);
 
   async function loadPayments() {
     try {

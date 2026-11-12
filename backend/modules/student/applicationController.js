@@ -421,8 +421,7 @@ async function confirmStudentId(req, res, next) {
       official_student_id:      studentId,
       student_id_confirmed_by:  req.admin.admin_id,
       student_id_confirmed_at:  new Date(),
-      generated_student_id:     studentId, // Keep for backwards compatibility
-      temp_password:            tempPass,  // Store for reference (hashed version in students table)
+      generated_student_id:     studentId,
       credentials_sent_at:      new Date(),
     });
 
