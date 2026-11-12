@@ -6420,11 +6420,19 @@ function SchedulingPanel() {
               credentials: "include",
             });
             const schedData = await schedRes.json();
+            // Normalize track: students table may store "TECH-PRO", schedules use "TechPro Track"
+            const rawTrack = student.track || '';
+            const normalizedTrack = (() => {
+              const u = rawTrack.toUpperCase();
+              if (u.includes('TECH') || u.includes('PRO')) return 'TechPro Track';
+              if (u.includes('ACADEMIC') || rawTrack === '') return 'Academic Track';
+              return rawTrack;
+            })();
             return {
               student_id: student.student_id,
               full_name: student.full_name,
               profile_picture_url: student.photo_url,
-              track: student.track || 'Academic Track',
+              track: normalizedTrack,
               strand: student.strand || student.pathway || 'STEM',
               grade_level: student.grade_level || 11,
               term: 'Term 1',
@@ -6676,8 +6684,17 @@ async function loadAvailableSchedules(student: any) {
     if (!token) return;
 
     try {
+      // Normalize track names: students table uses "TECH-PRO", schedules use "TechPro Track"
+      const normalizeTrack = (t: string) => {
+        if (!t) return "Academic Track";
+        const upper = t.toUpperCase();
+        if (upper.includes("TECH") || upper.includes("PRO")) return "TechPro Track";
+        if (upper.includes("ACADEMIC")) return "Academic Track";
+        return t; // already a known value
+      };
+
       const params = new URLSearchParams({
-        track: student.track,
+        track: normalizeTrack(student.track),
         strand: student.strand,
         term: student.term,
       });
