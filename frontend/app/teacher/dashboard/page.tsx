@@ -1188,7 +1188,26 @@ function GradesPanel({ isGradeLocked, activeTerm }: { isGradeLocked: boolean; ac
   useEffect(() => {
     loadSubjects();
     loadEditRequests();
+    loadSubmissionWindow();
   }, [selectedTerm]);
+
+  // Fetch submission window status independently so it shows correctly
+  // even before the teacher selects a subject
+  async function loadSubmissionWindow() {
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/teacher/grade-submission/window-status?term=${encodeURIComponent(selectedTerm)}`,
+        { headers: { Authorization: `Bearer ${token}` }, credentials: "include" }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // Only update if no subject is selected yet (don't overwrite richer data from loadStudents)
+        setSubmissionWindow(prev => prev === null ? data.submission_window : prev);
+      }
+    } catch (_) { /* non-fatal */ }
+  }
 
   async function loadEditRequests() {
     const token = localStorage.getItem("inform_token");

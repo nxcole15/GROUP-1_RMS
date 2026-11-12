@@ -853,12 +853,62 @@ async function getTeacherSubjectsForGrades(req, res, next) {
   }
 }
 
+/**
+ * Lightweight endpoint — returns only the submission window status for a given term.
+ * Called on page load so the open/closed indicator shows before a subject is selected.
+ */
+async function getSubmissionWindowStatus(req, res, next) {
+  try {
+    const term = req.query.term;
+    if (!term || !['Term 1', 'Term 2', 'Term 3'].includes(term)) {
+      return res.status(400).json({ error: "term query param is required (Term 1, Term 2, or Term 3)." });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT is_open, start_date, end_date, manual_override
+       FROM grade_submission_config WHERE term = ? LIMIT 1`,
+      [term]
+    );
+
+    const config = rows[0];
+    const now = new Date();
+    let isOpen = false;
+
+    if (config) {
+      if (config.manual_override === 'open') {
+        isOpen = true;
+      } else if (config.manual_override === 'closed') {
+        isOpen = false;
+      } else if (config.start_date && config.end_date) {
+        isOpen = now >= new Date(config.start_date) && now <= new Date(config.end_date);
+      }
+    }
+
+    const daysRemaining = config?.end_date
+      ? Math.max(0, Math.ceil((new Date(config.end_date) - now) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+    res.json({
+      submission_window: {
+        is_open: isOpen,
+        start_date: config?.start_date || null,
+        end_date: config?.end_date || null,
+        days_remaining: daysRemaining,
+        manual_override: config?.manual_override || null
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
-  getSubjectStudentsWithGrades,      // OLD - uses subject_id
-  getStudentsWithGradesForClass,     // ✨ NEW - uses subject_name+strand  
-  saveDraftGrade,                    // UPDATED - supports both systems
-  submitGradesBatch,                 // UPDATED - no approval, supports both
-  getSubmissionStatus,               // Keep as-is
-  getTeacherSubjectsWithStatus,      // OLD - uses subjects table
-  getTeacherSubjectsForGrades        // ✨ NEW - uses teacher_schedules
+  getSubjectStudentsWithGrades,
+  getStudentsWithGradesForClass,
+  saveDraftGrade,
+  submitGradesBatch,
+  getSubmissionStatus,
+  getTeacherSubjectsWithStatus,
+  getTeacherSubjectsForGrades,
+  getSubmissionWindowStatus        // ✨ NEW - lightweight window status check
 };
