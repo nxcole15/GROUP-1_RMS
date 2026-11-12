@@ -139,3 +139,34 @@ export function refreshAcademicConfig() {
   cachedConfig = null;
   cacheTimestamp = 0;
 }
+
+// ── Inactivity timeout hook ───────────────────────────────────────────────────
+// Auto-logs out the user after `timeoutMs` of no activity (default 15 min).
+// Call this inside any dashboard page once auth is confirmed.
+export function useInactivityTimeout(enabled: boolean, timeoutMs = 15 * 60 * 1000) {
+  // useEffect is a React hook — import it at call sites, but we keep the
+  // logic here so every dashboard gets identical behaviour.
+  // We export a plain function that sets up the listeners; call it in a
+  // useEffect with [enabled] as the dependency.
+  if (typeof window === "undefined" || !enabled) return;
+
+  const EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"] as const;
+  let timer: ReturnType<typeof setTimeout>;
+
+  function resetTimer() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      clearAuth();
+      window.location.replace("/login");
+    }, timeoutMs);
+  }
+
+  EVENTS.forEach(e => window.addEventListener(e, resetTimer));
+  resetTimer();
+
+  // Return a cleanup function so the caller's useEffect can return it
+  return () => {
+    clearTimeout(timer);
+    EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
+  };
+}

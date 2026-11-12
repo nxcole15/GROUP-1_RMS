@@ -4,7 +4,7 @@ import React from "react";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { API_BASE, getAcademicConfig, type AcademicConfig } from "../../lib/auth";
+import { API_BASE, getAcademicConfig, useInactivityTimeout, type AcademicConfig } from "../../lib/auth";
 import { GuidePanel } from "../../components/GuidePanel";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
@@ -4067,6 +4067,11 @@ export default function TeacherDashboardPage() {
       setAuthChecked(true);
     }
   }, []);
+
+  // Inactivity timeout: 15 minutes
+  useEffect(() => {
+    return useInactivityTimeout(authChecked) ?? undefined;
+  }, [authChecked]);
 
   // Fetch academic config
   useEffect(() => {

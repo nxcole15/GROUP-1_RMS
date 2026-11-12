@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import React from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { API_BASE, getAcademicConfig, type AcademicConfig } from "../lib/auth";
+import { API_BASE, getAcademicConfig, useInactivityTimeout, type AcademicConfig } from "../lib/auth";
 import { GuidePanel } from "../components/GuidePanel";
 
 type Panel = "home"|"grades"|"schedule"|"tuition"|"documents"|"notifications"|"profile"|"dashboard-guide"|"user-guide";
@@ -2269,6 +2269,7 @@ function ProfilePanel({ student }: { student?: {
     school_year?: string;
     current_term?: string;
     adviser_name?: string;
+    learning_modality?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -2357,6 +2358,16 @@ function ProfilePanel({ student }: { student?: {
                       style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", fontWeight:600 }}>
                       Active
                     </span>
+                    {profileData?.learning_modality && (
+                      <span className="badge rounded-pill px-3 py-2"
+                        style={{ background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", fontWeight:600 }}>
+                        {profileData.learning_modality === "face_to_face" || profileData.learning_modality === "Face to Face"
+                          ? "Face to Face"
+                          : profileData.learning_modality === "modular" || profileData.learning_modality === "Modular"
+                          ? "Modular"
+                          : profileData.learning_modality}
+                      </span>
+                    )}
                   </div>
 
                   {/* Stats */}
@@ -2575,6 +2586,11 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // -- Inactivity timeout: 15 minutes ----------------------------
+  useEffect(() => {
+    return useInactivityTimeout(authChecked) ?? undefined;
+  }, [authChecked]);
+
   // Fetch academic config
   useEffect(() => {
     if (!authChecked) return;
@@ -2691,7 +2707,6 @@ export default function DashboardPage() {
               </svg>
               {unreadCount > 0 && <span className="position-absolute top-0 end-0 rounded-circle bg-danger d-flex align-items-center justify-content-center text-white" style={{ width:16, height:16, fontSize:9, fontWeight:"bold" }}>{unreadCount}</span>}
             </button>
-            <button onClick={() => { setPanel("profile"); }} className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold d-none d-sm-flex border-0" style={{ width:32, height:32, fontSize:12, background:"linear-gradient(135deg,#6366f1,#7c3aed)", cursor:"pointer" }} title="My Profile">JS</button>
           </div>
         </header>
 

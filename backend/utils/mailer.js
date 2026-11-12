@@ -67,7 +67,7 @@ async function sendCredentials({ to, fullName, studentId, tempPass }) {
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#1e40af,#dc2626);padding:32px 24px;text-align:center;">
       <!-- School Logo -->
-      <img src="https://group-1-rms.vercel.app/cfei-logo.jpg" alt="CFEI Logo" style="width:80px;height:80px;margin-bottom:16px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);object-fit:cover;">
+      <img src="https://cfeistudentportal.com/cfei-logo.jpg" alt="CFEI Logo" style="width:80px;height:80px;margin-bottom:16px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);object-fit:cover;">
       <h1 style="color:#fff;margin:0;font-size:22px;">🎓 Enrollment Approved!</h1>
       <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Welcome to Cebu Far East Institute</p>
     </div>
@@ -227,7 +227,62 @@ async function sendRequirementsEmail({ to, fullName, dueDate }) {
   }
 }
 
-module.exports = { sendCredentials, sendRequirementsEmail, sendRejectionEmail };
+async function sendPasswordResetCode({ to, fullName, code }) {
+  const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
+
+  try {
+    await deliverEmail({
+      from,
+      to,
+      subject: "🔐 CFEI INFORM — Password Reset Verification Code",
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f0f4ff;margin:0;padding:0;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#dc2626,#f97316);padding:32px 24px;text-align:center;">
+      <img src="https://cfeistudentportal.com/cfei-logo.jpg" alt="CFEI Logo" style="width:72px;height:72px;margin-bottom:16px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);object-fit:cover;">
+      <h1 style="color:#fff;margin:0;font-size:22px;">🔐 Password Reset</h1>
+      <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Cebu Far East Institute — INFORM Portal</p>
+    </div>
+    <div style="padding:32px 24px;">
+      <p style="color:#334155;font-size:15px;margin:0 0 16px;">Dear <strong>${fullName}</strong>,</p>
+      <p style="color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;">
+        We received a request to reset your INFORM Portal password. Use the verification code below to continue.
+        This code expires in <strong>15 minutes</strong>.
+      </p>
+
+      <div style="background:#fff7ed;border:2px solid #f97316;border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9a3412;margin-bottom:12px;">Your Verification Code</div>
+        <div style="font-size:40px;font-weight:900;color:#dc2626;letter-spacing:0.25em;font-family:monospace;">${code}</div>
+      </div>
+
+      <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin-bottom:24px;border-radius:4px;">
+        <p style="margin:0;font-size:13px;color:#7f1d1d;line-height:1.6;">
+          <strong>⚠️ Security Notice:</strong> If you did not request a password reset, please ignore this email.
+          Your password will remain unchanged.
+        </p>
+      </div>
+
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.6;text-align:center;">
+        This is an automated message. Please do not reply to this email.
+      </p>
+    </div>
+    <div style="background:#f1f5f9;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;">
+      <p style="color:#94a3b8;font-size:11px;margin:0;">© ${new Date().getFullYear()} Cebu Far East Institute · INFORM Student Portal</p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+    console.log(`✅ Password reset code sent to ${to}`);
+  } catch (error) {
+    console.error(`❌ Failed to send password reset email to ${to}:`, error.message);
+    throw error;
+  }
+}
+
+module.exports = { sendCredentials, sendRequirementsEmail, sendRejectionEmail, sendPasswordResetCode };
 
 async function sendRejectionEmail({ to, fullName, rejectionReason, schoolYear }) {
   const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
