@@ -48,15 +48,22 @@ const GradeRequestModel = {
       `SELECT gr.*, 
               s.full_name AS student_name,
               s.student_id AS student_display_id,
+              s.id AS student_internal_id,
               s.grade_level,
               s.track AS student_track,
               s.strand AS student_strand,
               ts.subject_name,
               ts.strand,
-              CONCAT(ts.subject_name, ' (', ts.strand, ')') AS subject_code
+              CONCAT(ts.subject_name, ' (', ts.strand, ')') AS subject_code,
+              g.percentage AS existing_grade,
+              g.submission_status AS existing_grade_status
        FROM grade_requests gr
        JOIN students s ON s.student_id = gr.student_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
+       LEFT JOIN grades g 
+         ON g.teacher_schedule_id = ts.id
+         AND g.student_internal_id = s.id
+         AND g.submission_status = 'approved'
        WHERE gr.teacher_id = ?
        ORDER BY gr.created_at DESC`,
       [teacher_id]

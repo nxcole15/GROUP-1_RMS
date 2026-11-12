@@ -661,10 +661,10 @@ async function getSubmissionStatus(req, res, next) {
          b.approved_at,
          b.return_reason,
          b.notes,
-         sub.name as subject_name,
-         sub.code as subject_code
+         sub.subject_name,
+         sub.strand as subject_code
        FROM grade_submission_batches b
-       INNER JOIN subjects sub ON b.subject_id = sub.id
+       INNER JOIN teacher_schedules sub ON b.subject_id = sub.id
        WHERE b.teacher_id = ? 
          AND b.subject_id = ? 
          AND b.term = ?`,

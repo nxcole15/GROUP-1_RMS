@@ -288,6 +288,40 @@ await conn.query(`
 `);
 console.log("✅  Grade request config table created");
 
+// Seed grade_request_config rows
+await conn.query(`
+  INSERT IGNORE INTO grade_request_config (term, is_open)
+  VALUES ('Term 1', 0), ('Term 2', 0), ('Term 3', 0)
+`);
+console.log("✅  Grade request config seeded (Term 1/2/3)");
+
+await conn.query(`
+  CREATE TABLE grade_submission_config (
+    id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    term             ENUM('Term 1','Term 2','Term 3') NOT NULL UNIQUE,
+    is_open          TINYINT(1)   NOT NULL DEFAULT 0,
+    opened_by        VARCHAR(20)  NULL,
+    opened_at        DATETIME     NULL,
+    closed_by        VARCHAR(20)  NULL,
+    closed_at        DATETIME     NULL,
+    start_date       DATETIME     NULL,
+    end_date         DATETIME     NULL,
+    manual_override  ENUM('none','open','closed') NOT NULL DEFAULT 'none',
+    last_modified_by VARCHAR(20)  NULL,
+    last_modified_at DATETIME     NULL,
+    notes            TEXT         NULL,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+console.log("✅  Grade submission config table created");
+
+// Seed grade_submission_config rows
+await conn.query(`
+  INSERT IGNORE INTO grade_submission_config (term, is_open, manual_override)
+  VALUES ('Term 1', 0, 'none'), ('Term 2', 0, 'none'), ('Term 3', 0, 'none')
+`);
+console.log("✅  Grade submission config seeded (Term 1/2/3)");
+
 await conn.query(`
   CREATE TABLE staff_notifications (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -796,7 +796,7 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
                       return (
                         <div className="rounded-3 p-3 text-center" style={{ background: "rgba(16,185,129,0.07)", border: "1.5px solid rgba(16,185,129,0.3)" }}>
                           <div className="fw-black text-success mb-1" style={{ fontSize: 28 }}>
-                            {score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-" : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-" : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-" : score >= 65 ? "D" : "F"}
+                            {score}
                           </div>
                           <div className="fw-semibold small" style={{ color }}>Score: {existing.score}</div>
                           <div className="text-muted mt-1 d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="checkCircle" size={12} /> Grade Released</div>
@@ -1067,7 +1067,6 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
               <div className="row g-3">
                 {releasedGrades.map((g, i) => {
                   const score = Number(g.score);
-                  const letterGrade = score >= 97 ? "A+" : score >= 93 ? "A" : score >= 90 ? "A-" : score >= 87 ? "B+" : score >= 83 ? "B" : score >= 80 ? "B-" : score >= 77 ? "C+" : score >= 73 ? "C" : score >= 70 ? "C-" : score >= 65 ? "D" : "F";
                   const color = score >= 80 ? "#16a34a" : score >= 75 ? "#d97706" : "#dc2626";
                   return (
                     <div key={i} className="col-12 col-sm-6 col-lg-4">
@@ -1085,7 +1084,7 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
                           
                           {/* Grade display */}
                           <div className="rounded-3 p-3 text-center" style={{ background: "rgba(16,185,129,0.07)", border: "1.5px solid rgba(16,185,129,0.3)" }}>
-                            <div className="fw-black text-success mb-1" style={{ fontSize: 28 }}>{letterGrade}</div>
+                            <div className="fw-black text-success mb-1" style={{ fontSize: 28 }}>{score}</div>
                             <div className="fw-semibold small" style={{ color }}>Score: {score}</div>
                             <div className="text-muted mt-1 d-inline-flex align-items-center gap-1" style={{ fontSize: 11 }}><Icon name="checkCircle" size={12} /> Grade Released</div>
                           </div>

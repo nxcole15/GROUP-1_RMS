@@ -20,11 +20,10 @@ async function getMyGrades(req, res, next) {
          gr.letter_grade,
          gr.remarks,
          gr.updated_at as released_at,
-         COALESCE(ts.subject_name, sub.name) AS subject_name,
+         COALESCE(ts.subject_name, 'Unknown Subject') AS subject_name,
          COALESCE(ts.strand, 'N/A') AS subject_code,
          t.full_name AS teacher_name
        FROM grade_requests gr
-       LEFT JOIN subjects sub ON sub.id = gr.subject_id
        LEFT JOIN teacher_schedules ts ON ts.id = gr.subject_id
        JOIN teachers t ON t.id = gr.teacher_id
        WHERE gr.student_id = ? 

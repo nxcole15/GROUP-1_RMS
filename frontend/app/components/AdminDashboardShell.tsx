@@ -5061,7 +5061,7 @@ function AdminRequestsPanel({ role }: { role?: string }) {
                       <div className="rounded-3 p-3 bg-success-subtle border border-success-subtle text-center">
                         <div className="text-muted small mb-1">Submitted Grade</div>
                         <div className="fw-black text-success" style={{ fontSize: 40 }}>
-                          {req.score != null ? (Number(req.score) >= 97 ? "A+" : Number(req.score) >= 93 ? "A" : Number(req.score) >= 90 ? "A-" : Number(req.score) >= 87 ? "B+" : Number(req.score) >= 83 ? "B" : Number(req.score) >= 80 ? "B-" : Number(req.score) >= 77 ? "C+" : Number(req.score) >= 73 ? "C" : Number(req.score) >= 70 ? "C-" : Number(req.score) >= 65 ? "D" : "F") : "-"}
+                          {req.score != null ? `${req.score}` : "-"}
                         </div>
                         <div className="fw-semibold text-success small">{req.score != null ? `${req.score}%` : ""}</div>
                         {req.remarks && <div className="text-muted mt-1 fst-italic" style={{ fontSize: 11 }}>&ldquo;{req.remarks}&rdquo;</div>}
