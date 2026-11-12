@@ -36,7 +36,7 @@ async function getTeachersForScheduling(req, res, next) {
  */
 async function getTeacherSchedules(req, res, next) {
   try {
-    const { teacher_id, term, school_year, track, strand } = req.query;
+    const { teacher_id, term, school_year, track, strand, grade_level } = req.query;
     
     let query = `
       SELECT 
@@ -49,6 +49,7 @@ async function getTeacherSchedules(req, res, next) {
         ts.time_end,
         ts.track,
         ts.strand,
+        ts.grade_level,
         ts.term,
         ts.school_year,
         ts.max_capacity,
@@ -89,6 +90,11 @@ async function getTeacherSchedules(req, res, next) {
       // Handle "All Strands" - show schedules that match the strand OR are marked "All Strands"
       query += ` AND (ts.strand = ? OR ts.strand = 'All Strands')`;
       params.push(strand);
+    }
+
+    if (grade_level) {
+      query += ` AND ts.grade_level = ?`;
+      params.push(parseInt(grade_level));
     }
     
     query += ` ORDER BY ts.day, ts.time_start ASC`;
@@ -158,6 +164,7 @@ async function createTeacherSchedule(req, res, next) {
       time_end,
       track,
       strand,
+      grade_level,
       term,
       school_year,
       max_capacity
@@ -195,9 +202,9 @@ async function createTeacherSchedule(req, res, next) {
     // Insert schedule
     const [result] = await pool.query(`
       INSERT INTO teacher_schedules 
-        (teacher_id, subject_name, room, day, time_start, time_end, track, strand, term, school_year, max_capacity, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [teacher_id, subject_name, room, day, time_start, time_end, track, strand, term, school_year, max_capacity || 40, adminId]);
+        (teacher_id, subject_name, room, day, time_start, time_end, track, strand, grade_level, term, school_year, max_capacity, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [teacher_id, subject_name, room, day, time_start, time_end, track, strand, grade_level || 11, term, school_year, max_capacity || 40, adminId]);
 
     res.status(201).json({
       message: "Teacher schedule created successfully",
@@ -222,6 +229,7 @@ async function updateTeacherSchedule(req, res, next) {
       time_end,
       track,
       strand,
+      grade_level,
       term,
       max_capacity
     } = req.body;
@@ -271,6 +279,7 @@ async function updateTeacherSchedule(req, res, next) {
     if (time_end !== undefined) { updates.push('time_end = ?'); values.push(time_end); }
     if (track !== undefined) { updates.push('track = ?'); values.push(track); }
     if (strand !== undefined) { updates.push('strand = ?'); values.push(strand); }
+    if (grade_level !== undefined) { updates.push('grade_level = ?'); values.push(grade_level); }
     if (term !== undefined) { updates.push('term = ?'); values.push(term); }
     if (max_capacity !== undefined) { updates.push('max_capacity = ?'); values.push(max_capacity); }
 
@@ -847,33 +856,36 @@ async function getSchedulingStatistics(req, res, next) {
         COUNT(DISTINCT ts.teacher_id) as teachers_with_schedules
       FROM teachers t
       LEFT JOIN teacher_schedules ts ON t.id = ts.teacher_id
+      WHERE 1=1
     `;
 
-    if (term || school_year) {
-      teacherQuery += ` AND 1=1`;
-      if (term) {
-        teacherQuery += ` AND ts.term = ?`;
-      }
-      if (school_year) {
-        teacherQuery += ` AND ts.school_year = ?`;
-      }
+    const teacherParams = [];
+    if (term) {
+      teacherQuery += ` AND (ts.term = ? OR ts.teacher_id IS NULL)`;
+      teacherParams.push(term);
+    }
+    if (school_year) {
+      teacherQuery += ` AND (ts.school_year = ? OR ts.teacher_id IS NULL)`;
+      teacherParams.push(school_year);
     }
 
-    const [teacherStats] = await pool.query(teacherQuery, params);
+    const [teacherStats] = await pool.query(teacherQuery, teacherParams);
 
     // Students enrolled vs total approved
     let studentQuery = `
       SELECT 
-        COUNT(DISTINCT s.student_id) as total_students,
-        COUNT(DISTINCT sse.student_id) as students_enrolled
+        COUNT(DISTINCT s.id) as total_students,
+        COUNT(DISTINCT sse.student_internal_id) as students_enrolled
       FROM students s
-      INNER JOIN enrollments e ON s.student_id = e.student_id
-      LEFT JOIN student_schedule_enrollments sse ON s.student_id = sse.student_id
-      WHERE e.status = 'approved'
+      LEFT JOIN student_schedule_enrollments sse ON s.id = sse.student_internal_id
+      WHERE s.account_status = 'active'
     `;
 
     if (term) {
-      studentQuery += ` AND e.term = ?`;
+      studentQuery += ` AND EXISTS (
+        SELECT 1 FROM teacher_schedules ts 
+        WHERE ts.id = sse.teacher_schedule_id AND ts.term = ?
+      )`;
     }
 
     const studentParams = term ? [term] : [];

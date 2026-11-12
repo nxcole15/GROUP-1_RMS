@@ -51,7 +51,7 @@ const TeacherModel = {
          ts.strand,
          ts.track,
          ts.term,
-         COUNT(DISTINCT sse.student_id) AS enrolled_count
+         COUNT(DISTINCT COALESCE(sse.student_internal_id, sse.student_id)) AS enrolled_count
        FROM teacher_schedules ts
        LEFT JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
        WHERE ts.teacher_id = ?
@@ -63,6 +63,23 @@ const TeacherModel = {
   },
 
   async getStudentsInClasses(teacher_id) {
+    // Resolve the display teacher_id (e.g. "T-001") to the internal numeric ID
+    const [teacherIdRows] = await db.query(
+      `SELECT id FROM teachers WHERE teacher_id = ? LIMIT 1`,
+      [teacher_id]
+    );
+    const internalTeacherId = teacherIdRows[0]?.id;
+    if (!internalTeacherId) return [];
+
+    // Join via student_internal_id (INT, always populated by the new enrollment flow)
+    // Fall back to the legacy student_id string join if student_internal_id is NULL
+    //
+    // IMPORTANT: track/strand in the SELECT represents the SCHEDULE's track/strand
+    // (ts.track / ts.strand), not the student's personal track. This ensures that
+    // subjects like Physical Education assigned to "All Tracks" group as a single
+    // class in the dropdown instead of fragmenting by each student's individual track.
+    // The student's own track/strand is returned separately as student_track/student_strand
+    // for display in the Track & Strand column.
     const [rows] = await db.query(
       `SELECT 
          st.student_id, 
@@ -71,19 +88,22 @@ const TeacherModel = {
          st.grade_level, 
          st.email,
          ea.photo_url,
-         ea.track,
-         ea.strand,
+         ts.track,
+         ts.strand,
+         COALESCE(ea.track, ts.track, '') AS student_track,
+         COALESCE(ea.strand, ts.strand, '') AS student_strand,
          ts.subject_name,
          ts.term,
-         CONCAT(ea.track, ' - ', ea.strand) as track_strand
-       FROM students st
-       INNER JOIN student_schedule_enrollments sse ON st.student_id = sse.student_id
+         CONCAT(ts.track, ' - ', ts.strand) AS track_strand
+       FROM student_schedule_enrollments sse
        INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
-       INNER JOIN teachers t ON ts.teacher_id = t.id
+       INNER JOIN students st 
+         ON st.id = sse.student_internal_id
+         OR (sse.student_internal_id IS NULL AND st.student_id = sse.student_id)
        LEFT JOIN enrollment_applications ea ON st.student_id = ea.generated_student_id
-       WHERE t.teacher_id = ?
+       WHERE ts.teacher_id = ?
        ORDER BY st.full_name`,
-      [teacher_id]
+      [internalTeacherId]
     );
     return rows;
   },
@@ -170,7 +190,7 @@ const TeacherModel = {
     const [rows] = await db.query(
       `SELECT
          COUNT(DISTINCT ts.id) AS total_subjects,
-         COUNT(DISTINCT sse.student_id) AS total_students,
+         COUNT(DISTINCT COALESCE(sse.student_internal_id, sse.student_id)) AS total_students,
          ROUND(AVG(g.percentage), 2) AS avg_grade
        FROM teacher_schedules ts
        LEFT JOIN student_schedule_enrollments sse ON ts.id = sse.teacher_schedule_id
@@ -245,7 +265,7 @@ const TeacherModel = {
 
     // Get total unique students enrolled in this teacher's subjects
     const [studentRows] = await db.query(
-      `SELECT COUNT(DISTINCT sse.student_id) AS total_students
+      `SELECT COUNT(DISTINCT COALESCE(sse.student_internal_id, sse.student_id)) AS total_students
        FROM student_schedule_enrollments sse
        INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
        WHERE ts.teacher_id = ?`,

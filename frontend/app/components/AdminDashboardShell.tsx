@@ -344,6 +344,38 @@ function Overview({ setActive, hideBanner, adminName, academicConfig, role }: { 
     avgGwa: string;
   } | null>(null);
 
+  // Scheduling overview stats (teacher_coordinator only)
+  const [schedStats, setSchedStats] = useState<{
+    totalSchedules: number;
+    activeRooms: number;
+    teachersAssigned: number;
+    conflicts: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (role !== "teacher_coordinator") return;
+    const token = localStorage.getItem("inform_token");
+    if (!token) return;
+    const params = new URLSearchParams({ term: academicConfig?.current_term || "Term 1", school_year: getCurrentSchoolYear() });
+    fetch(`${API_BASE}/api/admin/scheduling/statistics?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.statistics) {
+          const s = data.statistics;
+          setSchedStats({
+            totalSchedules:   s.total_schedules       ?? 0,
+            activeRooms:      s.rooms?.utilized        ?? 0,
+            teachersAssigned: s.teachers?.with_schedules ?? 0,
+            conflicts:        s.conflicts?.room_conflicts ?? 0,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [role, academicConfig]);
+
   const [enrollmentInsights, setEnrollmentInsights] = useState<Array<{
     track: string;
     grade_level: number;
@@ -452,13 +484,13 @@ function Overview({ setActive, hideBanner, adminName, academicConfig, role }: { 
           {(role === "teacher_coordinator" ? 
             // Teacher Coordinator: Scheduling-specific stats
             [
-              { label:"Total Schedules",     value: "—", gradient:"linear-gradient(135deg,#8b5cf6,#7c3aed)", shadow:"rgba(139,92,246,0.2)", bgLight:"#f5f3ff", textColor:"#6b21a8",
+              { label:"Total Schedules",     value: schedStats ? String(schedStats.totalSchedules) : "…", gradient:"linear-gradient(135deg,#8b5cf6,#7c3aed)", shadow:"rgba(139,92,246,0.2)", bgLight:"#f5f3ff", textColor:"#6b21a8",
                 icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
-              { label:"Active Rooms",        value: "—", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
+              { label:"Active Rooms",        value: schedStats ? String(schedStats.activeRooms) : "…", gradient:"linear-gradient(135deg,#6b7280,#4b5563)", shadow:"rgba(75,85,99,0.2)", bgLight:"#f9fafb", textColor:"#374151",
                 icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-              { label:"Teachers Assigned",   value: "—", gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
+              { label:"Teachers Assigned",   value: schedStats ? String(schedStats.teachersAssigned) : "…", gradient:"linear-gradient(135deg,#9ca3af,#6b7280)", shadow:"rgba(107,114,128,0.2)", bgLight:"#f9fafb", textColor:"#4b5563",
                 icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-              { label:"Schedule Conflicts",  value: "—", gradient:"linear-gradient(135deg,#ef4444,#dc2626)", shadow:"rgba(239,68,68,0.2)", bgLight:"#fef2f2", textColor:"#b91c1c",
+              { label:"Schedule Conflicts",  value: schedStats ? String(schedStats.conflicts) : "…", gradient:"linear-gradient(135deg,#ef4444,#dc2626)", shadow:"rgba(239,68,68,0.2)", bgLight:"#fef2f2", textColor:"#b91c1c",
                 icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> },
             ] 
           : 
@@ -6244,6 +6276,8 @@ function StatisticsDashboard({ filters, setFilters, showToast }: any) {
   );
 }
 
+type TimeSlot = { days: string[]; timeStart: string; timeEnd: string };
+
 function SchedulingPanel() {
   const [activeTab, setActiveTab] = useState<"teacher" | "student" | "timetable">("teacher");
   
@@ -6271,8 +6305,13 @@ function SchedulingPanel() {
   const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [teacherScheduleForm, setTeacherScheduleForm] = useState({
-    subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "Academic Track", term: "Term 1"
+    subject: "", room: "", strand: "", track: "Academic Track", term: "Term 1", gradeLevel: "11",
+    // legacy single-slot fields kept for Edit modal compatibility
+    day: "", timeStart: "", timeEnd: ""
   });
+  const [scheduleTimeSlots, setScheduleTimeSlots] = useState<TimeSlot[]>([
+    { days: [], timeStart: "", timeEnd: "" }
+  ]);
   const [saving, setSaving] = useState(false);
 
   // Student Schedule State
@@ -6280,6 +6319,7 @@ function SchedulingPanel() {
   const [studentsLoading, setStudentsLoading] = useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentFilter, setStudentFilter] = useState<"all" | "scheduled" | "unscheduled">("all");
+  const [studentGradeLevelFilter, setStudentGradeLevelFilter] = useState<"all" | "11" | "12">("all");
   const [showEnrollSchedule, setShowEnrollSchedule] = useState(false);
   const [showViewStudentSchedules, setShowViewStudentSchedules] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -6301,6 +6341,7 @@ function SchedulingPanel() {
   const [showBulkEnroll, setShowBulkEnroll] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [bulkEnrollScheduleId, setBulkEnrollScheduleId] = useState<string>("");
+  const [bulkGradeLevel, setBulkGradeLevel] = useState<"11" | "12">("11");
 
   // Priority 2: Statistics State
   const [statistics, setStatistics] = useState<any>(null);
@@ -6383,11 +6424,10 @@ function SchedulingPanel() {
               student_id: student.student_id,
               full_name: student.full_name,
               profile_picture_url: student.photo_url,
-              // Use track and strand from students table or enrollment_applications
-              // In enrollment_applications: pathway = Track, track = Strand
-              track: student.track || 'Academic Track',  // Get actual track from student record
-              strand: student.strand || student.pathway || 'STEM',  // Get actual strand from student record
-              term: 'Term 1', // Default term, adjust if needed
+              track: student.track || 'Academic Track',
+              strand: student.strand || student.pathway || 'STEM',
+              grade_level: student.grade_level || 11,
+              term: 'Term 1',
               hasSchedule: schedData.total > 0,
               scheduleCount: schedData.total
             };
@@ -6403,73 +6443,110 @@ function SchedulingPanel() {
   }
 
   async function handleAddTeacherSchedule() {
-    if (!selectedTeacher || !teacherScheduleForm.subject || !teacherScheduleForm.room || 
-        !teacherScheduleForm.day || !teacherScheduleForm.timeStart || !teacherScheduleForm.timeEnd ||
+    if (!selectedTeacher || !teacherScheduleForm.subject || !teacherScheduleForm.room ||
         !teacherScheduleForm.strand || !teacherScheduleForm.track || !teacherScheduleForm.term) {
       showToast("❌ Please fill in all fields");
       return;
     }
 
-    // Feature 5: Check for room conflicts
-    const conflict = await checkRoomConflict(
-      teacherScheduleForm.room,
-      teacherScheduleForm.day,
-      teacherScheduleForm.timeStart,
-      teacherScheduleForm.timeEnd
-    );
-
-    if (conflict) {
-      const confirmCreate = confirm(
-        `⚠️ Room Conflict Detected!\n\n` +
-        `${teacherScheduleForm.room} is already occupied on ${teacherScheduleForm.day} at ${teacherScheduleForm.timeStart}-${teacherScheduleForm.timeEnd}\n\n` +
-        `Conflicting schedule: ${conflict.subject_name} (${conflict.teacher_name})\n\n` +
-        `Do you want to create this schedule anyway?`
-      );
-      
-      if (!confirmCreate) {
-        return; // Cancel creation
+    // Validate all time slots
+    for (let i = 0; i < scheduleTimeSlots.length; i++) {
+      const slot = scheduleTimeSlots[i];
+      if (slot.days.length === 0 || !slot.timeStart || !slot.timeEnd) {
+        showToast(`❌ Please complete Day(s), Time Start and Time End for slot ${i + 1}`);
+        return;
+      }
+      if (slot.timeStart >= slot.timeEnd) {
+        showToast(`❌ Time End must be after Time Start in slot ${i + 1}`);
+        return;
       }
     }
 
     const token = localStorage.getItem("inform_token");
     if (!token) return;
 
+    // Build flat list: one entry per (slot × day)
+    const entries: { day: string; timeStart: string; timeEnd: string }[] = [];
+    for (const slot of scheduleTimeSlots) {
+      for (const day of slot.days) {
+        entries.push({ day, timeStart: slot.timeStart, timeEnd: slot.timeEnd });
+      }
+    }
+
+    // Check room conflicts for all entries first
+    for (const entry of entries) {
+      const conflict = await checkRoomConflict(
+        teacherScheduleForm.room,
+        entry.day,
+        entry.timeStart,
+        entry.timeEnd
+      );
+      if (conflict) {
+        const confirmCreate = confirm(
+          `⚠️ Room Conflict Detected!\n\n` +
+          `${teacherScheduleForm.room} is already occupied on ${entry.day} at ${entry.timeStart}-${entry.timeEnd}\n\n` +
+          `Conflicting schedule: ${conflict.subject_name} (${conflict.teacher_name})\n\n` +
+          `Do you want to create this schedule anyway?`
+        );
+        if (!confirmCreate) return;
+      }
+    }
+
     setSaving(true);
+    let successCount = 0;
+    let lastError = "";
+
     try {
-      const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          teacher_id: selectedTeacher.id,
-          subject_name: teacherScheduleForm.subject,
-          room: teacherScheduleForm.room,
-          day: teacherScheduleForm.day,
-          time_start: teacherScheduleForm.timeStart,
-          time_end: teacherScheduleForm.timeEnd,
-          track: teacherScheduleForm.track,
-          strand: teacherScheduleForm.strand,
-          term: teacherScheduleForm.term,
-          school_year: getCurrentSchoolYear(),
-          max_capacity: 40
-        })
-      });
+      for (const entry of entries) {
+        const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            teacher_id: selectedTeacher.id,
+            subject_name: teacherScheduleForm.subject,
+            room: teacherScheduleForm.room,
+            day: entry.day,
+            time_start: entry.timeStart,
+            time_end: entry.timeEnd,
+            track: teacherScheduleForm.track,
+            strand: teacherScheduleForm.strand,
+            grade_level: parseInt(teacherScheduleForm.gradeLevel) || 11,
+            term: teacherScheduleForm.term,
+            school_year: getCurrentSchoolYear(),
+            max_capacity: 40
+          })
+        });
+        if (response.ok) {
+          successCount++;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          const reason = errData.error || `HTTP ${response.status}`;
+          lastError = reason;
+          console.error("Schedule creation failed:", reason, entry);
+          // 409 = teacher time conflict on this specific slot — show it immediately and stop
+          if (response.status === 409) {
+            showToast(`⚠️ Teacher conflict on ${entry.day} ${entry.timeStart}–${entry.timeEnd}: ${reason}`);
+            setSaving(false);
+            return;
+          }
+        }
+      }
 
-      const data = await response.json();
-
-      if (response.ok) {
-        showToast("✅ Schedule added successfully");
+      if (successCount > 0) {
+        showToast(`✅ ${successCount} schedule${successCount > 1 ? "s" : ""} added successfully`);
         setShowAddTeacherSchedule(false);
-        setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "Academic Track", term: "Term 1" });
-        loadTeachers(); // Reload to update schedule count
+        setTeacherScheduleForm({ subject: "", room: "", day: "", timeStart: "", timeEnd: "", strand: "", track: "Academic Track", term: "Term 1", gradeLevel: "11" });
+        setScheduleTimeSlots([{ days: [], timeStart: "", timeEnd: "" }]);
+        loadTeachers();
       } else {
-        showToast(`❌ ${data.error || "Failed to add schedule"}`);
+        showToast(`❌ Failed to add schedule: ${lastError || "Unknown error — check the browser console (F12)"}`);
       }
     } catch (err) {
-      showToast("❌ Network error");
+      showToast("❌ Network error — make sure the backend is running");
     } finally {
       setSaving(false);
     }
@@ -6484,29 +6561,42 @@ function SchedulingPanel() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
 
+    // Resolve group key → all matching schedule IDs
+    const [subjectName, teacherName, track, strand] = selectedScheduleId.split("||");
+    const matchingIds = availableSchedules
+      .filter(s =>
+        s.subject_name === subjectName &&
+        s.teacher_name === teacherName &&
+        s.track === track &&
+        s.strand === strand
+      )
+      .map(s => s.id);
+
     setSaving(true);
+    let enrolledCount = 0;
     try {
-      const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules/${selectedScheduleId}/enroll`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          student_ids: [selectedStudent.student_id]
-        })
-      });
+      for (const schedId of matchingIds) {
+        const response = await fetch(`${API_BASE}/api/admin/scheduling/schedules/${schedId}/enroll`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            student_ids: [selectedStudent.student_id]
+          })
+        });
+        if (response.ok) enrolledCount++;
+      }
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (enrolledCount > 0) {
         showToast("✅ Student enrolled successfully");
         setShowEnrollSchedule(false);
         setSelectedScheduleId("");
-        loadStudents(); // Reload to update schedule count
+        loadStudents();
       } else {
-        showToast(`❌ ${data.error || "Failed to enroll student"}`);
+        showToast("❌ Failed to enroll student");
       }
     } catch (err) {
       showToast("❌ Network error");
@@ -6525,38 +6615,55 @@ function SchedulingPanel() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
 
+    // Resolve group key → all matching schedule IDs
+    const [subjectName, teacherName, track, strand] = bulkEnrollScheduleId.split("||");
+    const matchingIds = availableSchedules
+      .filter(s =>
+        s.subject_name === subjectName &&
+        s.teacher_name === teacherName &&
+        s.track === track &&
+        s.strand === strand
+      )
+      .map(s => s.id);
+
     setSaving(true);
+    let totalEnrolled = 0;
+    let totalSkipped = 0;
+
     try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/scheduling/schedules/${bulkEnrollScheduleId}/enroll-bulk`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            student_ids: selectedStudentIds
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        showToast(`✅ ${data.enrolled} student(s) enrolled successfully${data.skipped > 0 ? ` (${data.skipped} already enrolled)` : ''}`);
-        setShowBulkEnroll(false);
-        setSelectedStudentIds([]);
-        setBulkEnrollScheduleId("");
-        loadStudents(); // Reload to update schedule counts
-      } else {
-        if (data.incompatible) {
+      for (const schedId of matchingIds) {
+        const response = await fetch(
+          `${API_BASE}/api/admin/scheduling/schedules/${schedId}/enroll-bulk`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({ student_ids: selectedStudentIds })
+          }
+        );
+        const data = await response.json();
+        if (response.ok) {
+          totalEnrolled += data.enrolled || 0;
+          totalSkipped += data.skipped || 0;
+        } else if (data.incompatible) {
           showToast(`❌ Track/Strand mismatch: ${data.incompatible.length} student(s) incompatible`);
+          setSaving(false);
+          return;
         } else {
           showToast(`❌ ${data.error || "Failed to enroll students"}`);
+          setSaving(false);
+          return;
         }
       }
+
+      showToast(`✅ ${selectedStudentIds.length} student(s) enrolled in ${matchingIds.length} slot(s)${totalSkipped > 0 ? ` (${totalSkipped} already enrolled)` : ''}`);
+      setShowBulkEnroll(false);
+      setSelectedStudentIds([]);
+      setBulkEnrollScheduleId("");
+      loadStudents();
     } catch (err) {
       showToast("❌ Network error");
     } finally {
@@ -6564,13 +6671,20 @@ function SchedulingPanel() {
     }
   }
 
-  async function loadAvailableSchedules(student: any) {
+async function loadAvailableSchedules(student: any) {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
 
     try {
+      const params = new URLSearchParams({
+        track: student.track,
+        strand: student.strand,
+        term: student.term,
+      });
+      if (student.grade_level) params.append("grade_level", String(student.grade_level));
+
       const response = await fetch(
-        `${API_BASE}/api/admin/scheduling/schedules?track=${encodeURIComponent(student.track)}&strand=${encodeURIComponent(student.strand)}&term=${encodeURIComponent(student.term)}`,
+        `${API_BASE}/api/admin/scheduling/schedules?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
@@ -6638,6 +6752,7 @@ function SchedulingPanel() {
             time_end: teacherScheduleForm.timeEnd,
             track: teacherScheduleForm.track,
             strand: teacherScheduleForm.strand,
+            grade_level: parseInt(teacherScheduleForm.gradeLevel) || 11,
             term: teacherScheduleForm.term,
           }),
         }
@@ -6725,31 +6840,29 @@ function SchedulingPanel() {
     }
   }
 
-  // Feature 4: Unenroll Student from Schedule
-  async function handleUnenrollStudent(scheduleId: number) {
+  // Feature 4: Unenroll Student from Schedule (supports multiple schedule IDs for grouped subjects)
+  async function handleUnenrollStudent(scheduleIds: number | number[]) {
     if (!selectedStudent) return;
 
     const token = localStorage.getItem("inform_token");
     if (!token) return;
 
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/scheduling/schedules/${scheduleId}/students/${selectedStudent.student_id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }
-      );
+    const ids = Array.isArray(scheduleIds) ? scheduleIds : [scheduleIds];
 
-      if (response.ok) {
-        showToast("✅ Student unenrolled successfully");
-        loadStudentSchedules(selectedStudent);
-        loadStudents(); // Refresh student list
-      } else {
-        const error = await response.json();
-        showToast(`❌ ${error.error || "Failed to unenroll student"}`);
+    try {
+      for (const scheduleId of ids) {
+        await fetch(
+          `${API_BASE}/api/admin/scheduling/schedules/${scheduleId}/students/${selectedStudent.student_id}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
+          }
+        );
       }
+      showToast("✅ Student unenrolled successfully");
+      loadStudentSchedules(selectedStudent);
+      loadStudents();
     } catch (err) {
       showToast("❌ Failed to unenroll student");
     }
@@ -6840,8 +6953,11 @@ function SchedulingPanel() {
     } else if (studentFilter === "unscheduled") {
       matchesFilter = !s.hasSchedule;
     }
+
+    // Grade level filter
+    const matchesGrade = studentGradeLevelFilter === "all" || String(s.grade_level) === studentGradeLevelFilter;
     
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesFilter && matchesGrade;
   });
 
   return (
@@ -7042,8 +7158,9 @@ function SchedulingPanel() {
                                 setSelectedTeacher(teacher);
                                 setTeacherScheduleForm({
                                   subject: "", room: "", day: "", timeStart: "", timeEnd: "", 
-                                  strand: "", track: "Academic Track", term: "Term 1"
+                                  strand: "", track: "Academic Track", term: "Term 1", gradeLevel: "11"
                                 });
+                                setScheduleTimeSlots([{ days: [], timeStart: "", timeEnd: "" }]);
                                 setShowAddTeacherSchedule(true);
                               }}
                             >
@@ -7074,7 +7191,8 @@ function SchedulingPanel() {
                   setShowBulkEnroll(true);
                   setSelectedStudentIds([]);
                   setBulkEnrollScheduleId("");
-                  loadAvailableSchedules({ track: "", strand: "", term: "Term 1" });
+                  setBulkGradeLevel("11");
+                  loadAvailableSchedules({ track: "", strand: "", term: "Term 1", grade_level: 11 });
                 }}
               >
                   Bulk Enroll Students
@@ -7127,6 +7245,28 @@ function SchedulingPanel() {
                 </div>
               </div>
             </div>
+
+            {/* Grade Level filter */}
+            <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
+              <span className="small text-muted fw-semibold">Grade Level:</span>
+              {(["all", "11", "12"] as const).map(gl => (
+                <button
+                  key={gl}
+                  className="btn btn-sm"
+                  style={{
+                    background: studentGradeLevelFilter === gl ? "#374151" : "transparent",
+                    color: studentGradeLevelFilter === gl ? "#fff" : "#374151",
+                    border: `1px solid ${studentGradeLevelFilter === gl ? "#374151" : "#d1d5db"}`,
+                    borderRadius: "20px",
+                    padding: "0.2rem 0.75rem",
+                    fontSize: "0.78rem"
+                  }}
+                  onClick={() => setStudentGradeLevelFilter(gl)}
+                >
+                  {gl === "all" ? "All Grades" : `Grade ${gl}`}
+                </button>
+              ))}
+            </div>
             
             {studentsLoading ? (
               <div className="text-center py-4 text-muted">
@@ -7138,6 +7278,7 @@ function SchedulingPanel() {
                 {studentSearchQuery ? `No students found matching "${studentSearchQuery}"` :
                  studentFilter === "scheduled" ? "No students with schedules." :
                  studentFilter === "unscheduled" ? "No students without schedules." :
+                 studentGradeLevelFilter !== "all" ? `No Grade ${studentGradeLevelFilter} students found.` :
                  "No approved enrolled students found."}
               </div>
             ) : (
@@ -7147,6 +7288,7 @@ function SchedulingPanel() {
                     <tr className="border-bottom">
                       <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Name</th>
                       <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Student ID</th>
+                      <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Grade</th>
                       <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Track/Strand</th>
                       <th className="fw-semibold text-muted small pb-3" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Term</th>
                       <th className="fw-semibold text-muted small pb-3 text-center" style={{ fontSize: '0.75rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Enrolled</th>
@@ -7179,6 +7321,11 @@ function SchedulingPanel() {
                         </td>
                         <td className="py-3">
                           <span className="font-monospace text-muted" style={{ fontSize: '0.8125rem' }}>{student.student_id}</span>
+                        </td>
+                        <td className="py-3">
+                          <span className="badge rounded-pill" style={{ fontSize: '0.72rem', background: student.grade_level === 12 ? '#ede9fe' : '#dbeafe', color: student.grade_level === 12 ? '#6d28d9' : '#1d4ed8', fontWeight: 600 }}>
+                            Grade {student.grade_level || 11}
+                          </span>
                         </td>
                         <td className="py-3">
                           <div>
@@ -7284,34 +7431,123 @@ function SchedulingPanel() {
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, room: e.target.value})}
                       />
                     </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Day</label>
-                      <select 
+                    {/* Dynamic time slot rows */}
+                    <div className="col-12">
+                      <div className="d-flex align-items-center justify-content-between mb-2">
+                        <label className="form-label fw-semibold mb-0">Schedule Slots</label>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-success"
+                          style={{ fontSize: "0.78rem", padding: "0.2rem 0.65rem" }}
+                          onClick={() => setScheduleTimeSlots(prev => [...prev, { days: [], timeStart: "", timeEnd: "" }])}
+                        >
+                          + Add Another Slot
+                        </button>
+                      </div>
+
+                      {scheduleTimeSlots.map((slot, idx) => (
+                        <div key={idx} className="border rounded-2 p-3 mb-2 bg-light position-relative">
+                          {scheduleTimeSlots.length > 1 && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger position-absolute"
+                              style={{ top: 8, right: 8, fontSize: "0.75rem", padding: "0.15rem 0.5rem", lineHeight: 1.2 }}
+                              onClick={() => setScheduleTimeSlots(prev => prev.filter((_, i) => i !== idx))}
+                              title="Remove slot"
+                            >
+                              ✕
+                            </button>
+                          )}
+
+                          <div className="row g-2 align-items-end">
+                            {/* Day checkboxes */}
+                            <div className="col-12">
+                              <label className="form-label fw-semibold mb-1" style={{ fontSize: "0.82rem" }}>
+                                Day(s) <span className="text-muted fw-normal">(select one or more)</span>
+                              </label>
+                              <div className="d-flex flex-wrap gap-2">
+                                {daysOfWeek.map(day => {
+                                  const checked = slot.days.includes(day);
+                                  return (
+                                    <label
+                                      key={day}
+                                      className="d-flex align-items-center gap-1 px-2 py-1 rounded-pill border"
+                                      style={{
+                                        fontSize: "0.8rem",
+                                        cursor: "pointer",
+                                        background: checked ? "#374151" : "#fff",
+                                        color: checked ? "#fff" : "#374151",
+                                        borderColor: checked ? "#374151" : "#d1d5db",
+                                        userSelect: "none"
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="visually-hidden"
+                                        checked={checked}
+                                        onChange={() => {
+                                          setScheduleTimeSlots(prev =>
+                                            prev.map((s, i) =>
+                                              i !== idx ? s : {
+                                                ...s,
+                                                days: checked
+                                                  ? s.days.filter(d => d !== day)
+                                                  : [...s.days, day]
+                                              }
+                                            )
+                                          );
+                                        }}
+                                      />
+                                      {day.slice(0, 3)}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Time Start */}
+                            <div className="col-md-6">
+                              <label className="form-label fw-semibold mb-1" style={{ fontSize: "0.82rem" }}>Time Start</label>
+                              <input
+                                type="time"
+                                className="form-control form-control-sm"
+                                value={slot.timeStart}
+                                onChange={(e) =>
+                                  setScheduleTimeSlots(prev =>
+                                    prev.map((s, i) => i !== idx ? s : { ...s, timeStart: e.target.value })
+                                  )
+                                }
+                              />
+                            </div>
+
+                            {/* Time End */}
+                            <div className="col-md-6">
+                              <label className="form-label fw-semibold mb-1" style={{ fontSize: "0.82rem" }}>Time End</label>
+                              <input
+                                type="time"
+                                className="form-control form-control-sm"
+                                value={slot.timeEnd}
+                                onChange={(e) =>
+                                  setScheduleTimeSlots(prev =>
+                                    prev.map((s, i) => i !== idx ? s : { ...s, timeEnd: e.target.value })
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Grade Level</label>
+                      <select
                         className="form-select"
-                        value={teacherScheduleForm.day}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, day: e.target.value})}
+                        value={teacherScheduleForm.gradeLevel}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, gradeLevel: e.target.value})}
                       >
-                        <option value="">Select Day</option>
-                        {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
                       </select>
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Time Start</label>
-                      <input 
-                        type="time" 
-                        className="form-control"
-                        value={teacherScheduleForm.timeStart}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeStart: e.target.value})}
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Time End</label>
-                      <input 
-                        type="time" 
-                        className="form-control"
-                        value={teacherScheduleForm.timeEnd}
-                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeEnd: e.target.value})}
-                      />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Track</label>
@@ -7397,28 +7633,47 @@ function SchedulingPanel() {
                   <div className="mb-3 p-3 bg-light rounded">
                     <div className="small text-muted">Student Info</div>
                     <div className="fw-semibold">{selectedStudent.student_id}</div>
-                    <div className="small">{selectedStudent.strand}/{selectedStudent.track} • {selectedStudent.term}</div>
+                    <div className="small">{selectedStudent.strand}/{selectedStudent.track} • Grade {selectedStudent.grade_level || 11} • {selectedStudent.term}</div>
                   </div>
                   
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Select Schedule</label>
-                    <select 
-                      className="form-select"
-                      value={selectedScheduleId}
-                      onChange={(e) => setSelectedScheduleId(e.target.value)}
-                    >
-                      <option value="">Select Schedule</option>
-                      {availableSchedules.map(schedule => (
-                        <option key={schedule.id} value={schedule.id}>
-                          {schedule.subject_name} - {schedule.teacher_name} 
-                          ({schedule.day} {schedule.time_start.slice(0,5)}-{schedule.time_end.slice(0,5)}) 
-                          [{schedule.enrolled_count}/{schedule.max_capacity}]
-                        </option>
-                      ))}
-                    </select>
+                    {(() => {
+                      // Group schedules by subject + teacher + track + strand
+                      const groups: Record<string, typeof availableSchedules> = {};
+                      availableSchedules.forEach(s => {
+                        const key = `${s.subject_name}||${s.teacher_name}||${s.track}||${s.strand}`;
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(s);
+                      });
+                      const groupEntries = Object.entries(groups);
+
+                      return (
+                        <select
+                          className="form-select"
+                          value={selectedScheduleId}
+                          onChange={(e) => setSelectedScheduleId(e.target.value)}
+                        >
+                          <option value="">Select Schedule</option>
+                          {groupEntries.map(([key, slots]) => {
+                            const first = slots[0];
+                            const daysList = slots.map(s =>
+                              `${s.day} ${s.time_start.slice(0,5)}-${s.time_end.slice(0,5)}`
+                            ).join(", ");
+                            const enrolled = slots.reduce((sum, s) => sum + (s.enrolled_count || 0), 0);
+                            const capacity = first.max_capacity;
+                            return (
+                              <option key={key} value={key}>
+                                {first.subject_name} - {first.teacher_name} | {daysList} [{enrolled}/{capacity}]
+                              </option>
+                            );
+                          })}
+                        </select>
+                      );
+                    })()}
                     {availableSchedules.length === 0 && (
                       <div className="text-muted small mt-2">
-                        No available schedules for {selectedStudent.track} - {selectedStudent.strand}
+                        No available schedules for Grade {selectedStudent.grade_level || 11} · {selectedStudent.track} - {selectedStudent.strand}
                       </div>
                     )}
                   </div>
@@ -7469,69 +7724,95 @@ function SchedulingPanel() {
                     </div>
                   ) : (
                     <div className="table-responsive">
-                      <table className="table table-hover">
+                      <table className="table table-hover align-middle">
                         <thead className="table-light">
                           <tr>
+                            <th>Subject</th>
                             <th>Day</th>
                             <th>Time</th>
-                            <th>Subject</th>
                             <th>Room</th>
                             <th>Track/Strand</th>
+                            <th>Grade</th>
                             <th>Term</th>
                             <th>Students</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {teacherSchedules.map((schedule) => (
-                            <tr key={schedule.id}>
-                              <td className="fw-medium">{schedule.day}</td>
-                              <td className="small">{schedule.time_start.slice(0,5)} - {schedule.time_end.slice(0,5)}</td>
-                              <td>{schedule.subject_name}</td>
-                              <td>{schedule.room}</td>
-                              <td className="small">{schedule.track}<br/><span className="badge bg-secondary-subtle text-secondary">{schedule.strand}</span></td>
-                              <td>{schedule.term}</td>
-                              <td>
-                                <span className={`badge ${schedule.enrolled_count >= schedule.max_capacity * 0.9 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} border`}>
-                                  {schedule.enrolled_count}/{schedule.max_capacity}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="d-flex gap-1">
-                                  <button 
-                                    className="btn btn-sm btn-outline-warning"
-                                    onClick={() => {
-                                      setSelectedSchedule(schedule);
-                                      setTeacherScheduleForm({
-                                        subject: schedule.subject_name,
-                                        room: schedule.room,
-                                        day: schedule.day,
-                                        timeStart: schedule.time_start.slice(0,5),
-                                        timeEnd: schedule.time_end.slice(0,5),
-                                        strand: schedule.strand,
-                                        track: schedule.track,
-                                        term: schedule.term
-                                      });
-                                      setShowEditTeacherSchedule(true);
-                                    }}
-                                    title="Edit"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button 
-                                    className="btn btn-sm btn-outline-danger"
-                                    onClick={() => {
-                                      setSelectedSchedule(schedule);
-                                      setShowDeleteConfirmation(true);
-                                    }}
-                                    title="Delete"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                          {(() => {
+                            // Group by subject + track + strand + term
+                            const groups: Record<string, typeof teacherSchedules> = {};
+                            teacherSchedules.forEach(s => {
+                              const key = `${s.subject_name}||${s.track}||${s.strand}||${s.term}`;
+                              if (!groups[key]) groups[key] = [];
+                              groups[key].push(s);
+                            });
+                            return Object.entries(groups).flatMap(([key, slots]) => {
+                              const first = slots[0];
+                              const totalEnrolled = slots.reduce((sum, s) => sum + (s.enrolled_count || 0), 0);
+                              return slots.map((s, idx) => (
+                                <tr key={s.id}>
+                                  {/* Subject — only on first slot row, spans all slots */}
+                                  {idx === 0 && (
+                                    <td rowSpan={slots.length} className="fw-medium align-middle">
+                                      {first.subject_name}
+                                    </td>
+                                  )}
+                                  <td>
+                                    <span className="badge bg-secondary-subtle text-secondary border" style={{ fontSize: "0.78rem" }}>
+                                      {s.day}
+                                    </span>
+                                  </td>
+                                  <td className="small text-muted">{s.time_start.slice(0,5)}–{s.time_end.slice(0,5)}</td>
+                                  {/* Room / Track / Grade / Term / Students — only on first row */}
+                                  {idx === 0 && (
+                                    <>
+                                      <td rowSpan={slots.length} className="align-middle">{first.room}</td>
+                                      <td rowSpan={slots.length} className="small align-middle">
+                                        {first.track}<br/>
+                                        <span className="badge bg-secondary-subtle text-secondary">{first.strand}</span>
+                                      </td>
+                                      <td rowSpan={slots.length} className="align-middle small">Grade {first.grade_level || 11}</td>
+                                      <td rowSpan={slots.length} className="align-middle">{first.term}</td>
+                                      <td rowSpan={slots.length} className="align-middle">
+                                        <span className={`badge ${totalEnrolled >= first.max_capacity * 0.9 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'} border`}>
+                                          {totalEnrolled}/{first.max_capacity}
+                                        </span>
+                                      </td>
+                                    </>
+                                  )}
+                                  <td className="align-middle">
+                                    <div className="d-flex gap-1">
+                                      <button
+                                        className="btn btn-sm btn-outline-warning"
+                                        onClick={() => {
+                                          setSelectedSchedule(s);
+                                          setTeacherScheduleForm({
+                                            subject: s.subject_name,
+                                            room: s.room,
+                                            day: s.day,
+                                            timeStart: s.time_start.slice(0,5),
+                                            timeEnd: s.time_end.slice(0,5),
+                                            strand: s.strand,
+                                            track: s.track,
+                                            term: s.term,
+                                            gradeLevel: String(s.grade_level || 11)
+                                          });
+                                          setShowEditTeacherSchedule(true);
+                                        }}
+                                        title="Edit this slot"
+                                      >✏️</button>
+                                      <button
+                                        className="btn btn-sm btn-outline-danger"
+                                        onClick={() => { setSelectedSchedule(s); setShowDeleteConfirmation(true); }}
+                                        title="Delete this slot"
+                                      >🗑️</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ));
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -7607,7 +7888,18 @@ function SchedulingPanel() {
                         onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, timeEnd: e.target.value})}
                       />
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
+                      <label className="form-label fw-semibold">Grade Level</label>
+                      <select
+                        className="form-select"
+                        value={teacherScheduleForm.gradeLevel}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, gradeLevel: e.target.value})}
+                      >
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                      </select>
+                    </div>
+                    <div className="col-md-4">
                       <label className="form-label fw-semibold">Track</label>
                       <select 
                         className="form-select"
@@ -7625,7 +7917,7 @@ function SchedulingPanel() {
                         <option value="TechPro Track">TechPro Track</option>
                       </select>
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <label className="form-label fw-semibold">Strand</label>
                       <select 
                         className="form-select"
@@ -7642,6 +7934,16 @@ function SchedulingPanel() {
                             {getStrandOptions().map(strand => <option key={strand} value={strand}>{strand}</option>)}
                           </>
                         )}
+                      </select>
+                    </div>
+                    <div className="col-md-12">
+                      <label className="form-label fw-semibold">Term</label>
+                      <select
+                        className="form-select"
+                        value={teacherScheduleForm.term}
+                        onChange={(e) => setTeacherScheduleForm({...teacherScheduleForm, term: e.target.value})}
+                      >
+                        {terms.map(term => <option key={term} value={term}>{term}</option>)}
                       </select>
                     </div>
                   </div>
@@ -7745,9 +8047,8 @@ function SchedulingPanel() {
                       <table className="table table-hover">
                         <thead className="table-light">
                           <tr>
-                            <th>Day</th>
-                            <th>Time</th>
                             <th>Subject</th>
+                            <th>Schedule(s)</th>
                             <th>Room</th>
                             <th>Teacher</th>
                             <th>Track/Strand</th>
@@ -7756,30 +8057,55 @@ function SchedulingPanel() {
                           </tr>
                         </thead>
                         <tbody>
-                          {studentSchedules.map((schedule: any) => (
-                            <tr key={schedule.schedule_id}>
-                              <td className="fw-medium">{schedule.day}</td>
-                              <td className="small">{schedule.time_start.slice(0,5)} - {schedule.time_end.slice(0,5)}</td>
-                              <td>{schedule.subject_name}</td>
-                              <td>{schedule.room}</td>
-                              <td>{schedule.teacher_name}</td>
-                              <td className="small">{schedule.track}<br/><span className="badge bg-secondary-subtle text-secondary">{schedule.strand}</span></td>
-                              <td>{schedule.term}</td>
-                              <td>
-                                <button 
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => {
-                                    if (confirm(`Unenroll from ${schedule.subject_name}?`)) {
-                                      handleUnenrollStudent(schedule.schedule_id);
-                                    }
-                                  }}
-                                  title="Unenroll"
-                                >
-                                  ❌ Unenroll
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {(() => {
+                            // Group by subject + teacher + track + strand + term
+                            const groups: Record<string, typeof studentSchedules> = {};
+                            (studentSchedules as any[]).forEach((s: any) => {
+                              const key = `${s.subject_name}||${s.teacher_name}||${s.track}||${s.strand}||${s.term}`;
+                              if (!groups[key]) groups[key] = [];
+                              groups[key].push(s);
+                            });
+                            return Object.entries(groups).map(([key, slots]) => {
+                              const first = (slots as any[])[0];
+                              const allIds = (slots as any[]).map((s: any) => s.schedule_id);
+                              return (
+                                <tr key={key}>
+                                  <td className="fw-medium align-middle">{first.subject_name}</td>
+                                  <td className="align-middle">
+                                    {(slots as any[]).map((s: any) => (
+                                      <div key={s.schedule_id} className="mb-1">
+                                        <span className="badge bg-secondary-subtle text-secondary border me-1" style={{ fontSize: "0.75rem" }}>
+                                          {s.day}
+                                        </span>
+                                        <span className="small text-muted">
+                                          {s.time_start.slice(0,5)}–{s.time_end.slice(0,5)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </td>
+                                  <td className="align-middle">{first.room}</td>
+                                  <td className="align-middle">{first.teacher_name}</td>
+                                  <td className="small align-middle">
+                                    {first.track}<br/>
+                                    <span className="badge bg-secondary-subtle text-secondary">{first.strand}</span>
+                                  </td>
+                                  <td className="align-middle">{first.term}</td>
+                                  <td className="align-middle">
+                                    <button
+                                      className="btn btn-sm btn-outline-danger"
+                                      onClick={() => {
+                                        if (confirm(`Unenroll from ${first.subject_name}? This will remove all ${allIds.length} scheduled slot(s).`)) {
+                                          handleUnenrollStudent(allIds);
+                                        }
+                                      }}
+                                    >
+                                      ❌ Unenroll
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -7808,40 +8134,89 @@ function SchedulingPanel() {
                   <button type="button" className="btn-close btn-close-white" onClick={() => setShowBulkEnroll(false)} />
                 </div>
                 <div className="modal-body">
+                  {/* Grade Level Selector */}
+                  <div className="mb-4 p-3 rounded-3 border" style={{ background: "#f8fafc" }}>
+                    <label className="form-label fw-semibold mb-2">Grade Level</label>
+                    <div className="d-flex gap-2">
+                      {(["11", "12"] as const).map(gl => (
+                        <button
+                          key={gl}
+                          type="button"
+                          className="btn"
+                          style={{
+                            background: bulkGradeLevel === gl ? "#374151" : "#fff",
+                            color: bulkGradeLevel === gl ? "#fff" : "#374151",
+                            border: `2px solid ${bulkGradeLevel === gl ? "#374151" : "#d1d5db"}`,
+                            borderRadius: "8px",
+                            padding: "0.4rem 1.5rem",
+                            fontWeight: 600,
+                            fontSize: "0.9rem"
+                          }}
+                          onClick={() => {
+                            setBulkGradeLevel(gl);
+                            setBulkEnrollScheduleId("");
+                            setSelectedStudentIds([]);
+                            loadAvailableSchedules({ track: "", strand: "", term: "Term 1", grade_level: parseInt(gl) });
+                          }}
+                        >
+                          Grade {gl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Select Schedule */}
                   <div className="mb-4">
-                    <label className="form-label fw-semibold">Select Schedule</label>
+                    <label className="form-label fw-semibold">Select Schedule <span className="text-muted fw-normal small">(Grade {bulkGradeLevel} schedules)</span></label>
                     <select 
                       className="form-select"
                       value={bulkEnrollScheduleId}
-                      onChange={(e) => setBulkEnrollScheduleId(e.target.value)}
+                      onChange={(e) => { setBulkEnrollScheduleId(e.target.value); setSelectedStudentIds([]); }}
                     >
                       <option value="">Choose a schedule...</option>
-                      {availableSchedules.map(schedule => (
-                        <option key={schedule.id} value={schedule.id}>
-                          {schedule.subject_name} - {schedule.teacher_name} 
-                          ({schedule.day} {schedule.time_start.slice(0,5)}-{schedule.time_end.slice(0,5)}) 
-                          - {schedule.track}/{schedule.strand}
-                          [{schedule.enrolled_count}/{schedule.max_capacity} slots]
-                        </option>
-                      ))}
+                      {(() => {
+                        const groups: Record<string, typeof availableSchedules> = {};
+                        availableSchedules.forEach(s => {
+                          const key = `${s.subject_name}||${s.teacher_name}||${s.track}||${s.strand}`;
+                          if (!groups[key]) groups[key] = [];
+                          groups[key].push(s);
+                        });
+                        return Object.entries(groups).map(([key, slots]) => {
+                          const first = slots[0];
+                          const daysList = slots.map(s =>
+                            `${s.day} ${s.time_start.slice(0,5)}-${s.time_end.slice(0,5)}`
+                          ).join(", ");
+                          const enrolled = slots.reduce((sum, s) => sum + (s.enrolled_count || 0), 0);
+                          return (
+                            <option key={key} value={key}>
+                              {first.subject_name} - {first.teacher_name} ({daysList}) - {first.track}/{first.strand} [{enrolled}/{first.max_capacity} slots]
+                            </option>
+                          );
+                        });
+                      })()}
                     </select>
                     {availableSchedules.length === 0 && (
                       <div className="text-muted small mt-2">
-                        No available schedules. Adjust filters or create schedules first.
+                        No Grade {bulkGradeLevel} schedules found. Create schedules for Grade {bulkGradeLevel} first.
                       </div>
                     )}
                   </div>
 
-                  {/* Student Selection */}
+                  {/* Student Selection — only shown after schedule is picked */}
                   {bulkEnrollScheduleId && (
                     <div>
                       <div className="d-flex justify-content-between align-items-center mb-3">
-                        <label className="form-label fw-semibold mb-0">Select Students ({selectedStudentIds.length} selected)</label>
+                        <label className="form-label fw-semibold mb-0">
+                          Grade {bulkGradeLevel} Students ({selectedStudentIds.length} selected)
+                        </label>
                         <div>
                           <button 
                             className="btn btn-sm btn-outline-primary me-2"
-                            onClick={() => setSelectedStudentIds(filteredStudents.map(s => s.student_id))}
+                            onClick={() => setSelectedStudentIds(
+                              students
+                                .filter(s => String(s.grade_level || 11) === bulkGradeLevel)
+                                .map(s => s.student_id)
+                            )}
                           >
                             Select All
                           </button>
@@ -7854,104 +8229,107 @@ function SchedulingPanel() {
                         </div>
                       </div>
 
-                      <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                      <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
                         <table className="table table-hover table-sm">
                           <thead className="table-light" style={{ position: 'sticky', top: 0 }}>
                             <tr>
-                              <th style={{ width: '50px' }}>
+                              <th style={{ width: '40px' }}>
                                 <input 
                                   type="checkbox"
                                   className="form-check-input"
-                                  checked={selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0}
+                                  checked={
+                                    students.filter(s => String(s.grade_level || 11) === bulkGradeLevel).length > 0 &&
+                                    students.filter(s => String(s.grade_level || 11) === bulkGradeLevel)
+                                      .every(s => selectedStudentIds.includes(s.student_id))
+                                  }
                                   onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedStudentIds(filteredStudents.map(s => s.student_id));
-                                    } else {
-                                      setSelectedStudentIds([]);
-                                    }
+                                    const gradeLevelStudents = students
+                                      .filter(s => String(s.grade_level || 11) === bulkGradeLevel)
+                                      .map(s => s.student_id);
+                                    setSelectedStudentIds(e.target.checked ? gradeLevelStudents : []);
                                   }}
                                 />
                               </th>
                               <th>Name</th>
                               <th>Student ID</th>
+                              <th>Grade</th>
                               <th>Track/Strand</th>
                               <th>Term</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredStudents.map(student => {
-                              const selectedSchedule = availableSchedules.find(s => s.id.toString() === bulkEnrollScheduleId);
-                              const isCompatible = selectedSchedule && (
-                                // Compatible if schedule is "All Tracks" OR tracks match
-                                (selectedSchedule.track === "All Tracks" || student.track === selectedSchedule.track) &&
-                                // Compatible if schedule is "All Strands" OR strands match
-                                (selectedSchedule.strand === "All Strands" || student.strand === selectedSchedule.strand)
-                              );
-                              
-                              return (
-                                <tr 
-                                  key={student.student_id}
-                                  className={!isCompatible ? 'table-warning' : ''}
-                                >
-                                  <td>
-                                    <input 
-                                      type="checkbox"
-                                      className="form-check-input"
-                                      checked={selectedStudentIds.includes(student.student_id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedStudentIds([...selectedStudentIds, student.student_id]);
-                                        } else {
-                                          setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.student_id));
-                                        }
-                                      }}
-                                      disabled={!isCompatible}
-                                    />
-                                  </td>
-                                  <td>
-                                    <div className="d-flex align-items-center gap-2">
-                                      {student.profile_picture_url ? (
-                                        <img 
-                                          src={student.profile_picture_url} 
-                                          alt={student.full_name}
-                                          className="rounded-circle flex-shrink-0"
-                                          style={{ width: 28, height: 28, objectFit: 'cover' }}
-                                          onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                            const fallback = e.currentTarget.nextElementSibling;
-                                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                                          }}
-                                        />
-                                      ) : null}
-                                      <div 
-                                        className="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center text-info fw-bold flex-shrink-0" 
-                                        style={{ 
-                                          width: 28, 
-                                          height: 28, 
-                                          fontSize: 10,
-                                          display: student.profile_picture_url ? 'none' : 'flex'
-                                        }}>
-                                        {student.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                            {students
+                              .filter(s => String(s.grade_level || 11) === bulkGradeLevel)
+                              .map(student => {
+                                const [selSubject, selTeacher, selTrack, selStrand] = bulkEnrollScheduleId.split("||");
+                                const selectedSchedule = availableSchedules.find(s =>
+                                  s.subject_name === selSubject &&
+                                  s.teacher_name === selTeacher &&
+                                  s.track === selTrack &&
+                                  s.strand === selStrand
+                                );
+                                const isCompatible = !selectedSchedule || (
+                                  (selectedSchedule.track === "All Tracks" || student.track === selectedSchedule.track) &&
+                                  (selectedSchedule.strand === "All Strands" || student.strand === selectedSchedule.strand)
+                                );
+                                return (
+                                  <tr key={student.student_id} className={!isCompatible ? 'table-warning' : ''}>
+                                    <td>
+                                      <input 
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        checked={selectedStudentIds.includes(student.student_id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedStudentIds([...selectedStudentIds, student.student_id]);
+                                          } else {
+                                            setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.student_id));
+                                          }
+                                        }}
+                                        disabled={!isCompatible}
+                                      />
+                                    </td>
+                                    <td>
+                                      <div className="d-flex align-items-center gap-2">
+                                        {student.profile_picture_url ? (
+                                          <img 
+                                            src={student.profile_picture_url} 
+                                            alt={student.full_name}
+                                            className="rounded-circle flex-shrink-0"
+                                            style={{ width: 28, height: 28, objectFit: 'cover' }}
+                                          />
+                                        ) : (
+                                          <div 
+                                            className="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center text-info fw-bold flex-shrink-0" 
+                                            style={{ width: 28, height: 28, fontSize: 10 }}>
+                                            {student.full_name.split(' ').map((n: string) => n[0]).join('').slice(0,2)}
+                                          </div>
+                                        )}
+                                        <span className="small">{student.full_name}</span>
                                       </div>
-                                      <span>{student.full_name}</span>
-                                    </div>
-                                  </td>
-                                  <td className="font-monospace small">{student.student_id}</td>
-                                  <td>
-                                    {student.track} / {student.strand}
-                                    {!isCompatible && <span className="badge bg-warning ms-2">Mismatch</span>}
-                                  </td>
-                                  <td>{student.term}</td>
-                                </tr>
-                              );
-                            })}
+                                    </td>
+                                    <td className="font-monospace small">{student.student_id}</td>
+                                    <td>
+                                      <span className="badge rounded-pill" style={{ fontSize: '0.72rem', background: student.grade_level === 12 ? '#ede9fe' : '#dbeafe', color: student.grade_level === 12 ? '#6d28d9' : '#1d4ed8', fontWeight: 600 }}>
+                                        Grade {student.grade_level || 11}
+                                      </span>
+                                    </td>
+                                    <td className="small">
+                                      {student.track} / {student.strand}
+                                      {!isCompatible && <span className="badge bg-warning ms-2 small">Mismatch</span>}
+                                    </td>
+                                    <td className="small">{student.term}</td>
+                                  </tr>
+                                );
+                              })
+                            }
                           </tbody>
                         </table>
                       </div>
 
                       {selectedStudentIds.length > 0 && (
-                        <div className="alert alert-info mt-3">
-                          <strong>{selectedStudentIds.length} student(s)</strong> will be enrolled in the selected schedule.
+                        <div className="alert alert-info mt-3 mb-0">
+                          <strong>{selectedStudentIds.length} Grade {bulkGradeLevel} student(s)</strong> will be enrolled in the selected schedule.
                         </div>
                       )}
                     </div>
