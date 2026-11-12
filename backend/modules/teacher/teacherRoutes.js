@@ -4,7 +4,7 @@ const router  = express.Router();
 
 const { login, logout, getProfile, getDashboard, getNotifications, getOverview }           = require("./teacherAuthController");
 const { getSubjectGrades, submitGrade, getClassGradeStats }                   = require("./teacherGradesController");
-const { getSubjectStudentsWithGrades, getStudentsWithGradesForClass, saveDraftGrade, submitGradesBatch, getSubmissionStatus, getTeacherSubjectsWithStatus, getTeacherSubjectsForGrades } = require("./teacherGradeSubmissionController");
+const { getSubjectStudentsWithGrades, getStudentsWithGradesForClass, saveDraftGrade, submitGradesBatch, getSubmissionStatus, getTeacherSubjectsWithStatus, getTeacherSubjectsForGrades, getSubmissionWindowStatus } = require("./teacherGradeSubmissionController");
 const { getTeacherSchedules, getScheduleStudents }                             = require("./teacherScheduleController");
 const { authenticateTeacher }                                                  = require("./teacherMiddleware");
 const { getMyDocumentRequests, approveDocumentRequest }                        = require("./teacherDocumentController");
@@ -36,6 +36,7 @@ router.get("/grade-submission/:subject_id/status",      getSubmissionStatus);
 // ✨ NEW routes (for new teacher_schedules system)
 router.get("/grade-submission/subjects-new",            getTeacherSubjectsForGrades);
 router.get("/grade-submission/students-for-class",      getStudentsWithGradesForClass);
+router.get("/grade-submission/window-status",           getSubmissionWindowStatus);
 
 // Universal routes (work with both old and new systems)
 router.post("/grade-submission/save-draft",             saveDraftGrade);
