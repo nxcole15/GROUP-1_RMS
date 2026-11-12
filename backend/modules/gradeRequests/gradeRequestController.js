@@ -110,7 +110,7 @@ async function studentGetRequests(req, res, next) {
       
       const [subjects] = await db.query(
         `SELECT 
-           ts.id as subject_id,
+           MIN(ts.id) as subject_id,
            ts.subject_name,
            ts.strand,
            ts.term,
@@ -128,6 +128,7 @@ async function studentGetRequests(req, res, next) {
                AND gr.term = ?
                AND gr.status NOT IN ('rejected')
            )
+         GROUP BY ts.subject_name, ts.strand, ts.term, t.id, t.full_name
          ORDER BY ts.subject_name ASC`,
         [studentInternalId, active_term, student_id, active_term]
       );
