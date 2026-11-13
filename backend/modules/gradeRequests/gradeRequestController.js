@@ -64,11 +64,20 @@ async function studentSubmitRequest(req, res, next) {
     const teacher_id  = scheduleRows[0].teacher_id;
     const subject_name = scheduleRows[0].subject_name;
 
-    // Check for duplicate
+    // Check for duplicate — match by subject_name + teacher_id + term so that
+    // subjects with multiple schedule rows (different strands/days) are treated
+    // as the same subject and cannot be requested more than once.
     const [existing] = await db.query(
-      `SELECT id FROM grade_requests WHERE student_id = ? AND subject_id = ? AND term = ?
-       AND status NOT IN ('rejected', 'released_to_student') LIMIT 1`,
-      [student_id, subject_id, term]
+      `SELECT gr.id FROM grade_requests gr
+       INNER JOIN teacher_schedules ts_new ON ts_new.id = ?
+       INNER JOIN teacher_schedules ts_req ON ts_req.id = gr.subject_id
+       WHERE gr.student_id = ?
+         AND gr.term = ?
+         AND ts_req.subject_name = ts_new.subject_name
+         AND ts_req.teacher_id = ts_new.teacher_id
+         AND gr.status NOT IN ('rejected', 'released_to_student')
+       LIMIT 1`,
+      [subject_id, student_id, term]
     );
     if (existing[0]) return res.status(409).json({ error: "You already have a pending request for this subject in this term." });
 
@@ -112,7 +121,6 @@ async function studentGetRequests(req, res, next) {
         `SELECT 
            MIN(ts.id) as subject_id,
            ts.subject_name,
-           ts.strand,
            ts.term,
            t.id as teacher_db_id,
            t.full_name as teacher_name
@@ -123,12 +131,14 @@ async function studentGetRequests(req, res, next) {
            AND ts.term = ?
            AND NOT EXISTS (
              SELECT 1 FROM grade_requests gr
+             INNER JOIN teacher_schedules ts2 ON ts2.id = gr.subject_id
              WHERE gr.student_id = ?
-               AND gr.subject_id = ts.id
                AND gr.term = ?
+               AND ts2.subject_name = ts.subject_name
+               AND ts2.teacher_id = ts.teacher_id
                AND gr.status NOT IN ('rejected')
            )
-         GROUP BY ts.subject_name, ts.strand, ts.term, t.id, t.full_name
+         GROUP BY ts.subject_name, ts.teacher_id, ts.term, t.id, t.full_name
          ORDER BY ts.subject_name ASC`,
         [studentInternalId, active_term, student_id, active_term]
       );
