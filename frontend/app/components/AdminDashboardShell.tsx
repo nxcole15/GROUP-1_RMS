@@ -165,6 +165,7 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
     principal: { title: "Principal Panel", subtitle: "Full Access", initials: "PR", email: "principal@cfei.edu" },
     registrar: { title: "Registrar Panel", subtitle: "Full Access", initials: "RG", email: "registrar@cfei.edu" },
     accounting: { title: "Accounting Panel", subtitle: "Full Access", initials: "AC", email: "accounting@cfei.edu" },
+    teacher_coordinator: { title: "Teacher Coordinator", subtitle: "Full Access", initials: "TC", email: "admin@cfei.edu" },
   };
 
   const config = roleConfig[role as keyof typeof roleConfig] || { title: "Admin Panel", subtitle: "Full Access", initials: "AD", email: "admin@cfei.edu" };
@@ -215,20 +216,23 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
           overflowY: "auto",
           overflowX: "hidden",
           boxShadow: "2px 0 10px rgba(0,0,0,0.05)",
-          borderRight: "1px solid #f1f5f9"
-        }}
+          borderRight: "1px solid #f1f5f9",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        } as React.CSSProperties}
       >
+        <style>{`.dashboard-sidebar::-webkit-scrollbar { display: none; } .dashboard-sidebar nav::-webkit-scrollbar { display: none; }`}</style>
         {/* Logo */}
         <div className="sidebar-brand">
-          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem" }}>
-            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={80} height={80} />
-            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 10 }}>
+          <div className="sidebar-brand-group" style={{ flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.75rem" }}>
+            <Image src="/cfei-logo.jpg" alt="CFEI" className="sidebar-brand-logo" width={52} height={52} style={{ width: 52, height: 52, minWidth: 52, minHeight: 52, maxWidth: 52, maxHeight: 52 }} />
+            <div className="sidebar-brand-info" style={{ alignItems: "center", textAlign: "center", marginTop: 6 }}>
               <div className="sidebar-brand-title" style={{ color: "#1f2937" }}>{config.title}</div><div style={{ color:"#6b7280", fontSize:11 }}>{config.subtitle}</div></div>
           </div>
           <button className="btn-close sidebar-brand-close d-lg-none" onClick={() => setShow(false)} />
         </div>
         {/* Nav */}
-        <nav className="flex-grow-1 px-3 py-2 d-flex flex-column gap-1 mt-2">
+        <nav className="flex-grow-1 px-3 py-1 d-flex flex-column gap-1 mt-1" style={{ overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           {filteredNavItems.filter(item => !(hideRequests && item.id === "requests")).map(item => (
             <button key={item.id} onClick={() => { setActive(item.id); setShow(false); }}
               className="btn text-start d-flex align-items-center gap-3 px-3 py-2 rounded-3 border-0"
@@ -290,9 +294,9 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, hideRequest
         </nav>
         
         {/* Logout button - More visible at bottom */}
-        <div className="px-3 pb-4 pt-2" style={{ borderTop:"1px solid #f3f4f6" }}>
-          <div className="rounded-3 p-3" style={{ background:"#f9fafb", border:"1px solid #e5e7eb" }}>
-            <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="px-3 pb-3 pt-2" style={{ borderTop:"1px solid #f3f4f6", flexShrink: 0 }}>
+          <div className="rounded-3 p-2" style={{ background:"#f9fafb", border:"1px solid #e5e7eb" }}>
+            <div className="d-flex align-items-center gap-2 mb-2">
               <div className="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
                 style={{ width:34, height:34, fontSize:12, background:"#fbbf24", color:"#78350f" }}>
                 {config.initials}
@@ -897,14 +901,13 @@ function StudentsPanel() {
                 <th className="small text-muted fw-semibold text-uppercase d-none d-sm-table-cell" style={{ letterSpacing:"0.05em" }}>ID</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Grade - Track & Strand</th>
                 <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>GWA</th>
-                <th className="small text-muted fw-semibold text-uppercase d-none d-lg-table-cell" style={{ letterSpacing:"0.05em" }}>Room</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Status</th>
                 <th className="small text-muted fw-semibold text-uppercase" style={{ letterSpacing:"0.05em" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={8} className="text-center text-muted py-4 small">No students found for the selected track/grade.</td></tr>
+                ? <tr><td colSpan={7} className="text-center text-muted py-4 small">No students found for the selected track/grade.</td></tr>
                 : filtered.map((s, i) => (
                   <tr key={s.id}>
                     <td className="ps-4 text-muted small">{i + 1}</td>
@@ -932,13 +935,6 @@ function StudentsPanel() {
                     <td className="d-none d-lg-table-cell text-muted small">Grade {s.grade} - {s.track}</td>
                     <td className="d-none d-lg-table-cell fw-bold text-primary small">
                       {s.gwa != null && s.gwa > 0 ? Number(s.gwa).toFixed(2) : <span className="text-muted">--</span>}
-                    </td>
-                    <td className="d-none d-lg-table-cell text-muted small">
-                      {s.room > 0 ? (
-                        <span className="badge bg-info-subtle text-info border border-info-subtle">Room {s.room}</span>
-                      ) : (
-                        <span className="text-muted">TBA</span>
-                      )}
                     </td>
                     <td>
                       <span className={`badge ${
@@ -8906,8 +8902,8 @@ export function AdminDashboardPage({ hideBanner, onSidebarExpandChange, readOnly
       case "reports":       return <ReportsPanel />;
       case "profile":       return <PrincipalProfilePanel adminName={adminName} role={role} />;
       case "settings":      return <SettingsPanel />;
-      case "dashboard-guide": return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="dashboard" />;
-      case "user-guide":    return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : "principal"} type="user" />;
+      case "dashboard-guide": return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : role === "teacher_coordinator" ? "teacher_coordinator" : "principal"} type="dashboard" />;
+      case "user-guide":    return <GuidePanel role={role === "principal" ? "principal" : role === "registrar" ? "registrar" : role === "accounting" ? "accounting" : role === "teacher_coordinator" ? "teacher_coordinator" : "principal"} type="user" />;
       default:              return <Overview setActive={setActiveNav} hideBanner={hideBanner} adminName={adminName} academicConfig={academicConfig} role={role} />;
     }
   }

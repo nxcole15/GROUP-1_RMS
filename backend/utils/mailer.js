@@ -50,9 +50,7 @@ async function deliverEmail(message) {
 async function sendCredentials({ to, fullName, studentId, tempPass }) {
   const from = process.env.EMAIL_FROM || "CFEI INFORM <noreply@resend.dev>";
   
-  const clientOrigins = process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim()) : [];
-  const productionUrl = clientOrigins.find(url => url.startsWith("https://")) || clientOrigins[0] || "http://localhost:3000";
-  const loginUrl = `${productionUrl}/login`;
+  const loginUrl = `${process.env.FRONTEND_URL || "https://cfeistudentportal.com"}/login`;
   
   try {
     await deliverEmail({
