@@ -585,7 +585,8 @@ export default function AccountingDashboardPage() {
   return (
     <>
       {showSidebar && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex: 1040 }} onClick={() => setShowSidebar(false)} />}
-      <div className={`position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", boxShadow: "2px 0 8px rgba(0,0,0,0.1)" }}>
+      <div className={`accounting-sidebar position-fixed top-0 start-0 h-100 d-flex flex-column flex-shrink-0 ${showSidebar ? "" : "d-none d-lg-flex"}`} style={{ width: 256, zIndex: 1045, background: "#ffffff", overflowY: "auto", overflowX: "hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.1)", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+        <style>{`.accounting-sidebar::-webkit-scrollbar { display: none; }`}</style>
         <div className="p-4 d-flex flex-column align-items-center border-bottom" style={{ borderColor: "#f1f5f9" }}>
           <Image src="/cfei-logo.jpg" alt="CFEI" className="rounded-circle mb-3 sidebar-brand-logo" width={180} height={180} />
           <div className="text-center">
