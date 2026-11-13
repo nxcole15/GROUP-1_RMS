@@ -75,11 +75,9 @@ async function getDashboardData(req, res, next) {
     let totalPaid = 0;
     try {
       const [paymentsRows] = await db.query(`
-        SELECT 
-          COALESCE(SUM(p.amount), 0) as total_paid
-        FROM payments p
-        INNER JOIN students s ON p.student_internal_id = s.id
-        WHERE s.student_id = ? AND p.status = 'verified'
+        SELECT COALESCE(SUM(amount), 0) AS total_paid
+        FROM payments
+        WHERE student_id = ? AND status = 'verified'
       `, [studentId]);
       totalPaid = paymentsRows[0]?.total_paid || 0;
     } catch (err) {
@@ -91,12 +89,10 @@ async function getDashboardData(req, res, next) {
     let totalTuition = 0;
     try {
       const [assessmentRows] = await db.query(`
-        SELECT 
-          COALESCE(sa.net_assessment, 0) as total_tuition
-        FROM student_assessments sa
-        INNER JOIN students s ON sa.student_internal_id = s.id
-        WHERE s.student_id = ?
-        ORDER BY sa.assessed_at DESC
+        SELECT COALESCE(net_assessment, 0) AS total_tuition
+        FROM student_assessments
+        WHERE student_id = ?
+        ORDER BY assessed_at DESC
         LIMIT 1
       `, [studentId]);
       
@@ -111,10 +107,9 @@ async function getDashboardData(req, res, next) {
     let pendingDocs = 0;
     try {
       const [docsRows] = await db.query(`
-        SELECT COUNT(*) as pending_count
-        FROM documents d
-        INNER JOIN students s ON d.student_internal_id = s.id
-        WHERE s.student_id = ? AND d.status <> 'released'
+        SELECT COUNT(*) AS pending_count
+        FROM documents
+        WHERE student_id = ? AND status NOT IN ('released', 'rejected')
       `, [studentId]);
       pendingDocs = docsRows[0]?.pending_count || 0;
     } catch (err) {

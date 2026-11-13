@@ -32,26 +32,30 @@ CREATE TABLE IF NOT EXISTS students (
 
 -- ── Teachers ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS teachers (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  teacher_id  VARCHAR(20)  NOT NULL UNIQUE,
-  password    VARCHAR(255) NOT NULL,
-  full_name   VARCHAR(100) NOT NULL,
-  department  VARCHAR(100) NOT NULL,
-  email       VARCHAR(100) NOT NULL,
-  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  teacher_id       VARCHAR(20)  NOT NULL UNIQUE,
+  password         VARCHAR(255) NOT NULL,
+  full_name        VARCHAR(100) NOT NULL,
+  department       VARCHAR(100) NOT NULL,
+  email            VARCHAR(100) NOT NULL,
+  failed_attempts  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until     DATETIME     NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ── Admins ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admins (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  admin_id    VARCHAR(20)  NOT NULL UNIQUE,
-  password    VARCHAR(255) NOT NULL,
-  full_name   VARCHAR(100) NOT NULL,
-  role        VARCHAR(20)  NOT NULL DEFAULT 'admin',
-  email       VARCHAR(100) NOT NULL,
-  is_archived TINYINT(1) NOT NULL DEFAULT 0,
-  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  admin_id         VARCHAR(20)  NOT NULL UNIQUE,
+  password         VARCHAR(255) NOT NULL,
+  full_name        VARCHAR(100) NOT NULL,
+  role             VARCHAR(20)  NOT NULL DEFAULT 'admin',
+  email            VARCHAR(100) NOT NULL,
+  is_archived      TINYINT(1) NOT NULL DEFAULT 0,
+  failed_attempts  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until     DATETIME     NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ── Subjects ─────────────────────────────────────────────────
@@ -171,10 +175,25 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 -- ── Enrollment Config ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS enrollment_config (
-  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  active_term     VARCHAR(50)  NOT NULL,
-  deadline        DATETIME     NOT NULL
-);
+  id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  school_year             VARCHAR(20)  NOT NULL,
+  current_term            ENUM('Term 1','Term 2','Term 3') NOT NULL DEFAULT 'Term 1',
+  status                  ENUM('active','completed') NOT NULL DEFAULT 'active',
+  enrollment_start_date   DATE         NULL,
+  enrollment_end_date     DATE         NULL,
+  enrollment_is_open      TINYINT(1)   NOT NULL DEFAULT 0,
+  term1_completed_at      DATETIME     NULL,
+  term2_completed_at      DATETIME     NULL,
+  term3_completed_at      DATETIME     NULL,
+  created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by              VARCHAR(20)  NULL,
+  last_modified_by        VARCHAR(20)  NULL,
+  UNIQUE KEY unique_active_year (status, school_year),
+  INDEX idx_school_year (school_year),
+  INDEX idx_status (status),
+  INDEX idx_current_term (current_term)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Schedule ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS schedule (

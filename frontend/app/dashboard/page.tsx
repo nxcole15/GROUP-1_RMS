@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import React from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -189,8 +189,8 @@ function Sidebar({ active, setActive, show, setShow, onExpandChange, student }: 
     <>
       {show && <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-lg-none" style={{ zIndex:1040 }} onClick={() => setShow(false)} />}
       <div
-        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show?"":"d-none d-lg-flex"}`}
-        style={{ width: 256, zIndex:1045, background:"#ffffff", overflowY:"auto", overflowX:"hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.05)", borderRight: "1px solid #f3f4f6" }}
+        className={`dashboard-sidebar d-flex flex-column flex-shrink-0 position-fixed top-0 start-0 h-100 ${show ? "sidebar-mobile-open" : "sidebar-mobile-closed"}`}
+        style={{ width: 256, zIndex:1045, background:"#ffffff", overflowY:"auto", overflowX:"hidden", boxShadow: "2px 0 8px rgba(0,0,0,0.05)", borderRight: "1px solid #f3f4f6", transition: "transform 0.25s ease" }}
       >
         {/* Logo */}
         <div className="sidebar-brand">
@@ -341,27 +341,27 @@ function HomePanel({ setPanel, onAskJobert, student, dashboardData, academicConf
     <div className="d-flex flex-column gap-0">
       {/* ── Welcome Banner ───────────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)",
+        background: "linear-gradient(135deg,#f59e0b 0%,#fbbf24 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "32px 32px 80px",
         position: "relative",
         overflow: "hidden",
       }}>
-        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.07)" }} />
-        <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
-        <div style={{ position:"absolute", top:20, right:80, width:70, height:70, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+        <div style={{ position:"absolute", top:-50, right:-50, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.15)" }} />
+        <div style={{ position:"absolute", bottom:-60, right:160, width:150, height:150, borderRadius:"50%", background:"rgba(255,255,255,0.1)" }} />
+        <div style={{ position:"absolute", top:20, right:80, width:70, height:70, borderRadius:"50%", background:"rgba(255,255,255,0.12)" }} />
         <div style={{ position:"relative", zIndex:1 }}>
-          <h1 className="fw-bold text-white mb-1" style={{ fontSize:"1.7rem" }}>
+          <h1 className="fw-bold mb-1" style={{ fontSize:"1.7rem", color:"#78350f" }}>
             Welcome back, {student?.full_name ?? "Student"}
           </h1>
-          <p className="mb-3" style={{ color:"rgba(255,255,255,0.72)", fontSize:14 }}>
+          <p className="mb-3" style={{ color:"#92400e", fontSize:14 }}>
             {student?.student_id ?? ""} · {student?.pathway ?? "STEM"} Grade {student?.grade_level ?? "11"} · {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`}
           </p>
           <div className="d-flex gap-2 flex-wrap">
-            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", fontSize:"0.78rem" }}>
+            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(120,53,15,0.12)", color:"#78350f", border:"1px solid rgba(120,53,15,0.25)", fontSize:"0.78rem" }}>
               ✅ Active Student
             </span>
-            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(255,255,255,0.13)", color:"white", border:"1px solid rgba(255,255,255,0.22)", fontSize:"0.78rem" }}>
+            <span className="badge px-3 py-2 rounded-pill" style={{ background:"rgba(120,53,15,0.08)", color:"#78350f", border:"1px solid rgba(120,53,15,0.18)", fontSize:"0.78rem" }}>
               📅 Enrollment Open
             </span>
           </div>
@@ -620,6 +620,9 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
   const [requestMap, setRequestMap] = useState<Record<number, SubjectRequestStatus>>({});
   const [toast, setToast]               = useState<string | null>(null);
   const [confirmSubjectId, setConfirmSubjectId] = useState<number | null>(null);
+  // Track locally-requested IDs so the optimistic "pending" state survives
+  // poll-driven re-renders until the backend confirms the request.
+  const requestedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     // Use the available subjects from the API instead of fetching separately
@@ -637,12 +640,16 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
       subjects.forEach((s: any) => {
         const existing = existingRequests.find(r => Number(r.subject_id) === s.id);
         if (!existing) {
-          map[s.id] = "idle";
+          // Keep optimistic "pending" for IDs the student just requested locally,
+          // even if the backend hasn't returned them in the next poll yet.
+          map[s.id] = requestedIdsRef.current.has(s.id) ? "pending" : "idle";
         } else if (existing.status === "rejected") {
           map[s.id] = "rejected";
         } else {
           // Any other status (pending, in-progress, released) – show as "pending" (not requestable)
           map[s.id] = "pending";
+          // Backend confirmed – keep tracking so it's never reset to idle
+          requestedIdsRef.current.add(s.id);
         }
       });
       setRequestMap(map);
@@ -670,15 +677,18 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
           if (data.error) {
             showToast(data.error);
           } else {
+            requestedIdsRef.current.add(subjectId);
             setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
             showToast(`Grade request for ${subjectName} sent to your teacher.`);
           }
         })
         .catch(() => {
+          requestedIdsRef.current.add(subjectId);
           setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
           showToast(`Grade request for ${subjectName} sent.`);
         });
     } else {
+      requestedIdsRef.current.add(subjectId);
       setRequestMap(prev => ({ ...prev, [subjectId]: "pending" }));
     }
   }
@@ -687,12 +697,17 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
   
   // Filter logic: 
   // - "idle" subjects need action (can request)
-  // - "pending" subjects are in progress
+  // - "pending" with no backend record yet = just clicked, show optimistic card
+  // - "pending" with backend record = already in "Request Status" list, hide card
   // - "rejected" subjects can be re-requested
   // - "released_to_student" subjects should NOT show in cards
   const unreleased = enrolledSubjects.filter(s => {
     const existing = existingRequests.find(r => Number(r.subject_id) === s.id);
-    return existing?.status !== "released_to_student";
+    // Hide if fully released
+    if (existing?.status === "released_to_student") return false;
+    // Hide if backend already confirmed the request (shown in Request Status list above)
+    if (existing && existing.status !== "rejected") return false;
+    return true;
   });
   
   const allRequested   = unreleased.length > 0 && unreleased.every(s => requestMap[s.id] === "pending");
@@ -805,23 +820,16 @@ function GradesRequestOpen({ term, existingRequests = [], availableSubjects = []
                     }
                     // Already requested and in-progress
                     if (status === "pending") {
+                      // If the backend has already confirmed this request, it will
+                      // appear in the "Request Status" list above — don't duplicate it here.
+                      // Only show the optimistic "Request Sent" card while waiting for
+                      // the first poll to confirm (existing is null but we just clicked).
+                      if (existing) return null;
                       return (
-                        <>
-                          <div className="rounded-3 p-3 text-center mb-0" style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.3)" }}>
-                            <div className="fw-semibold small mb-1 text-warning d-inline-flex align-items-center gap-1"><Icon name="clock" size={12} /> Request Sent</div>
-                            <div className="text-muted" style={{ fontSize:11 }}>
-                              {existing ? (() => {
-                                const s = existing.status;
-                                if (s === "registrar_review") return "Registrar is reviewing";
-                                if (s === "principal_review") return "Principal is reviewing";
-                                if (s === "principal_approved") return "Approved - awaiting release";
-                                if (s === "registrar_released") return "Sent back to teacher";
-                                return "Waiting for your teacher";
-                              })() : "Waiting for your teacher."}
-                            </div>
-                          </div>
-                          <WorkflowTracker subject={subj.subject_name} currentStep={0} />
-                        </>
+                        <div className="rounded-3 p-3 text-center mb-0" style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.3)" }}>
+                          <div className="fw-semibold small mb-1 text-warning d-inline-flex align-items-center gap-1"><Icon name="clock" size={12} /> Request Sent</div>
+                          <div className="text-muted" style={{ fontSize:11 }}>Waiting for your teacher.</div>
+                        </div>
                       );
                     }
                     // Can request
@@ -908,7 +916,19 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
         .then(r => r.ok ? r.json() : null)
         .then(data => { 
           if (data?.requests) setMyRequests(data.requests);
-          if (data?.available_subjects) setAvailableSubjects(data.available_subjects);
+          if (data?.available_subjects) {
+            // Deduplicate by subject_name + teacher_name so subjects with
+            // multiple schedule rows (different strands, days, etc.) only
+            // appear once in the request cards.
+            const seen = new Set<string>();
+            const deduped = data.available_subjects.filter((s: any) => {
+              const key = `${(s.subject_name || '').trim().toLowerCase()}__${(s.teacher_name || '').trim().toLowerCase()}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            setAvailableSubjects(deduped);
+          }
         })
         .catch(() => {});
     }
@@ -919,10 +939,15 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
     return () => clearInterval(interval);
   }, []);
 
-  // Requests for selected term
-  const termRequests = myRequests.filter(r => r.term === termLabel);
+  // Requests for selected term – useMemo so the array reference is stable
+  // and doesn't cause GradesRequestOpen's useEffect to re-run on every poll.
+  const termRequests = useMemo(() => myRequests.filter(r => r.term === termLabel), [myRequests, termLabel]);
   const releasedGrades = termRequests.filter(r => r.status === "released_to_student");
-  const pendingRequests = termRequests.filter(r => r.status !== "released_to_student");
+  // Deduplicate pending requests by subject_name so old duplicate DB records
+  // don't show the same subject twice in the Request Status list.
+  const pendingRequests = termRequests
+    .filter(r => r.status !== "released_to_student")
+    .filter((r, idx, arr) => arr.findIndex(x => x.subject_name === r.subject_name) === idx);
 
   function statusLabel(status: string): string {
     const map: Record<string, string> = {
@@ -1099,23 +1124,37 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
         </div>
       )}
 
-      {/* Pending requests � show status tracker */}
+      {/* Pending requests — show status tracker with workflow progress */}
       {!loading && pendingRequests.length > 0 && (
         <div className="d-flex flex-column gap-2">
           <h3 className="fw-bold small text-dark mb-1 d-flex align-items-center gap-1"><Icon name="clipboard" size={14} /> Request Status - {termLabel}</h3>
-          {pendingRequests.map((r, i) => (
-            <div key={i} className="card border-0 shadow-sm rounded-3">
-              <div className="card-body p-3 d-flex align-items-center gap-3">
-                <div className="flex-grow-1">
-                  <div className="fw-bold small text-dark">{r.subject_name}</div>
-                  <div className="text-muted" style={{ fontSize: 11 }}>{r.subject_code} - {r.teacher_name}</div>
+          {pendingRequests.map((r, i) => {
+            const stepMap: Record<string, number> = {
+              student_requested:   0,
+              teacher_calculating: 1,
+              registrar_review:    2,
+              principal_review:    2,
+              principal_approved:  3,
+              registrar_released:  3,
+            };
+            const currentStep = stepMap[r.status] ?? 0;
+            return (
+              <div key={i} className="card border-0 shadow-sm rounded-3">
+                <div className="card-body p-3">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="flex-grow-1">
+                      <div className="fw-bold small text-dark">{r.subject_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{r.subject_code} - {r.teacher_name}</div>
+                    </div>
+                    <span className={`badge ${statusColor(r.status)}`} style={{ fontSize: 10 }}>
+                      {statusLabel(r.status)}
+                    </span>
+                  </div>
+                  <WorkflowTracker subject={r.subject_name} currentStep={currentStep} />
                 </div>
-                <span className={`badge ${statusColor(r.status)}`} style={{ fontSize: 10 }}>
-                  {statusLabel(r.status)}
-                </span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1127,7 +1166,7 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
       {/* Grade request section � only when window is open */}
       {!loading && isRequestOpen && (
         <div>
-          <GradesRequestOpen term={termLabel} existingRequests={myRequests.filter(r => r.term === termLabel)} availableSubjects={availableSubjects} />
+          <GradesRequestOpen term={termLabel} existingRequests={termRequests} availableSubjects={availableSubjects} />
         </div>
       )}
     </div>
@@ -1135,7 +1174,7 @@ function GradesView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert
 }
 
 /* -- Schedule View -- */
-function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=>void; academicConfig?: AcademicConfig | null }) {
+function ScheduleView({ onAskJobert: _onAskJobert, academicConfig }: { onAskJobert:(p:string)=>void; academicConfig?: AcademicConfig | null }) {
   const [schedules, setSchedules] = useState<{
     schedule_id: number;
     subject_name: string;
@@ -1149,26 +1188,20 @@ function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=
   const [loading, setLoading] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
 
-  useEffect(() => {
-    loadSchedules();
-  }, []);
+  useEffect(() => { loadSchedules(); }, []);
 
   async function loadSchedules() {
     const token = localStorage.getItem("inform_token");
     if (!token) return;
-    
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/student/schedules`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
-      
       if (response.ok) {
         const data = await response.json();
-        if (data?.schedules) {
-          setSchedules(data.schedules);
-        }
+        if (data?.schedules) setSchedules(data.schedules);
       }
     } catch (err) {
       console.error("Failed to load schedules:", err);
@@ -1177,39 +1210,97 @@ function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=
     }
   }
 
-  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const timeSlots = [
-    "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", 
-    "13:00", "14:00", "15:00", "16:00", "17:00"
+  // "HH:MM:SS" or "HH:MM" → "7:00 AM" / "1:00 PM"
+  function to12Hour(time: string): string {
+    const [hStr, mStr] = time.split(":");
+    let h = parseInt(hStr, 10);
+    const m = mStr?.padStart(2, "0") ?? "00";
+    const period = h >= 12 ? "PM" : "AM";
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    return `${h}:${m} ${period}`;
+  }
+
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  // Only show hours that have at least one class, plus one slot before/after for padding
+  const allHours = useMemo(() => {
+    if (schedules.length === 0) return Array.from({ length: 11 }, (_, i) => i + 7);
+    const starts = schedules.map(s => parseInt(s.time_start.split(":")[0], 10));
+    const ends   = schedules.map(s => Math.ceil(parseInt(s.time_end.split(":")[0], 10) + (parseInt(s.time_end.split(":")[1], 10) > 0 ? 1 : 0)));
+    const min = Math.max(6, Math.min(...starts) - 1);
+    const max = Math.min(20, Math.max(...ends));
+    return Array.from({ length: max - min + 1 }, (_, i) => i + min);
+  }, [schedules]);
+
+  // Subject → consistent color
+  const SUBJECT_COLORS = [
+    { bg: "#ede9fe", accent: "#7c3aed", text: "#5b21b6" },
+    { bg: "#dbeafe", accent: "#2563eb", text: "#1d4ed8" },
+    { bg: "#dcfce7", accent: "#16a34a", text: "#15803d" },
+    { bg: "#fef3c7", accent: "#d97706", text: "#b45309" },
+    { bg: "#fce7f3", accent: "#db2777", text: "#be185d" },
+    { bg: "#e0f2fe", accent: "#0284c7", text: "#0369a1" },
+    { bg: "#fef9c3", accent: "#ca8a04", text: "#a16207" },
+    { bg: "#fee2e2", accent: "#dc2626", text: "#b91c1c" },
   ];
 
-  function getSchedulesForDayAndTime(day: string, timeSlot: string) {
-    return schedules.filter((schedule) => {
-      if (schedule.day !== day) return false;
-      
-      const scheduleStart = schedule.time_start.slice(0, 5);
-      const scheduleEnd = schedule.time_end.slice(0, 5);
-      const slotEnd = `${(parseInt(timeSlot.slice(0, 2)) + 1).toString().padStart(2, '0')}:00`;
-      
-      // Check if the schedule overlaps with this time slot hour
-      // A schedule overlaps if it starts before the slot ends AND ends after the slot starts
-      return scheduleStart < slotEnd && scheduleEnd > timeSlot;
+  const subjectColorMap = useMemo(() => {
+    const map: Record<string, typeof SUBJECT_COLORS[0]> = {};
+    [...new Set(schedules.map(s => s.subject_name))].forEach((name, i) => {
+      map[name] = SUBJECT_COLORS[i % SUBJECT_COLORS.length];
+    });
+    return map;
+  }, [schedules]);
+
+  // Returns schedules that START in this hour slot for the given day
+  function getSlotSchedules(day: string, hour: number) {
+    return schedules.filter(s => {
+      if (s.day !== day) return false;
+      const startH = parseInt(s.time_start.split(":")[0], 10);
+      return startH === hour;
     });
   }
 
+  // How many rows a schedule spans (rounded up to whole hours)
+  function rowSpan(s: { time_start: string; time_end: string }) {
+    const startH = parseInt(s.time_start.split(":")[0], 10);
+    const startM = parseInt(s.time_start.split(":")[1], 10);
+    const endH   = parseInt(s.time_end.split(":")[0], 10);
+    const endM   = parseInt(s.time_end.split(":")[1], 10);
+    const totalMins = (endH * 60 + endM) - (startH * 60 + startM);
+    return Math.max(1, Math.ceil(totalMins / 60));
+  }
+
+  // Track which cells are covered by a rowspan so we skip rendering them
+  const coveredCells = useMemo(() => {
+    const covered = new Set<string>();
+    DAYS.forEach(day => {
+      schedules
+        .filter(s => s.day === day)
+        .forEach(s => {
+          const startH = parseInt(s.time_start.split(":")[0], 10);
+          const span   = rowSpan(s);
+          for (let i = 1; i < span; i++) {
+            covered.add(`${day}-${startH + i}`);
+          }
+        });
+    });
+    return covered;
+  }, [schedules]);
+
   return (
     <div className="d-flex flex-column gap-4">
-      <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+      {/* Header */}
+      <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
         <div>
           <h2 className="fw-black fs-4 text-dark mb-1">My Schedule</h2>
-          <p className="text-muted small mb-0">{academicConfig?.current_term || "Term 1"} - {academicConfig?.school_year || "2026-2027"}</p>
+          <p className="text-muted small mb-0">
+            {academicConfig?.current_term || "Term 1"} · SY {academicConfig?.school_year || "2026-2027"}
+          </p>
         </div>
-        <button 
-          onClick={loadSchedules}
-          className="btn btn-outline-primary btn-sm" 
-          style={{ fontSize: 12 }}
-        >
-          🔄 Refresh
+        <button onClick={loadSchedules} className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" style={{ fontSize: 12 }}>
+          <Icon name="refresh" size={13} /> Refresh
         </button>
       </div>
 
@@ -1219,142 +1310,196 @@ function ScheduleView({ onAskJobert, academicConfig }: { onAskJobert:(p:string)=
           <p className="text-muted mt-2 small">Loading your schedule...</p>
         </div>
       ) : schedules.length === 0 ? (
-        <div className="card border-0 shadow-sm rounded-3">
+        <div className="card border-0 shadow-sm rounded-4">
           <div className="card-body p-5 text-center">
-            <div className="text-muted">
-              <Icon name="calendar" size={48} />
-              <p className="mt-3 mb-0">No enrolled classes yet</p>
-              <p className="small text-muted">Contact the registrar to enroll in classes</p>
-            </div>
+            <Icon name="calendar" size={48} className="text-muted" />
+            <p className="mt-3 mb-1 fw-semibold text-dark">No enrolled classes yet</p>
+            <p className="small text-muted mb-0">Contact the registrar to enroll in classes.</p>
           </div>
         </div>
       ) : (
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-3">
-            <div className="table-responsive">
-              <table className="table table-bordered table-sm mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: '80px', fontSize: '0.75rem' }} className="text-center">Time</th>
-                    {daysOfWeek.map(day => (
-                      <th key={day} style={{ fontSize: '0.75rem', minWidth: '140px' }} className="text-center fw-bold">
-                        {day}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {timeSlots.map(timeSlot => (
-                    <tr key={timeSlot}>
-                      <td className="text-center fw-semibold small text-muted" style={{ fontSize: '0.75rem' }}>
-                        {timeSlot}
-                      </td>
-                      {daysOfWeek.map(day => {
-                        const daySchedules = getSchedulesForDayAndTime(day, timeSlot);
+        <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table mb-0" style={{ tableLayout: "fixed", minWidth: 640 }}>
+              <colgroup>
+                <col style={{ width: 72 }} />
+                {DAYS.map(d => <col key={d} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  {/* Top-left corner */}
+                  <th className="text-center align-middle py-3"
+                    style={{ background: "#fbbf24", color: "#78350f", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", border: "none" }}>
+                    TIME
+                  </th>
+                  {DAYS.map(day => (
+                    <th key={day} className="text-center align-middle py-3"
+                      style={{ background: "#fbbf24", color: "#78350f", fontSize: 12, fontWeight: 700, border: "none", borderLeft: "1px solid rgba(120,53,15,0.15)" }}>
+                      {day.slice(0, 3).toUpperCase()}
+                      <div style={{ fontSize: 10, fontWeight: 400, opacity: 0.75 }}>{day}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allHours.map((hour, rowIdx) => (
+                  <tr key={hour} style={{ background: rowIdx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                    {/* Time label */}
+                    <td className="text-center align-top py-2 px-1"
+                      style={{ fontSize: 11, fontWeight: 600, color: "#64748b", borderRight: "2px solid #e2e8f0", borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>
+                      {to12Hour(`${hour.toString().padStart(2, "0")}:00`)}
+                    </td>
+
+                    {DAYS.map(day => {
+                      // Skip cells covered by a rowspan from above
+                      if (coveredCells.has(`${day}-${hour}`)) return null;
+
+                      const slotSchedules = getSlotSchedules(day, hour);
+
+                      if (slotSchedules.length === 0) {
                         return (
-                          <td key={`${day}-${timeSlot}`} className="p-1" style={{ verticalAlign: 'top' }}>
-                            {daySchedules.map((schedule) => (
-                              <div 
+                          <td key={day}
+                            style={{ borderBottom: "1px solid #f1f5f9", borderLeft: "1px solid #f1f5f9", padding: 4 }} />
+                        );
+                      }
+
+                      return (
+                        <td key={day}
+                          rowSpan={rowSpan(slotSchedules[0])}
+                          style={{ borderBottom: "1px solid #f1f5f9", borderLeft: "1px solid #f1f5f9", padding: 4, verticalAlign: "top" }}>
+                          {slotSchedules.map(schedule => {
+                            const color = subjectColorMap[schedule.subject_name];
+                            return (
+                              <button
                                 key={schedule.schedule_id}
-                                className="card mb-1 border cursor-pointer"
-                                style={{ 
-                                  fontSize: '0.7rem',
-                                  backgroundColor: '#e7f3ff',
-                                  borderColor: '#4a90e2 !important'
-                                }}
                                 onClick={() => setSelectedSchedule(schedule)}
+                                className="w-100 text-start border-0 p-0 h-100"
+                                style={{ background: "transparent", cursor: "pointer" }}
                               >
-                                <div className="card-body p-2">
-                                  <div className="fw-bold text-dark mb-1" style={{ fontSize: '0.75rem' }}>
+                                <div className="rounded-3 p-2 h-100 d-flex flex-column gap-1"
+                                  style={{
+                                    background: color.bg,
+                                    borderLeft: `3px solid ${color.accent}`,
+                                    minHeight: 56,
+                                  }}>
+                                  <div className="fw-bold text-truncate" style={{ fontSize: 11, color: color.text }}>
                                     {schedule.subject_name}
                                   </div>
-                                  <div className="text-muted" style={{ fontSize: '0.65rem' }}>
-                                    📍 {schedule.room}
+                                  <div className="text-truncate" style={{ fontSize: 10, color: "#64748b" }}>
+                                    {schedule.teacher_name}
                                   </div>
-                                  <div className="text-muted" style={{ fontSize: '0.65rem' }}>
-                                    👨‍🏫 {schedule.teacher_name}
-                                  </div>
-                                  <div className="text-muted mt-1" style={{ fontSize: '0.65rem' }}>
-                                    {schedule.time_start.slice(0, 5)} - {schedule.time_end.slice(0, 5)}
+                                  <div className="mt-auto" style={{ fontSize: 10, color: color.accent, fontWeight: 600 }}>
+                                    {to12Hour(schedule.time_start)}–{to12Hour(schedule.time_end)}
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                              </button>
+                            );
+                          })}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="px-4 py-3 d-flex flex-wrap gap-2 align-items-center"
+            style={{ borderTop: "1px solid #f1f5f9", background: "#fafafa" }}>
+            <span className="small text-muted me-1" style={{ fontSize: 11 }}>Subjects:</span>
+            {[...new Set(schedules.map(s => s.subject_name))].map(name => {
+              const color = subjectColorMap[name];
+              return (
+                <span key={name} className="d-inline-flex align-items-center gap-1 rounded-pill px-2 py-1"
+                  style={{ background: color.bg, border: `1px solid ${color.accent}`, fontSize: 10, color: color.text, fontWeight: 600 }}>
+                  <span className="rounded-circle" style={{ width: 6, height: 6, background: color.accent, display: "inline-block" }} />
+                  {name}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Schedule Details Modal */}
+      {/* Detail Modal */}
       {selectedSchedule && (
-        <div 
-          className="modal d-block" 
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => setSelectedSchedule(null)}
-        >
-          <div 
-            className="modal-dialog modal-dialog-centered"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header bg-primary text-white">
-                <h5 className="modal-title fw-bold">{selectedSchedule.subject_name}</h5>
-                <button 
-                  type="button" 
-                  className="btn-close btn-close-white" 
-                  onClick={() => setSelectedSchedule(null)}
-                />
+        <div className="modal d-block" style={{ background: "rgba(0,0,0,0.45)", zIndex: 9998 }}
+          onClick={() => setSelectedSchedule(null)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={e => e.stopPropagation()}>
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="p-4 pb-3"
+                style={{
+                  background: subjectColorMap[selectedSchedule.subject_name]?.bg ?? "#fef3c7",
+                  borderBottom: `3px solid ${subjectColorMap[selectedSchedule.subject_name]?.accent ?? "#fbbf24"}`,
+                }}>
+                <div className="d-flex align-items-start justify-content-between gap-2">
+                  <div>
+                    <h5 className="fw-black mb-1" style={{ color: subjectColorMap[selectedSchedule.subject_name]?.text ?? "#1e293b" }}>
+                      {selectedSchedule.subject_name}
+                    </h5>
+                    <div className="small text-muted">{selectedSchedule.department}</div>
+                  </div>
+                  <button className="btn btn-sm border-0 p-1 rounded-2"
+                    style={{ background: "rgba(0,0,0,0.08)" }}
+                    onClick={() => setSelectedSchedule(null)}>
+                    <Icon name="x" size={16} />
+                  </button>
+                </div>
               </div>
               <div className="modal-body p-4">
-                <div className="row g-3">
-                  <div className="col-12">
-                    <div className="d-flex align-items-center gap-2 mb-2">
+                <div className="d-flex flex-column gap-3">
+                  <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                    <div className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                      style={{ width: 36, height: 36, background: "#fef3c7", color: "#78350f" }}>
                       <Icon name="user" size={16} />
-                      <strong className="small">Teacher:</strong>
                     </div>
-                    <p className="ms-4 mb-0">{selectedSchedule.teacher_name}</p>
-                    <p className="ms-4 mb-0 text-muted small">{selectedSchedule.department}</p>
-                  </div>
-                  
-                  <div className="col-6">
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                      <Icon name="calendar" size={16} />
-                      <strong className="small">Day:</strong>
+                    <div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Teacher</div>
+                      <div className="fw-semibold small text-dark">{selectedSchedule.teacher_name}</div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>{selectedSchedule.department}</div>
                     </div>
-                    <p className="ms-4 mb-0">{selectedSchedule.day}</p>
                   </div>
-                  
-                  <div className="col-6">
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                      <Icon name="clock" size={16} />
-                      <strong className="small">Time:</strong>
+                  <div className="d-flex gap-3">
+                    <div className="flex-grow-1 d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                      <div className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                        style={{ width: 36, height: 36, background: "#fef3c7", color: "#78350f" }}>
+                        <Icon name="calendar" size={16} />
+                      </div>
+                      <div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>Day</div>
+                        <div className="fw-semibold small text-dark">{selectedSchedule.day}</div>
+                      </div>
                     </div>
-                    <p className="ms-4 mb-0">
-                      {selectedSchedule.time_start.slice(0, 5)} - {selectedSchedule.time_end.slice(0, 5)}
-                    </p>
+                    <div className="flex-grow-1 d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                      <div className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                        style={{ width: 36, height: 36, background: "#fef3c7", color: "#78350f" }}>
+                        <Icon name="clock" size={16} />
+                      </div>
+                      <div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>Time</div>
+                        <div className="fw-semibold small text-dark">
+                          {to12Hour(selectedSchedule.time_start)} – {to12Hour(selectedSchedule.time_end)}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="col-12">
-                    <div className="d-flex align-items-center gap-2 mb-2">
+                  <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#f8fafc" }}>
+                    <div className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                      style={{ width: 36, height: 36, background: "#fef3c7", color: "#78350f" }}>
                       <Icon name="map-pin" size={16} />
-                      <strong className="small">Room:</strong>
                     </div>
-                    <p className="ms-4 mb-0">{selectedSchedule.room}</p>
+                    <div>
+                      <div className="text-muted" style={{ fontSize: 11 }}>Room</div>
+                      <div className="fw-semibold small text-dark">{selectedSchedule.room || "Not assigned"}</div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setSelectedSchedule(null)}
-                >
+              <div className="modal-footer border-0 pt-0 pb-4 px-4">
+                <button className="btn w-100 rounded-3 fw-semibold"
+                  style={{ background: "#fbbf24", color: "#78350f" }}
+                  onClick={() => setSelectedSchedule(null)}>
                   Close
                 </button>
               </div>
@@ -2534,7 +2679,7 @@ function ProfilePanel({ student }: { student?: {
 
 export default function DashboardPage() {
   const [panel, setPanel]         = useState<Panel>("home");
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(true); // start open on desktop
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [notifList, setNotifList] = useState(notifications);
@@ -2687,10 +2832,10 @@ export default function DashboardPage() {
     <div className="admin-dashboard-layout" style={{ background:"#f0f4ff" }} suppressHydrationWarning>
       <Sidebar active={panel} setActive={setPanel} show={mobileOpen} setShow={setMobileOpen} onExpandChange={setSidebarExpanded} student={student} />
 
-      <div className="admin-dashboard-main" style={{ marginLeft: 256 }}>
+      <div className="admin-dashboard-main dashboard-main-content" style={{ marginLeft: 256 }}>
         {/* Topbar */}
         <header className="bg-white border-bottom px-2 px-md-4 py-3 d-flex align-items-center gap-2 gap-md-3 flex-shrink-0 shadow-sm flex-wrap">
-          <button className="btn btn-link text-dark p-1 d-lg-none hamburger-mobile-only" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+          <button className="btn btn-link text-dark p-1 hamburger-btn" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
