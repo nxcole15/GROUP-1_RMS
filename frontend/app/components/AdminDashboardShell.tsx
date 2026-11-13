@@ -4110,6 +4110,7 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
     term: "" as "" | "Term 1" | "Term 2" | "Term 3"
   });
   const [creatingTeacher, setCreatingTeacher] = useState(false);
+  const [showTeacherPassword, setShowTeacherPassword] = useState(false);
   
   // Edit modal
   const [showEditTeacher, setShowEditTeacher] = useState(false);
@@ -4619,14 +4620,35 @@ function TeachersPanel({ readOnly, registrarView, role }: { readOnly?: boolean; 
                   </div>
                   <div>
                     <label className="form-label small fw-semibold">Temporary password</label>
-                    <input 
-                      required 
-                      minLength={8} 
-                      type="password" 
-                      value={teacherForm.password} 
-                      onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} 
-                      className="form-control" 
-                    />
+                    <div className="position-relative">
+                      <input 
+                        required 
+                        minLength={8} 
+                        type={showTeacherPassword ? "text" : "password"} 
+                        value={teacherForm.password} 
+                        onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} 
+                        className="form-control pe-5" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowTeacherPassword(v => !v)}
+                        className="position-absolute top-50 end-0 translate-middle-y border-0 bg-transparent pe-3"
+                        style={{ lineHeight: 0 }}
+                        tabIndex={-1}
+                        aria-label={showTeacherPassword ? "Hide password" : "Show password"}
+                      >
+                        {showTeacherPassword ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6b7280" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6b7280" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                     <div className="form-text">Minimum 8 characters</div>
                   </div>
                   <div>
@@ -5915,14 +5937,19 @@ function SubmittedGradesList() {
                         </span>
                       </td>
                       <td className="small text-muted">
-                        {new Date(sub.submitted_at).toLocaleDateString()} {new Date(sub.submitted_at).toLocaleTimeString()}
+                        {new Date(sub.submitted_at).toLocaleString("en-PH", {
+                          timeZone: "Asia/Manila",
+                          month: "numeric", day: "numeric", year: "numeric",
+                          hour: "numeric", minute: "2-digit", second: "2-digit",
+                          hour12: true
+                        })}
                       </td>
                       <td className="text-center">
                         <button
                           className="btn btn-sm btn-outline-primary"
                           onClick={() => viewDetails(sub)}
                         >
-                          👁️ View
+                          View
                         </button>
                       </td>
                     </tr>
@@ -5966,9 +5993,22 @@ function SubmittedGradesList() {
                           <div className="fw-semibold">{viewingSubmission.total_students}</div>
                         </div>
                         <div className="col-6">
+                          <div className="text-muted small">Grade Level</div>
+                          <div className="fw-semibold">
+                            {students.length > 0 && students[0].grade_level
+                              ? `Grade ${students[0].grade_level}`
+                              : '—'}
+                          </div>
+                        </div>
+                        <div className="col-6">
                           <div className="text-muted small">Submitted At</div>
                           <div className="fw-semibold">
-                            {new Date(viewingSubmission.submitted_at).toLocaleString()}
+                            {new Date(viewingSubmission.submitted_at).toLocaleString("en-PH", {
+                              timeZone: "Asia/Manila",
+                              month: "numeric", day: "numeric", year: "numeric",
+                              hour: "numeric", minute: "2-digit", second: "2-digit",
+                              hour12: true
+                            })}
                           </div>
                         </div>
                         <div className="col-6">
@@ -6006,7 +6046,7 @@ function SubmittedGradesList() {
                           <tr>
                             <th className="small fw-semibold">Student ID</th>
                             <th className="small fw-semibold">Name</th>
-                            <th className="small fw-semibold">Pathway</th>
+                            <th className="small fw-semibold">Track & Strand</th>
                             <th className="small fw-semibold text-center">Grade (%)</th>
                             <th className="small fw-semibold text-center">Remarks</th>
                           </tr>
@@ -6014,13 +6054,16 @@ function SubmittedGradesList() {
                         <tbody>
                           {students.map((student) => {
                             const grade = student.percentage !== null ? parseFloat(student.percentage) : null;
-                            const passed = grade !== null && grade >= 80; // Correct passing grade is 80+
+                            const passed = grade !== null && grade >= 75;
+                            const trackStrand = student.track && student.strand
+                              ? `${student.track} - ${student.strand}`
+                              : student.strand || student.track || student.pathway || '—';
                             
                             return (
                               <tr key={student.student_id}>
                                 <td className="small">{student.student_id}</td>
                                 <td className="small">{student.student_name}</td>
-                                <td className="small text-muted">{student.pathway}</td>
+                                <td className="small text-muted">{trackStrand}</td>
                                 <td className="small text-center">
                                   <span className={`fw-semibold ${
                                     grade === null ? 'text-muted' : 

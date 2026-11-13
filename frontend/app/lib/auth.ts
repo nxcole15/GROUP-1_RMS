@@ -76,6 +76,18 @@ export async function apiFetch<T = unknown>(
   return data as T;
 }
 
+// ── Auth guard for manual fetch() call sites ─────────────────────────────────
+// On a 401 (expired/invalid token), clear stored auth and redirect to the login
+// page. Returns true when it handled a 401 so the caller can short-circuit. Use
+// this inside `then(r => ...)` callbacks at call sites that aren't routed through
+// apiFetch (e.g. handlers that inspect specific status codes).
+export function handleAuth401(status: number): boolean {
+  if (status !== 401) return false;
+  clearAuth();
+  if (typeof window !== "undefined") window.location.replace("/login");
+  return true;
+}
+
 // ── School Year & Term ────────────────────────────────────────────────────────
 export interface AcademicConfig {
   school_year: string;
