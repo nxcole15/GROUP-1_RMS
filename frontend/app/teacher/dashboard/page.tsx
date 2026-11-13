@@ -4,7 +4,7 @@ import React from "react";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { API_BASE, getAcademicConfig, useInactivityTimeout, type AcademicConfig } from "../../lib/auth";
+import { API_BASE, getAcademicConfig, useInactivityTimeout, handleAuth401, type AcademicConfig } from "../../lib/auth";
 import { GuidePanel } from "../../components/GuidePanel";
 
 const TIMELOG_KEY = "inform_teacher_timelog";
@@ -298,6 +298,9 @@ function Overview({ isGradeLocked, activeTerm, teacher, apiActivity, apiSubjects
           const data = await res.json();
           setOverviewData(data);
         } else {
+          // 401 = expired/invalid token: clear it and send the user to the
+          // login page instead of silently rendering empty stats.
+          if (handleAuth401(res.status)) return;
           console.error("Overview fetch failed:", res.status, res.statusText);
           // Set default empty data to prevent errors
           setOverviewData({
@@ -1079,10 +1082,10 @@ function StudentsPanel({ students: propStudents, subjects: propSubjects }: {
                     <td className="d-none d-sm-table-cell"><span className="text-muted small">{s.id}</span></td>
                     <td className="d-none d-md-table-cell">
                       {/* In "All Classes" view, show all subjects as pills */}
-                      {selectedClass === "all" && s.subjects && s.subjects.length > 1 ? (
+                      {selectedClass === "all" && s.subjects && s.subjects.length >= 1 ? (
                         <div className="d-flex flex-wrap gap-1">
                           {s.subjects.map(subj => (
-                            <span key={subj} className="badge rounded-pill text-white small" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", fontSize: "0.72rem" }}>
+                            <span key={subj} className="badge rounded-pill small" style={{ background: "#e9ecef", color: "#495057", fontSize: "0.72rem" }}>
                               {subj}
                             </span>
                           ))}
@@ -4088,7 +4091,11 @@ export default function TeacherDashboardPage() {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       credentials: "include",
     })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        // 401 = expired/invalid token: clear auth and bounce to login.
+        if (handleAuth401(r.status)) return null;
+        return r.ok ? r.json() : null;
+      })
       .then(data => {
         if (!data) return;
         if (data.stats?.pending_requests !== undefined) setPendingCount(data.stats.pending_requests);

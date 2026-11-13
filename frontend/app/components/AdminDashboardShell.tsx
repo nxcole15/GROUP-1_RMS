@@ -5915,14 +5915,19 @@ function SubmittedGradesList() {
                         </span>
                       </td>
                       <td className="small text-muted">
-                        {new Date(sub.submitted_at).toLocaleDateString()} {new Date(sub.submitted_at).toLocaleTimeString()}
+                        {new Date(sub.submitted_at).toLocaleString("en-PH", {
+                          timeZone: "Asia/Manila",
+                          month: "numeric", day: "numeric", year: "numeric",
+                          hour: "numeric", minute: "2-digit", second: "2-digit",
+                          hour12: true
+                        })}
                       </td>
                       <td className="text-center">
                         <button
                           className="btn btn-sm btn-outline-primary"
                           onClick={() => viewDetails(sub)}
                         >
-                          👁️ View
+                          View
                         </button>
                       </td>
                     </tr>
@@ -5966,9 +5971,22 @@ function SubmittedGradesList() {
                           <div className="fw-semibold">{viewingSubmission.total_students}</div>
                         </div>
                         <div className="col-6">
+                          <div className="text-muted small">Grade Level</div>
+                          <div className="fw-semibold">
+                            {students.length > 0 && students[0].grade_level
+                              ? `Grade ${students[0].grade_level}`
+                              : '—'}
+                          </div>
+                        </div>
+                        <div className="col-6">
                           <div className="text-muted small">Submitted At</div>
                           <div className="fw-semibold">
-                            {new Date(viewingSubmission.submitted_at).toLocaleString()}
+                            {new Date(viewingSubmission.submitted_at).toLocaleString("en-PH", {
+                              timeZone: "Asia/Manila",
+                              month: "numeric", day: "numeric", year: "numeric",
+                              hour: "numeric", minute: "2-digit", second: "2-digit",
+                              hour12: true
+                            })}
                           </div>
                         </div>
                         <div className="col-6">
@@ -6006,7 +6024,7 @@ function SubmittedGradesList() {
                           <tr>
                             <th className="small fw-semibold">Student ID</th>
                             <th className="small fw-semibold">Name</th>
-                            <th className="small fw-semibold">Pathway</th>
+                            <th className="small fw-semibold">Track & Strand</th>
                             <th className="small fw-semibold text-center">Grade (%)</th>
                             <th className="small fw-semibold text-center">Remarks</th>
                           </tr>
@@ -6014,13 +6032,16 @@ function SubmittedGradesList() {
                         <tbody>
                           {students.map((student) => {
                             const grade = student.percentage !== null ? parseFloat(student.percentage) : null;
-                            const passed = grade !== null && grade >= 80; // Correct passing grade is 80+
+                            const passed = grade !== null && grade >= 75;
+                            const trackStrand = student.track && student.strand
+                              ? `${student.track} - ${student.strand}`
+                              : student.strand || student.track || student.pathway || '—';
                             
                             return (
                               <tr key={student.student_id}>
                                 <td className="small">{student.student_id}</td>
                                 <td className="small">{student.student_name}</td>
-                                <td className="small text-muted">{student.pathway}</td>
+                                <td className="small text-muted">{trackStrand}</td>
                                 <td className="small text-center">
                                   <span className={`fw-semibold ${
                                     grade === null ? 'text-muted' : 

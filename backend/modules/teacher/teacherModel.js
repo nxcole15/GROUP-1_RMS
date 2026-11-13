@@ -42,10 +42,14 @@ const TeacherModel = {
       return [];
     }
 
-    // Get subjects from teacher_schedules (new system)
+    // Get subjects from teacher_schedules (new system).
+    // A single class can span several schedule rows (e.g. Mon/Wed/Fri slots, or
+    // duplicated schedule entries), so collapse them into one row per class
+    // (subject + strand + track + term) and count distinct students across all
+    // of that class's schedules. This is what the Overview "Class Summary" shows.
     const [rows] = await db.query(
       `SELECT 
-         ts.id,
+         MIN(ts.id) AS id,
          ts.subject_name AS name,
          ts.subject_name AS code,
          ts.strand,
@@ -55,7 +59,7 @@ const TeacherModel = {
        FROM teacher_schedules ts
        LEFT JOIN student_schedule_enrollments sse ON sse.teacher_schedule_id = ts.id
        WHERE ts.teacher_id = ?
-       GROUP BY ts.id, ts.subject_name, ts.strand, ts.track, ts.term
+       GROUP BY ts.subject_name, ts.strand, ts.track, ts.term
        ORDER BY ts.subject_name`,
       [internalTeacherId]
     );
@@ -87,14 +91,14 @@ const TeacherModel = {
          st.pathway, 
          st.grade_level, 
          st.email,
-         ea.photo_url,
-         ts.track,
-         ts.strand,
-         COALESCE(ea.track, ts.track, '') AS student_track,
-         COALESCE(ea.strand, ts.strand, '') AS student_strand,
+         MAX(ea.photo_url) AS photo_url,
+         MAX(ts.track) AS track,
+         MAX(ts.strand) AS strand,
+         COALESCE(MAX(ea.track), MAX(ts.track), '') AS student_track,
+         COALESCE(MAX(ea.strand), MAX(ts.strand), '') AS student_strand,
          ts.subject_name,
          ts.term,
-         CONCAT(ts.track, ' - ', ts.strand) AS track_strand
+         CONCAT(MAX(ts.track), ' - ', MAX(ts.strand)) AS track_strand
        FROM student_schedule_enrollments sse
        INNER JOIN teacher_schedules ts ON sse.teacher_schedule_id = ts.id
        INNER JOIN students st 
@@ -102,6 +106,7 @@ const TeacherModel = {
          OR (sse.student_internal_id IS NULL AND st.student_id = sse.student_id)
        LEFT JOIN enrollment_applications ea ON st.student_id = ea.generated_student_id
        WHERE ts.teacher_id = ?
+       GROUP BY st.student_id, st.full_name, st.pathway, st.grade_level, st.email, ts.subject_name, ts.term
        ORDER BY st.full_name`,
       [internalTeacherId]
     );

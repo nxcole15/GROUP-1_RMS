@@ -169,6 +169,8 @@ async function getSubmissionDetails(req, res, next) {
           g.submitted_at,
           s.full_name as student_name,
           s.pathway,
+          s.track,
+          s.strand,
           s.grade_level
         FROM grades g
         INNER JOIN students s ON g.student_internal_id = s.id
@@ -191,6 +193,8 @@ async function getSubmissionDetails(req, res, next) {
           g.submitted_at,
           s.full_name as student_name,
           s.pathway,
+          s.track,
+          s.strand,
           s.grade_level
         FROM grades g
         INNER JOIN students s ON g.student_internal_id = s.id
