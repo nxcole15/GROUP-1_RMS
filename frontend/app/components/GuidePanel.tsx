@@ -31,7 +31,7 @@ interface GuideSection {
 }
 
 interface GuidePanelProps {
-  role: "student" | "teacher" | "principal" | "registrar" | "accounting" | "superadmin";
+  role: "student" | "teacher" | "principal" | "registrar" | "accounting" | "superadmin" | "teacher_coordinator";
   type: "user" | "dashboard";
 }
 
@@ -358,6 +358,104 @@ const GUIDE_CONTENT: Record<string, Record<string, GuideSection[]>> = {
       },
     ]
   },
+  teacher_coordinator: {
+    user: [
+      {
+        title: "Getting Started",
+        content: [
+          "Welcome to the INFORM Teacher Coordinator Dashboard! Your role is to manage and coordinate class schedules for the entire school.",
+          "Your dashboard gives you access to two main areas: Overview and Scheduling.",
+          "Use the sidebar to switch between the Overview (your home screen) and the Scheduling module.",
+          "Any changes you make to schedules are reflected in real time for teachers and students.",
+        ]
+      },
+      {
+        title: "Understanding the Overview",
+        content: [
+          "The Overview screen shows four key scheduling statistics: Total Schedules, Active Rooms, Teachers Assigned, and Schedule Conflicts.",
+          "Total Schedules — the number of class schedule entries currently set up for the active term.",
+          "Active Rooms — the number of rooms that have at least one scheduled class assigned.",
+          "Teachers Assigned — the number of teachers who have been given at least one schedule.",
+          "Schedule Conflicts — the number of detected conflicts (e.g., the same room or teacher booked at the same time). Aim to keep this at zero.",
+          "Click 'Go to Scheduling' or 'View Timetable' to jump directly into the scheduling module.",
+        ]
+      },
+      {
+        title: "Using the Scheduling Module",
+        content: [
+          "The Scheduling section is your main workspace for creating and managing class timetables.",
+          "You can create new schedule entries by selecting the subject, teacher, room, day, and time slot.",
+          "Each schedule entry requires: a subject, an assigned teacher, a room, a day of the week, and a start/end time.",
+          "Use the filters (by grade level, track, or teacher) to narrow down what is displayed in the timetable view.",
+          "The system will warn you if a new entry causes a conflict — always resolve conflicts before finalizing a schedule.",
+        ]
+      },
+      {
+        title: "Managing Rooms",
+        content: [
+          "Rooms are shared resources — a room can only be assigned to one class at a time.",
+          "Before assigning a room, check the room's existing schedule to avoid double-booking.",
+          "If all rooms are occupied during a time slot, coordinate with the principal to explore alternatives.",
+          "The 'Active Rooms' stat on your overview tells you how many rooms are currently in use.",
+        ]
+      },
+      {
+        title: "Managing Teacher Assignments",
+        content: [
+          "Each schedule entry must have a teacher assigned. Make sure teachers are not double-booked.",
+          "The system automatically detects teacher conflicts (same teacher, overlapping time slots).",
+          "If a teacher is unavailable for a slot, leave it unassigned temporarily and coordinate with the principal.",
+          "The 'Teachers Assigned' stat shows how many teachers currently have at least one scheduled class.",
+        ]
+      },
+      {
+        title: "Resolving Schedule Conflicts",
+        content: [
+          "A conflict is flagged when two schedule entries share the same room or teacher at the same time.",
+          "Navigate to the Scheduling module and look for conflict indicators on the affected entries.",
+          "To resolve a conflict, edit one of the conflicting entries — change the room, time slot, or teacher.",
+          "After resolving, the conflict count on your Overview should decrease to zero.",
+          "It is important to resolve all conflicts before the start of a term so teachers and students have accurate schedules.",
+        ]
+      },
+      {
+        title: "Logging Out",
+        content: [
+          "When you are done, always log out using the 'Log Out' button at the bottom of the sidebar.",
+          "Logging out protects sensitive scheduling data from unauthorized access.",
+          "Your session will also automatically expire after a period of inactivity.",
+        ]
+      },
+    ],
+    dashboard: [
+      {
+        title: "Dashboard Overview",
+        content: [
+          "Your dashboard opens on the Overview screen, which shows a summary of the current scheduling status.",
+          "Four stat cards give you an at-a-glance view: Total Schedules, Active Rooms, Teachers Assigned, and Schedule Conflicts.",
+          "The 'Scheduling Overview' card below the stats provides a quick-access button to jump into the full Scheduling module.",
+          "All stats are live — they update automatically as schedules are created or modified.",
+        ]
+      },
+      {
+        title: "Navigating the Dashboard",
+        content: [
+          "The sidebar has two navigation items: Overview and Scheduling.",
+          "Overview is your home screen with scheduling statistics and quick links.",
+          "Scheduling is where you do the actual work of creating, editing, and managing class timetables.",
+          "The Guide section (this page) is accessible anytime from the sidebar for reference.",
+        ]
+      },
+      {
+        title: "Quick Actions",
+        content: [
+          "Click 'Go to Scheduling' on the Overview to open the full timetable management module.",
+          "Click 'View Timetable' on the welcome card to access the schedule grid directly.",
+          "Use the sidebar navigation to switch between sections at any time.",
+        ]
+      },
+    ]
+  },
   superadmin: {
     user: [
       {
@@ -560,8 +658,19 @@ const TROUBLESHOOTING = [
   },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  student: "Student",
+  teacher: "Teacher",
+  principal: "Principal",
+  registrar: "Registrar",
+  accounting: "Accounting",
+  superadmin: "Super Admin",
+  teacher_coordinator: "Teacher Coordinator",
+};
+
 export function GuidePanel({ role, type }: GuidePanelProps) {
   const guideContent = GUIDE_CONTENT[role]?.[type] || [];
+  const roleLabel = ROLE_LABELS[role] ?? (role.charAt(0).toUpperCase() + role.slice(1));
 
   return (
     <div className="guide-document-container" style={{ maxWidth: "900px", margin: "0 auto" }}>
@@ -584,14 +693,14 @@ export function GuidePanel({ role, type }: GuidePanelProps) {
             </div>
             <h1 className="fw-bold mb-0" style={{ fontSize: "2rem", lineHeight: 1.2 }}>
               {type === "user" 
-                ? `${role.charAt(0).toUpperCase() + role.slice(1)} Guide` 
-                : `${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard Guide`}
+                ? `${roleLabel} Guide` 
+                : `${roleLabel} Dashboard Guide`}
             </h1>
           </div>
         </div>
         <p className="mb-0 opacity-90" style={{ fontSize: "1rem", lineHeight: 1.6 }}>
           {type === "user" 
-            ? `Complete reference guide for ${role} users. Learn how to navigate the system, manage your tasks, and make the most of available features.`
+            ? `Complete reference guide for ${roleLabel} users. Learn how to navigate the system, manage your tasks, and make the most of available features.`
             : `Learn how to use your dashboard effectively. Understand key metrics, navigation, and quick actions available to you.`}
         </p>
       </div>

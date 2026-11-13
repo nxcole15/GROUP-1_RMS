@@ -7,39 +7,66 @@ const GEMINI_URL =
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
 
 /* ── JOBERT system prompt ── */
-const SYSTEM_PROMPT = `You are JOBERT, the official AI assistant of the INFORM Student Information System at Benedicto College (Cebu, Philippines).
+const SYSTEM_PROMPT = `You are JOBERT, the official AI assistant of the INFORM Student Information System at Cebu Far East Institute (CFEI).
 
-Your role is to help students with questions about:
-- How to log in (Student ID is a 9-digit number, numbers only)
-- Viewing grades and understanding the Philippine grading scale (1.00 highest, 5.00 failed, 3.00 passing at 75%)
-- Class schedule (Mon-Fri timetable)
-- Tuition fees and payments
-- Library books (borrowing, returning, due dates)
-- Enrollment (currently open, deadline June 15, 2026)
-- Requesting documents (TOR, Certificate of Enrollment, Good Moral, Diploma)
-- Scholarships (Academic Excellence, Financial Assistance, Government Voucher)
-- Lost ID replacement (go to Registrar, PHP 150 fee)
-- Campus services (Clinic, Guidance Office, Canteen, Gym)
-- Academic calendar (1st Sem: Aug 2025 - Jan 2026, 2nd Sem: Feb - Jun 2026)
-- Admin access centralized at /login, for staff only
-- Contact info (Registrar: registrar@inform.edu, Room 101 Admin Bldg, Mon-Fri 8AM-5PM)
-- IT Help Desk: helpdesk@inform.edu, Room 010 Admin Bldg
-- Cashier: Room 102 Admin Bldg, Mon-Fri 8AM-4PM
+Your role is to help students understand and navigate the INFORM system. Here is exactly what the system does:
 
-Use your institution-issued student or staff credentials to sign in.
+WHAT STUDENTS CAN DO IN INFORM:
+- View their own grades per term (Term 1, Term 2, Term 3)
+- Request their grades when the grade request window is open
+- View their class schedule (Mon-Fri timetable per subject, room, and teacher)
+- View their tuition fees and payment status (how much is paid and balance due)
+- Request documents (e.g. Transcript of Records, Certificate of Enrollment)
+- Download approved documents
+- View notifications (enrollment updates, payment confirmations, grade releases, system alerts)
+- View their profile (student ID, name, pathway, grade level, term, email)
 
-Benedicto College offers:
-- Academic Track and Technical Professional Track (SHS)
-- Guaranteed No Tuition Fee for incoming Grade 11 students from public schools (SY 2026-2027)
-- CESA Esports League teams: BC Cheetahs (MLBB) and BC Valorant team
-- Website: https://benedictocollege.edu.ph
-- Facebook: /BENEDICTO COLLEGE
-- Phone: 032 345 6873
-- Mobile: +63 908 899 8600
+GRADE REQUEST FLOW (how grades work):
+1. Student opens the term and clicks "Request Grade" for a subject
+2. The request is recorded as Pending
+3. Teacher processes and calculates the grade, then submits it
+4. Registrar reviews the grade
+5. Principal reviews and approves
+6. Registrar releases the grade
+7. Teacher releases it to the student
+8. Student can now see the released grade in My Grades
+
+DOCUMENT REQUEST FLOW:
+1. Student selects a document type from Available Documents and confirms the request
+2. Status becomes Pending
+3. Teacher reviews/validates the request
+4. Admin approves and assigns a Release Date
+5. Student sees the document under Approved Documents and can download it
+
+GRADING SYSTEM (percentage-based):
+- Grades are stored as a percentage (e.g. 92.50)
+- The Philippine grading scale still applies:
+  1.00 = 99-100%, 1.25 = 96-98%, 1.50 = 93-95%, 1.75 = 90-92%,
+  2.00 = 87-89%, 2.25 = 84-86%, 2.50 = 81-83%, 2.75 = 78-80%,
+  3.00 = 75-77% (Passing), 5.00 = Below 75% (Failed)
+
+ENROLLMENT:
+- Enrollment is managed by admin and may be open or closed depending on the current term
+- Students can check if enrollment is open from the Dashboard
+- The system supports Terms 1, 2, and 3 per school year
+
+ACCOUNTS & LOGIN:
+- Students log in at /login using their Student ID and password
+- Teachers and admins also log in at /login using their own IDs
+- If a student forgets their password or gets locked out, they should contact the school's IT or Registrar
+
+WHAT JOBERT CANNOT DO:
+- JOBERT cannot view your actual grades, schedule, or account details — those are shown in the portal
+- JOBERT cannot process requests or change any data
+- JOBERT can only guide you on how to use the system
+
+SCHOOL INFORMATION:
+- School: Cebu Far East Institute (CFEI)
+- System name: INFORM Self-Service Student Information Kiosk
 
 Rules:
-- Only answer questions related to Benedicto College and the INFORM system
-- If asked about something unrelated, politely say you can only help with INFORM and Benedicto College topics
+- Only answer questions related to CFEI and the INFORM system
+- If asked about something unrelated, politely say you can only help with INFORM and CFEI topics
 - Keep answers concise and helpful
 - Use a friendly, professional tone
 - Format lists with line breaks for readability
@@ -50,43 +77,50 @@ function getFallbackReply(message: string): string {
   const msg = message.toLowerCase();
 
   if (msg.includes("log in") || msg.includes("login") || msg.includes("sign in")) {
-    return "To log in to INFORM:\n\n1. Go to the login page\n2. Enter your Student ID, teacher ID, or admin ID\n3. Enter your password\n4. Click \"Access Portal\"\n\nNeed more help? Contact IT Help Desk at helpdesk@inform.edu or Room 010 Admin Bldg.";
-  }
-  if (msg.includes("password") || msg.includes("forgot")) {
-    return "If you forgot your password:\n\n1. Contact the IT Help Desk at helpdesk@inform.edu\n2. Visit Room 010, Admin Building (Mon-Fri, 8AM-5PM)\n3. Bring your school ID or employee ID for verification";
-  }
-  if (msg.includes("grade") || msg.includes("gwa") || msg.includes("average")) {
-    return "Philippine Grading Scale at Benedicto College:\n\n• 1.00 = 99-100% (Highest)\n• 1.25 = 96-98%\n• 1.50 = 93-95%\n• 1.75 = 90-92%\n• 2.00 = 87-89%\n• 2.25 = 84-86%\n• 2.50 = 81-83%\n• 2.75 = 78-80%\n• 3.00 = 75-77% (Passing)\n• 5.00 = Below 75% (Failed)\n\nYour GWA is the average of all your subject grades.";
-  }
-  if (msg.includes("tuition") || msg.includes("pay") || msg.includes("fee")) {
-    return "To pay your tuition fees:\n\n1. Go to the Cashier's Office — Room 102, Admin Building\n2. Hours: Mon-Fri, 8AM-4PM\n3. You can also pay via online banking (ask the Cashier for details)\n\nFee breakdown (per semester):\n• Tuition Fee: ₱18,500\n• Miscellaneous: ₱2,200\n• Laboratory: ₱1,500\n• Library: ₱500\n• Student Activity: ₱800\n• ID/Registration: ₱350";
-  }
-  if (msg.includes("enrollment") || msg.includes("enroll")) {
-    return "Enrollment Information:\n\n• Status: Currently OPEN\n• Deadline: June 15, 2026\n• Where: Registrar's Office, Room 101 Admin Bldg\n• Hours: Mon-Fri, 8AM-5PM\n\nRequirements:\n• Previous semester grades\n• Cleared balance (no outstanding fees)\n• Accomplished enrollment form\n\nContact: registrar@inform.edu";
-  }
-  if (msg.includes("schedule") || msg.includes("class") || msg.includes("timetable")) {
-    return "Your class schedule is available in the Dashboard under \"View Schedule\".\n\nAcademic Calendar:\n• 1st Semester: Aug 2025 – Jan 2026\n• 2nd Semester: Feb – Jun 2026\n\nClasses run Mon-Fri. Check your specific timetable in the Schedule section of your portal.";
-  }
-  if (msg.includes("library") || msg.includes("book") || msg.includes("borrow")) {
-    return "Library Services:\n\n• Location: Library Building, Ground Floor\n• Hours: Mon-Fri, 7AM-6PM\n• Borrowing limit: 3 books at a time\n• Loan period: 7 days\n• Late return penalty: ₱5/day per book\n\nTo borrow: Present your school ID at the library counter.\nTo return: Bring the book to the same counter before the due date.";
-  }
-  if (msg.includes("tor") || msg.includes("transcript") || msg.includes("document") || msg.includes("certificate")) {
-    return "Document Requests (Registrar's Office, Room 101):\n\n• Transcript of Records (TOR): ₱150, 3-5 working days\n• Certificate of Enrollment: ₱50, same day\n• Good Moral Certificate: ₱50, 1-2 working days\n• Diploma: Available after graduation clearance\n\nBring your school ID and fill out a request form. Contact: registrar@inform.edu";
-  }
-  if (msg.includes("scholarship")) {
-    return "Available Scholarships at Benedicto College:\n\n1. Academic Excellence Scholarship\n   • For students with GWA of 1.50 or higher\n   • Covers 50-100% of tuition\n\n2. Financial Assistance Grant\n   • For students with financial need\n   • Submit income certificate from parents\n\n3. Government Voucher (SHS)\n   • For incoming Grade 11 from public schools\n   • No tuition fee for SY 2026-2027\n\nApply at the Registrar's Office.";
-  }
-  if (msg.includes("contact") || msg.includes("office") || msg.includes("help")) {
-    return "Benedicto College Contact Information:\n\n📍 Registrar's Office\n   Room 101, Admin Building\n   registrar@inform.edu\n   Mon-Fri, 8AM-5PM\n\n💻 IT Help Desk\n   Room 010, Admin Building\n   helpdesk@inform.edu\n\n💰 Cashier\n   Room 102, Admin Building\n   Mon-Fri, 8AM-4PM\n\n📞 032 345 6873\n📱 +63 908 899 8600\n🌐 benedictocollege.edu.ph";
-  }
-  if (msg.includes("id") && (msg.includes("lost") || msg.includes("replace") || msg.includes("replacement"))) {
-    return "Lost ID Replacement:\n\n1. Go to the Registrar's Office (Room 101, Admin Bldg)\n2. Fill out a lost ID form\n3. Pay the replacement fee: ₱150 at the Cashier\n4. Present your receipt to the Registrar\n5. New ID will be ready in 3-5 working days";
-  }
-  if (msg.includes("demo") || msg.includes("account") || msg.includes("test")) {
-    return "This system is configured for real institutional accounts. Please use your assigned ID and password to access the portal.";
+    return "To log in to INFORM:\n\n1. Go to the login page at /login\n2. Enter your Student ID and password\n3. Click \"Access Portal\"\n\nTeachers and admins also log in at the same page using their own IDs.\n\nIf you are locked out or forgot your password, contact your school's Registrar or IT support.";
   }
 
-  return "I'm JOBERT, your INFORM assistant at Benedicto College! I can help you with:\n\n• Logging in to INFORM\n• Grades and GWA\n• Class schedule\n• Tuition fees and payments\n• Library services\n• Enrollment\n• Document requests\n• Scholarships\n• Contact information\n\nWhat would you like to know?";
+  if (msg.includes("password") || msg.includes("forgot") || msg.includes("locked")) {
+    return "If you forgot your password or your account is locked:\n\n1. Contact the school Registrar or IT support\n2. Bring your school ID for verification\n\nFor security, passwords can only be reset by an authorized admin.";
+  }
+
+  if (msg.includes("grade request") || msg.includes("request grade")) {
+    return "How to request your grades in INFORM:\n\n1. Go to My Grades\n2. Select the term (Term 1, 2, or 3)\n3. Click \"Request Grade\" for the subject you want\n4. Your request is submitted as Pending\n\nAfter that, the flow is:\nYou → Teacher calculates → Registrar reviews → Principal approves → Registrar releases → Teacher releases → You can view it\n\nNote: The request button only appears when the grade request window is open.";
+  }
+
+  if (msg.includes("grade") || msg.includes("gwa") || msg.includes("average")) {
+    return "Your grades are shown in the My Grades section by term.\n\nPhilippine Grading Scale used in INFORM:\n\n• 1.00 = 99-100% (Highest)\n• 1.25 = 96-98%\n• 1.50 = 93-95%\n• 1.75 = 90-92%\n• 2.00 = 87-89%\n• 2.25 = 84-86%\n• 2.50 = 81-83%\n• 2.75 = 78-80%\n• 3.00 = 75-77% (Passing)\n• 5.00 = Below 75% (Failed)\n\nGrades are only visible once they have been released to you by your teacher.";
+  }
+
+  if (msg.includes("tuition") || msg.includes("pay") || msg.includes("fee") || msg.includes("balance")) {
+    return "Your tuition fee details are in the Tuition Fee section of your portal.\n\nYou can see:\n• Total fees\n• Amount already paid\n• Remaining balance\n• Individual fee items and their payment status\n\nFor payment transactions, coordinate with the school Cashier directly.";
+  }
+
+  if (msg.includes("enrollment") || msg.includes("enroll")) {
+    return "Enrollment in INFORM:\n\n• The admin controls when enrollment opens and closes each term\n• You can check if enrollment is currently open from your Dashboard\n• The system supports Term 1, Term 2, and Term 3 per school year\n\nIf you have questions about enrollment requirements or deadlines, contact the school Registrar.";
+  }
+
+  if (msg.includes("schedule") || msg.includes("class") || msg.includes("timetable")) {
+    return "Your class schedule is in the My Schedule section.\n\nIt shows:\n• Your subjects per day (Monday to Friday)\n• Time and room for each class\n• Your subject teacher\n\nSchedules are set by the admin and assigned to your account.";
+  }
+
+  if (msg.includes("document") || msg.includes("tor") || msg.includes("transcript") || msg.includes("certificate")) {
+    return "How to request a document in INFORM:\n\n1. Go to the Documents section\n2. Find the document type you need under Available Documents\n3. Click to request it and confirm\n4. Your request becomes Pending\n5. It goes through Teacher review → Admin approval → Release Date is set\n6. Once approved, you can download it from the Approved Documents list\n\nDocument types available depend on what the admin has set up in the system.";
+  }
+
+  if (msg.includes("notification")) {
+    return "Your notifications are in the Notifications section.\n\nYou will receive alerts for:\n• Enrollment updates\n• Payment confirmations\n• Grade releases\n• Document request status changes\n• System announcements\n\nYou can mark notifications as read or dismiss them.";
+  }
+
+  if (msg.includes("profile")) {
+    return "Your profile shows your basic account information:\n\n• Student ID\n• Full name\n• Pathway and grade level\n• Current term\n• Email address\n\nTo update your profile details, contact the school Registrar or admin.";
+  }
+
+  if (msg.includes("what can") || msg.includes("what do") || msg.includes("feature") || msg.includes("help")) {
+    return "Here is what INFORM lets you do:\n\n• My Grades — view released grades per term and request grades when open\n• My Schedule — see your class timetable (day, time, room, teacher)\n• Tuition Fee — check your fees, payments, and balance\n• Documents — request and download official documents\n• Notifications — stay updated on grades, payments, and announcements\n• My Profile — view your student information\n\nWhat would you like help with?";
+  }
+
+  return "Hi! I am JOBERT, your INFORM assistant at Cebu Far East Institute.\n\nI can help you with:\n\n• Logging in to INFORM\n• How grades and grade requests work\n• Viewing your class schedule\n• Tuition fees and payments\n• Requesting documents\n• Enrollment status\n• Notifications and profile\n\nWhat would you like to know?";
 }
 
 export async function POST(req: NextRequest) {
