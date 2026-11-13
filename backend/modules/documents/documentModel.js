@@ -256,10 +256,10 @@ const DocumentModel = {
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pending_payment_verification' THEN 1 ELSE 0 END) as needs_verification,
-        SUM(CASE WHEN status = 'payment_verified' THEN 1 ELSE 0 END) as verified,
+        SUM(CASE WHEN status = 'ready_for_release' THEN 1 ELSE 0 END) as verified,
         SUM(CASE WHEN status = 'released' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status = 'pending_payment_verification' THEN payment_amount ELSE 0 END) as pending_amount,
-        SUM(CASE WHEN status IN ('payment_verified', 'released') THEN payment_amount ELSE 0 END) as verified_amount
+        SUM(CASE WHEN status IN ('ready_for_release', 'released') THEN payment_amount ELSE 0 END) as verified_amount
        FROM documents
        WHERE requires_payment = 1`
     );
